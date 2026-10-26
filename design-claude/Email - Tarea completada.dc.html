@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><script src="./agenda-emails.js"></script><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:28px 28px 64px; display:flex; flex-direction:column; gap:22px">
+  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; background:#fff; border-radius:24px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1160px">
+    <div style="display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 320px">
+      <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASUNTO · SOLO A LOS ENCARGADOS DEL DEPARTAMENTO</span>
+      <span style="font-size:15px; font-weight:700; color:#0a0a0a">{{ asunto }}</span>
+      <span style="font-size:13px; font-weight:500; color:rgba(0,0,0,.6)">Preencabezado: {{ pre }}</span>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tSol }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tCarpeta }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tVars }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <button onClick="{{ copiar }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:700; cursor:pointer">{{ copyLbl }}</button>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start">
+    <sc-for list="{{ vistas }}" as="v" hint-placeholder-count="3">
+      <div style="display:flex; flex-direction:column; gap:10px; flex:none">
+        <div style="display:flex; align-items:center; gap:8px"><span style="height:26px; padding:0 10px; border-radius:999px; background:#0a0a0a; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center">{{ v.id }}</span><span style="font-size:13px; font-weight:600; color:rgba(0,0,0,.62)">{{ v.t }}</span></div>
+        <iframe title="{{ v.t }}" srcDoc="{{ v.html }}" onLoad="{{ fit }}" style="width:{{ v.w }}; height:900px; border:0; border-radius:{{ v.r }}; background:#f6f6f4; box-shadow:0 6px 24px rgba(0,0,0,.12); display:block"></iframe>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { sol: true, carpeta: true, vars: false, copied: false, ready: !!window.AOMail };
+  componentDidMount() { const t = () => window.AOMail ? this.setState({ ready: true }) : setTimeout(t, 40); t(); }
+  data(vars) {
+    const s = this.state;
+    if (vars) return { vars: true, nombre_tarea: '{{nombre_tarea}}', sub_departamento: '{{sub_departamento}}', departamento: '{{departamento}}', color: '#db2777', completo_por: '{{completada_por}}', completo_fecha: '{{fecha_completada}}', dia: '{{dia}}', horario: '{{horario}}', prioridad: '{{prioridad}}', prio_color: '#c2410c', carpeta: '{{carpeta}}', integrantes: '{{integrantes}}', detalles: '{{detalles}}', creador: '{{creador}}', fecha_creacion: '{{fecha_creacion}}', solicitante: '{{solicitante}}', fecha_solicitud: '{{fecha_solicitud}}', link_panel: '{{link_panel}}' };
+    return { nombre_tarea: 'Flyer Nocturna para escuelas', sub_departamento: 'Diseño', departamento: 'Creativos', color: '#db2777', completo_por: 'Camila Ledesma', completo_fecha: '26/10/2026 a las 14:32', dia: 'Miércoles 28 de octubre', horario: 'Todo el día', prioridad: 'Alta', prio_color: '#c2410c', carpeta: s.carpeta ? 'Nocturna 2026' : '',
+      integrantes: ['Valentina Ríos (dirige)', 'Lucía Ferreyra', 'Sofía Benítez', 'Camila Ledesma', 'Martina Vega'],
+      detalles: 'Versión A5 para imprimir y versión digital para WhatsApp.\nUsar la paleta de Nocturna y dejar lugar para el logo de cada escuela.', creador: 'Tomás Aguirre', fecha_creacion: '23/10/2026 a las 16:30',
+      solicitante: s.sol ? 'Carolina Méndez' : '', fecha_solicitud: '22/10/2026 a las 19:02', link_panel: 'https://app.origeniglesia.org/departamentos/creativos' };
+  }
+  renderVals() {
+    const s = this.state, M = window.AOMail;
+    const seg = on => 'height:32px; padding:0 12px; border:0; border-radius:15px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)');
+    const d = this.data(s.vars), light = M ? M.completada(d, false) : '', dark = M ? M.completada(d, true) : '';
+    const tg = (k, a, b2) => [[true, a], [false, b2]].map(([v, t]) => ({ t, style: seg(s[k] === v), ir: () => this.setState({ [k]: v }) }));
+    return {
+      asunto: '✓ Completada: ' + d.nombre_tarea + ' · ' + d.sub_departamento, pre: d.completo_por + ' marcó la tarea como completada',
+      tSol: tg('sol', 'Vino de una solicitud', 'Creada en el panel'), tCarpeta: tg('carpeta', 'Con carpeta', 'Sin carpeta'),
+      tVars: [[false, 'Datos de ejemplo'], [true, 'Variables']].map(([v, t]) => ({ t, style: seg(s.vars === v), ir: () => this.setState({ vars: v }) })),
+      vistas: [{ id: 'A', t: 'Escritorio · 680 px', w: '680px', r: '14px', html: light }, { id: 'B', t: 'Celular · 375 px', w: '375px', r: '36px', html: light }, { id: 'C', t: 'Modo oscuro · 375 px', w: '375px', r: '36px', html: dark }],
+      fit: e => { try { const f = e.target; f.style.height = Math.max(400, f.contentDocument.documentElement.scrollHeight) + 'px'; } catch (er) {} },
+      copyLbl: s.copied ? '¡HTML copiado!' : 'Copiar HTML con variables',
+      copiar: () => { try { navigator.clipboard.writeText(M.completada(this.data(true), false)); } catch (er) {} this.setState({ copied: true }); clearTimeout(this.ct); this.ct = setTimeout(() => this.setState({ copied: false }), 2000); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><script src="./agenda-core.js"></script><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif;color:#0a0a0a}button,input,textarea,select{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}input:focus{outline:none}.ao-s::-webkit-scrollbar{display:none}@keyframes aoFade{from{opacity:0}to{opacity:1}}@keyframes aoUp{from{transform:translateY(100%)}to{transform:none}}@keyframes aoPop{from{opacity:0;margin-top:10px}to{opacity:1;margin-top:0}}@keyframes aoToast{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes aoShim{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:16px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ANCHO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ anchos }}" as="a" hint-placeholder-count="5"><button onClick="{{ a.ir }}" style="{{ a.style }}">{{ a.t }}</button></sc-for></div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ forzar }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.ir }}" style="{{ f.style }}">{{ f.t }}</button></sc-for></div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:#f6f6f4; box-shadow:0 6px 28px rgba(0,0,0,.14); display:flex; flex-direction:column">
+    <div style="flex:none; background:#fff; border-bottom:1px solid rgba(0,0,0,.06); padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:12px">
+        <a href="Departamentos - Inicio.dc.html" aria-label="Volver a Departamentos" style="width:44px; height:44px; flex:none; border-radius:999px; background:#f2f2f0; color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5 M12 19l-7-7 7-7"></path></svg></a>
+        <span style="{{ deptCircle }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ deptPath }}"></path></svg></span>
+        <div style="min-width:0; flex:1"><p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">DEPARTAMENTO</p><h1 style="margin:2px 0 0; font-size:{{ h1 }}; font-weight:700; letter-spacing:-.02em">{{ deptNombre }}</h1></div>
+      </div>
+      <div style="position:relative; display:flex; margin-top:16px">
+        <button onClick="{{ secNav.toggle }}" aria-haspopup="menu" aria-expanded="{{ secNav.open }}" style="height:48px; max-width:100%; padding:0 16px 0 7px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:700">
+          <span style="width:34px; height:34px; flex:none; border-radius:999px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ secNav.actualPath }}"></path></svg></span>
+          <span style="flex:none; white-space:nowrap">{{ secNav.actual }}</span>
+          <sc-if value="{{ secNav.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#dc2626; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ secNav.badge }}</span></sc-if>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; opacity:.75"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <sc-if value="{{ secNav.pop }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ secNav.close }}" style="position:fixed; inset:0; z-index:40"></div>
+          <div role="menu" aria-label="{{ secNav.titulo }}" style="position:absolute; left:0; top:56px; z-index:41; width:340px; background:#fff; border-radius:24px; padding:8px; box-shadow:0 18px 50px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; animation:aoPop .18s ease both">
+          <p style="margin:6px 12px 6px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">{{ secNav.tituloMay }}</p>
+          <sc-for list="{{ secNav.items }}" as="it" hint-placeholder-count="5">
+            <button role="menuitem" aria-current="{{ it.on }}" onClick="{{ it.ir }}" style="{{ it.style }}" style-hover="background:#f6f6f4">
+              <span style="width:38px; height:38px; flex:none; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.path }}"></path></svg></span>
+              <span style="flex:1; min-width:0"><span style="display:block; font-size:14.5px; font-weight:700; color:#0a0a0a">{{ it.t }}</span><span style="display:block; margin-top:2px; font-size:12.5px; line-height:1.35; font-weight:500; color:rgba(0,0,0,.55)">{{ it.desc }}</span></span>
+              <sc-if value="{{ it.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:#dc2626; color:#fff; font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ it.badge }}</span></sc-if>
+              <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+            </button>
+          </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:{{ bodyPad }}">
+      <div style="max-width:1080px; margin:0 auto">
+
+      <sc-if value="{{ st.carga }}" hint-placeholder-val="{{ false }}">
+        <div aria-busy="true" style="display:flex; flex-direction:column; gap:10px">
+          <div style="height:48px; border-radius:999px; background:#fff; animation:aoShim 1.2s infinite"></div>
+          <div style="height:72px; border-radius:22px; background:#fff; animation:aoShim 1.2s .1s infinite"></div>
+          <div style="height:72px; border-radius:22px; background:#fff; animation:aoShim 1.2s .2s infinite"></div>
+          <div style="height:72px; border-radius:22px; background:#fff; animation:aoShim 1.2s .3s infinite"></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ st.error }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border-radius:26px; padding:44px 24px; text-align:center; display:flex; flex-direction:column; align-items:center">
+          <p style="margin:0; font-size:18px; font-weight:700">No pudimos cargar el equipo</p>
+          <p style="margin:8px 0 0; font-size:14px; font-weight:500; color:rgba(0,0,0,.62)">Puede ser la conexión. Probá de nuevo en un momento.</p>
+          <button onClick="{{ reintentar }}" style="height:48px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:700; cursor:pointer">Reintentar</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ v.subsList }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+          <label style="flex:1; min-width:200px; height:48px; border-radius:999px; background:#fff; display:flex; align-items:center; gap:10px; padding:0 16px; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2" stroke-linecap="round"><path d="M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M21 21l-4.3-4.3"></path></svg>
+            <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Buscar sub-departamento o persona" aria-label="Buscar" style="flex:1; min-width:0; border:0; background:transparent; font-size:14.5px; font-weight:600; color:#0a0a0a">
+          </label>
+          <button onClick="{{ abrirNuevo }}" style="height:48px; padding:0 20px 0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Crear sub-departamento</button>
+        </div>
+        <sc-if value="{{ subsVacio }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:16px; background:#fff; border-radius:26px; padding:44px 24px; text-align:center">
+            <p style="margin:0; font-size:18px; font-weight:700">{{ subsVacioTxt }}</p>
+            <p style="margin:8px 0 0; font-size:14px; font-weight:500; color:rgba(0,0,0,.62)">Los sub-departamentos son los equipos que reciben las tareas.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tabla }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top:16px; background:#fff; border-radius:26px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1.4fr) 130px 150px; gap:12px; padding:14px 22px; border-bottom:1px solid rgba(0,0,0,.06); font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)"><span>SUB-DEPARTAMENTO</span><span>QUIÉN LO DIRIGE</span><span>MIEMBROS</span><span></span></div>
+            <sc-for list="{{ subsRows }}" as="r" hint-placeholder-count="4">
+              <div style="display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1.4fr) 130px 150px; gap:12px; align-items:center; padding:12px 22px; min-height:68px; border-bottom:1px solid rgba(0,0,0,.05)">
+                <span style="display:flex; align-items:center; gap:11px; font-size:15px; font-weight:700"><span style="{{ r.dot }}"></span>{{ r.nombre }}</span>
+                <span style="display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; min-width:0"><span style="{{ r.av }}">{{ r.ini }}</span><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.lider }}</span></span>
+                <span style="font-size:14px; font-weight:600; color:rgba(0,0,0,.62)">{{ r.miembros }}</span>
+                <button onClick="{{ r.ver }}" style="height:42px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13.5px; font-weight:700; cursor:pointer">Ver detalles</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ tarjetas }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:16px">
+            <sc-for list="{{ subsRows }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.ver }}" style="width:100%; padding:16px; border:0; border-radius:22px; background:#fff; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <span style="{{ r.bar }}"></span>
+                <span style="flex:1; min-width:0"><span style="display:block; font-size:16px; font-weight:700; color:#0a0a0a">{{ r.nombre }}</span><span style="display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; font-weight:600; color:rgba(0,0,0,.62)"><span style="{{ r.avS }}">{{ r.ini }}</span>{{ r.lider }} · {{ r.miembros }}</span></span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ v.subDet }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ volverSubs }}" style="height:44px; padding:0 16px 0 10px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.72); font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 1px 2px rgba(0,0,0,.05)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>Sub-departamentos</button>
+        <div style="margin-top:16px; background:#fff; border-radius:28px; padding:22px; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <sc-if value="{{ sd.noEdit }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; align-items:center; gap:14px">
+              <span style="{{ sd.dot }}"></span>
+              <h2 style="margin:0; flex:1; min-width:0; font-size:26px; font-weight:700; letter-spacing:-.02em">{{ sd.nombre }}</h2>
+              <button onClick="{{ sd.editar }}" style="height:44px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:7px; flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z M15 5l4 4"></path></svg>Editar nombre</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sd.edit }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:14px">
+              <input value="{{ sd.draft }}" onChange="{{ sd.onDraft }}" aria-label="Nombre del sub-departamento" style="{{ sd.inputSt }}">
+              <div style="display:flex; flex-wrap:wrap; gap:8px"><sc-for list="{{ sd.colores }}" as="c" hint-placeholder-count="12"><button aria-label="{{ c.nombre }}" onClick="{{ c.ir }}" style="{{ c.style }}"></button></sc-for></div>
+              <div style="display:flex; gap:8px"><button onClick="{{ sd.cancelar }}" style="height:44px; padding:0 18px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14px; font-weight:700; cursor:pointer">Cancelar</button><button onClick="{{ sd.guardar }}" style="{{ sd.btn }}">Guardar</button></div>
+            </div>
+          </sc-if>
+          <p style="margin:12px 0 0; font-size:13.5px; font-weight:600; color:rgba(0,0,0,.55)">{{ sd.resumen }}</p>
+        </div>
+
+        <div style="display:grid; grid-template-columns:{{ sdCols }}; gap:14px; margin-top:14px; align-items:start">
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#fff; border-radius:26px; padding:20px">
+              <p style="margin:0 0 12px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">QUIÉN LO DIRIGE</p>
+              <div style="display:flex; align-items:center; gap:12px">
+                <span style="{{ sd.lAv }}">{{ sd.lIni }}</span>
+                <span style="flex:1; min-width:0"><span style="display:block; font-size:15.5px; font-weight:700">{{ sd.lNombre }}</span><span style="display:block; margin-top:2px; font-size:12.5px; font-weight:500; color:rgba(0,0,0,.55); overflow:hidden; text-overflow:ellipsis">{{ sd.lEmail }}</span></span>
+                <button onClick="{{ sd.cambiarLider }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13px; font-weight:700; cursor:pointer; flex:none">Cambiar</button>
+              </div>
+            </div>
+            <div style="background:#fff; border-radius:26px; padding:20px">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px"><p style="margin:0; flex:1; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">INTEGRANTES · {{ sd.nM }}</p></div>
+              <div style="display:flex; flex-direction:column">
+                <sc-for list="{{ sd.miembros }}" as="m" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:12px; min-height:56px; border-bottom:1px solid rgba(0,0,0,.05)">
+                    <span style="{{ m.av }}">{{ m.ini }}</span><span style="flex:1; min-width:0; font-size:14.5px; font-weight:600">{{ m.full }}</span>
+                    <button onClick="{{ m.menu }}" aria-label="{{ m.aria }}" style="width:44px; height:44px; border:0; border-radius:999px; background:transparent; cursor:pointer; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center" style-hover="background:#f2f2f0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h.01 M12 12h.01 M19 12h.01"></path></svg></button>
+                  </div>
+                </sc-for>
+              </div>
+              <button onClick="{{ sd.agregar }}" style="width:100%; height:46px; margin-top:12px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.72); font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M5 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0 M19 8v6 M22 11h-6"></path></svg>Agregar integrantes</button>
+            </div>
+          </div>
+          <div style="background:#fff; border-radius:26px; padding:20px">
+            <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">TAREAS · {{ sd.nT }}</p>
+            <sc-if value="{{ sd.sinTareas }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0; font-size:14px; font-weight:600; color:rgba(0,0,0,.55)">Este sub-departamento todavía no tiene tareas.</p></sc-if>
+            <div style="display:flex; flex-direction:column">
+              <sc-for list="{{ sd.tareas }}" as="t" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.05); flex-wrap:wrap">
+                  <span style="width:92px; flex:none; font-size:12.5px; line-height:1.35; font-weight:700; color:rgba(0,0,0,.62)">{{ t.fecha }}<br><span style="font-weight:600; color:rgba(0,0,0,.5)">{{ t.hora }}</span></span>
+                  <span style="flex:1; min-width:160px; display:flex; flex-direction:column; gap:6px"><span style="font-size:14.5px; font-weight:700">{{ t.nombre }}</span><span style="display:flex; gap:6px; flex-wrap:wrap; align-items:center"><span style="{{ t.estChip }}"><span style="{{ t.estDot }}"></span>{{ t.estado }}</span><sc-if value="{{ t.hayFolder }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.62)"><span style="{{ t.fDot }}"></span>{{ t.folder }}</span></sc-if></span></span>
+                  <button onClick="{{ t.reas }}" style="height:40px; padding:0 14px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13px; font-weight:700; cursor:pointer; flex:none; display:flex; align-items:center; gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4 M20 7H4 M8 21l-4-4 4-4 M4 17h16"></path></svg>Reasignar</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ v.personal }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff; border-radius:28px; padding:20px 22px; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+            <div style="flex:1; min-width:200px"><p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">ENCARGADOS DEL DEPARTAMENTO</p><p style="margin:4px 0 0; font-size:13px; font-weight:500; color:rgba(0,0,0,.62)">Administran todo {{ deptNombre }} y reciben el aviso de cada tarea completada.</p></div>
+            <button onClick="{{ addEnc }}" style="height:42px; padding:0 16px 0 12px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.72); font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Agregar</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px">
+            <sc-for list="{{ encs }}" as="u" hint-placeholder-count="2"><span style="height:46px; padding:0 4px 0 6px; border-radius:999px; background:#f6f6f4; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); display:flex; align-items:center; gap:9px; font-size:14px; font-weight:700"><span style="{{ u.av }}">{{ u.ini }}</span>{{ u.full }}<button onClick="{{ u.quitar }}" aria-label="{{ u.aria }}" style="width:36px; height:36px; border:0; border-radius:999px; background:transparent; cursor:pointer; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg></button></span></sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ orgLine }}" hint-placeholder-val="{{ true }}"><div aria-hidden="true" style="display:flex; justify-content:center"><span style="width:2px; height:22px; background:rgba(0,0,0,.12)"></span></div></sc-if>
+        <sc-if value="{{ noOrgLine }}" hint-placeholder-val="{{ false }}"><div style="height:14px"></div></sc-if>
+        <div style="display:grid; grid-template-columns:{{ persCols }}; gap:12px; align-items:start; {{ orgTop }}">
+          <sc-for list="{{ bloques }}" as="bl" hint-placeholder-count="4">
+            <div style="background:#fff; border-radius:26px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+              <div style="{{ bl.head }}">
+                <span style="{{ bl.dot }}"></span><span style="flex:1; font-size:15.5px; font-weight:700">{{ bl.nombre }}</span><span style="font-size:12.5px; font-weight:600; color:rgba(0,0,0,.55); white-space:nowrap">{{ bl.cnt }}</span>
+              </div>
+              <div style="padding:14px 16px 16px">
+                <div style="display:flex; align-items:center; gap:10px; padding:10px; border-radius:18px; background:#f6f6f4">
+                  <span style="{{ bl.lAv }}">{{ bl.lIni }}</span>
+                  <span style="flex:1; min-width:0"><span style="display:block; font-size:11px; font-weight:700; letter-spacing:.06em; color:rgba(0,0,0,.45)">DIRIGE</span><span style="display:block; font-size:14px; font-weight:700">{{ bl.lNombre }}</span></span>
+                  <button onClick="{{ bl.cambiar }}" aria-label="{{ bl.cambiarAria }}" style="height:36px; padding:0 12px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.62); font-size:12.5px; font-weight:700; cursor:pointer">Cambiar</button>
+                </div>
+                <div style="margin:6px 0 0 26px; padding-left:14px; border-left:2px solid rgba(0,0,0,.08); display:flex; flex-direction:column">
+                  <sc-for list="{{ bl.miembros }}" as="m" hint-placeholder-count="3">
+                    <div style="display:flex; align-items:center; gap:10px; min-height:48px">
+                      <span style="{{ m.av }}">{{ m.ini }}</span><span style="flex:1; min-width:0; font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.full }}</span>
+                      <button onClick="{{ m.menu }}" aria-label="{{ m.aria }}" style="width:44px; height:44px; border:0; border-radius:999px; background:transparent; cursor:pointer; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center; flex:none" style-hover="background:#f2f2f0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h.01 M12 12h.01 M19 12h.01"></path></svg></button>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ v.config }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:680px; background:#fff; border-radius:28px; padding:22px; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <div style="display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap">
+            <div style="flex:1; min-width:200px"><p style="margin:0; font-size:18px; font-weight:700">Prioridades</p><p style="margin:4px 0 0; font-size:13.5px; line-height:1.5; font-weight:500; color:rgba(0,0,0,.62)">{{ prioIntro }}</p></div>
+            <sc-if value="{{ hayPrios }}" hint-placeholder-val="{{ true }}"><button onClick="{{ addPrio }}" style="height:44px; padding:0 16px 0 12px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Agregar prioridad</button></sc-if>
+          </div>
+          <sc-if value="{{ hayPrios }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:18px">
+              <sc-for list="{{ prios }}" as="p" hint-placeholder-count="4">
+                <div draggable="{{ p.drag }}" onDragStart="{{ p.dStart }}" onDragOver="{{ p.dOver }}" onDrop="{{ p.dDrop }}" onDragEnd="{{ p.dEnd }}" style="{{ p.row }}">
+                  <sc-if value="{{ p.drag }}" hint-placeholder-val="{{ true }}"><span aria-hidden="true" title="Arrastrá para ordenar" style="width:28px; height:44px; flex:none; display:flex; align-items:center; justify-content:center; color:rgba(0,0,0,.38); cursor:grab"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9 5h.01 M9 12h.01 M9 19h.01 M15 5h.01 M15 12h.01 M15 19h.01"></path></svg></span></sc-if>
+                  <span style="font-size:12.5px; font-weight:800; color:rgba(0,0,0,.38); width:18px; text-align:center">{{ p.n }}</span>
+                  <span style="{{ p.chip }}"><span style="{{ p.dot }}"></span>{{ p.nombre }}</span>
+                  <span style="flex:1; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.5)">{{ p.uso }}</span>
+                  <sc-if value="{{ p.arrows }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ p.up }}" aria-label="Subir" aria-disabled="{{ p.first }}" style="{{ p.upSt }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5 M5 12l7-7 7 7"></path></svg></button>
+                    <button onClick="{{ p.down }}" aria-label="Bajar" aria-disabled="{{ p.last }}" style="{{ p.downSt }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14 M19 12l-7 7-7-7"></path></svg></button>
+                  </sc-if>
+                  <button onClick="{{ p.editar }}" aria-label="{{ p.editAria }}" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:transparent; color:rgba(0,0,0,.62); cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="background:#f2f2f0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"></path></svg></button>
+                  <button onClick="{{ p.borrar }}" aria-label="{{ p.delAria }}" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:transparent; color:#b42318; cursor:pointer; display:flex; align-items:center; justify-content:center" style-hover="background:#f2f2f0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sinPrios }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:18px; padding:32px 20px; border-radius:22px; background:#f6f6f4; text-align:center; display:flex; flex-direction:column; align-items:center">
+              <p style="margin:0; font-size:16px; font-weight:700">Todavía no hay prioridades</p>
+              <p style="margin:6px 0 0; max-width:340px; font-size:13.5px; line-height:1.55; font-weight:500; color:rgba(0,0,0,.62)">Sirven para que el equipo sepa qué hacer primero. Podés empezar con las sugeridas y cambiarlas después.</p>
+              <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center">
+                <button onClick="{{ usarSugeridas }}" style="height:46px; padding:0 18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14px; font-weight:700; cursor:pointer">Usar las sugeridas (Baja, Normal, Alta, Urgente)</button>
+                <button onClick="{{ addPrio }}" style="height:46px; padding:0 18px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.62); font-size:14px; font-weight:700; cursor:pointer">Crear una</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ nuevoOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shNuevo.close }}" style="{{ shNuevo.back }}"></div>
+      <div role="dialog" aria-label="Crear sub-departamento" style="{{ shNuevo.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shNuevo.down }}" onPointerMove="{{ shNuevo.move }}" onPointerUp="{{ shNuevo.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <p style="margin:0; padding:18px 22px 6px; font-size:20px; font-weight:700">Crear sub-departamento</p>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:10px 22px 16px; display:flex; flex-direction:column; gap:20px">
+          <label style="display:flex; flex-direction:column; gap:8px"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">NOMBRE</span><input value="{{ nv.nombre }}" onChange="{{ nv.onNombre }}" placeholder="Por ejemplo, Ilustración" style="{{ nv.nombreSt }}"><sc-if value="{{ nv.errNombre }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Escribí un nombre.</span></sc-if></label>
+          <div style="display:flex; flex-direction:column; gap:10px"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">COLOR</span><div role="radiogroup" style="display:flex; flex-wrap:wrap; gap:10px"><sc-for list="{{ nv.colores }}" as="c" hint-placeholder-count="12"><button role="radio" aria-checked="{{ c.on }}" aria-label="{{ c.nombre }}" onClick="{{ c.ir }}" style="{{ c.style }}"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></sc-if></button></sc-for></div></div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">QUIÉN LO DIRIGE</span>
+            <sc-if value="{{ nv.hayLider }}" hint-placeholder-val="{{ false }}"><div style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:18px; background:#f6f6f4"><span style="{{ nv.lAv }}">{{ nv.lIni }}</span><span style="flex:1; font-size:14.5px; font-weight:700">{{ nv.lNombre }}</span><button onClick="{{ nv.quitarLider }}" style="height:38px; padding:0 14px; border:0; border-radius:999px; background:#fff; color:rgba(0,0,0,.62); font-size:13px; font-weight:700; cursor:pointer">Cambiar</button></div></sc-if>
+            <sc-if value="{{ nv.sinLider }}" hint-placeholder-val="{{ true }}">
+              <label style="{{ nv.lBox }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2" stroke-linecap="round"><path d="M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M21 21l-4.3-4.3"></path></svg><input value="{{ nv.lq }}" onChange="{{ nv.onLq }}" placeholder="Buscar entre todos los usuarios" aria-label="Buscar quién lo dirige" style="flex:1; min-width:0; border:0; background:transparent; font-size:14.5px; font-weight:600; color:#0a0a0a"></label>
+              <sc-if value="{{ nv.errLider }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Elegí quién lo va a dirigir.</span></sc-if>
+              <div style="display:flex; flex-direction:column; gap:2px"><sc-for list="{{ nv.lRes }}" as="u" hint-placeholder-count="3"><button onClick="{{ u.pick }}" style="min-height:52px; padding:6px 10px; border:0; border-radius:14px; background:transparent; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left" style-hover="background:#f6f6f4"><span style="{{ u.av }}">{{ u.ini }}</span><span style="flex:1; min-width:0"><span style="display:block; font-size:14px; font-weight:700; color:#0a0a0a">{{ u.full }}</span><span style="display:block; font-size:12.5px; font-weight:500; color:rgba(0,0,0,.55)">{{ u.email }}</span></span></button></sc-for></div>
+            </sc-if>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">MIEMBROS</span>
+            <sc-if value="{{ nv.hayM }}" hint-placeholder-val="{{ false }}"><div style="display:flex; flex-wrap:wrap; gap:6px"><sc-for list="{{ nv.ms }}" as="u" hint-placeholder-count="2"><span style="height:38px; padding:0 4px; border-radius:999px; background:#f2f2f0; display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700"><span style="{{ u.av }}">{{ u.ini }}</span>{{ u.full }}<button onClick="{{ u.quitar }}" aria-label="{{ u.aria }}" style="width:30px; height:30px; border:0; border-radius:999px; background:transparent; cursor:pointer; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg></button></span></sc-for></div></sc-if>
+            <label style="height:50px; border-radius:16px; background:#f6f6f4; display:flex; align-items:center; gap:10px; padding:0 14px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2" stroke-linecap="round"><path d="M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M21 21l-4.3-4.3"></path></svg><input value="{{ nv.mq }}" onChange="{{ nv.onMq }}" placeholder="Buscar y sumar personas" aria-label="Buscar miembros" style="flex:1; min-width:0; border:0; background:transparent; font-size:14.5px; font-weight:600; color:#0a0a0a"></label>
+            <div style="display:flex; flex-direction:column; gap:2px"><sc-for list="{{ nv.mRes }}" as="u" hint-placeholder-count="3"><button onClick="{{ u.pick }}" style="min-height:52px; padding:6px 10px; border:0; border-radius:14px; background:transparent; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left" style-hover="background:#f6f6f4"><span style="{{ u.av }}">{{ u.ini }}</span><span style="flex:1; min-width:0"><span style="display:block; font-size:14px; font-weight:700; color:#0a0a0a">{{ u.full }}</span><span style="display:block; font-size:12.5px; font-weight:500; color:rgba(0,0,0,.55)">{{ u.email }}</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.62)" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg></button></sc-for></div>
+          </div>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:14px 22px 24px; border-top:1px solid rgba(0,0,0,.06)">
+          <button onClick="{{ shNuevo.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ nv.crear }}" aria-disabled="{{ nv.invalid }}" style="{{ nv.btn }}">Crear</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pickOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shPick.close }}" style="{{ shPick.back }}"></div>
+      <div role="dialog" aria-label="{{ pk.titulo }}" style="{{ shPick.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shPick.down }}" onPointerMove="{{ shPick.move }}" onPointerUp="{{ shPick.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:18px 22px 8px"><p style="margin:0; font-size:19px; font-weight:700">{{ pk.titulo }}</p><p style="margin:4px 0 0; font-size:13.5px; font-weight:500; color:rgba(0,0,0,.62)">{{ pk.sub }}</p></div>
+        <div style="padding:6px 22px 0"><label style="height:50px; border-radius:16px; background:#f6f6f4; display:flex; align-items:center; gap:10px; padding:0 14px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2" stroke-linecap="round"><path d="M3 11a8 8 0 1 0 16 0a8 8 0 1 0-16 0 M21 21l-4.3-4.3"></path></svg><input value="{{ pk.q }}" onChange="{{ pk.onQ }}" placeholder="Buscar por nombre o email" aria-label="Buscar usuarios" style="flex:1; min-width:0; border:0; background:transparent; font-size:14.5px; font-weight:600; color:#0a0a0a"></label></div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:8px 16px">
+          <sc-for list="{{ pk.res }}" as="u" hint-placeholder-count="5"><button onClick="{{ u.toggle }}" role="checkbox" aria-checked="{{ u.on }}" style="width:100%; min-height:56px; padding:6px 10px; border:0; border-radius:14px; background:{{ u.bg }}; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left"><span style="{{ u.av }}">{{ u.ini }}</span><span style="flex:1; min-width:0"><span style="display:block; font-size:14px; font-weight:700; color:#0a0a0a">{{ u.full }}</span><span style="display:block; font-size:12.5px; font-weight:500; color:rgba(0,0,0,.55)">{{ u.email }}</span></span><span style="{{ u.box }}"><sc-if value="{{ u.on }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></sc-if></span></button></sc-for>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:12px 22px 24px; border-top:1px solid rgba(0,0,0,.06)">
+          <button onClick="{{ shPick.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ pk.ok }}" aria-disabled="{{ pk.dis }}" style="{{ pk.btn }}">{{ pk.okTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ menuOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shMenu.close }}" style="{{ shMenu.back }}"></div>
+      <div role="menu" aria-label="Opciones" style="{{ shMenu.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shMenu.down }}" onPointerMove="{{ shMenu.move }}" onPointerUp="{{ shMenu.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="display:flex; align-items:center; gap:12px; padding:18px 22px 10px"><span style="{{ mn.av }}">{{ mn.ini }}</span><span style="font-size:16px; font-weight:700">{{ mn.full }}</span></div>
+        <div style="display:flex; flex-direction:column; gap:4px; padding:4px 14px 24px">
+          <button onClick="{{ mn.mover }}" role="menuitem" style="min-height:52px; padding:0 14px; border:0; border-radius:16px; background:#f6f6f4; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; font-size:14.5px; font-weight:700; color:#0a0a0a"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4 M20 7H4 M8 21l-4-4 4-4 M4 17h16"></path></svg>Mover a otro sub-departamento</button>
+          <button onClick="{{ mn.quitar }}" role="menuitem" style="min-height:52px; padding:0 14px; border:0; border-radius:16px; background:#f6f6f4; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; font-size:14.5px; font-weight:700; color:#b42318"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg>Quitar del sub-departamento</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ listOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shList.close }}" style="{{ shList.back }}"></div>
+      <div role="dialog" aria-label="{{ ls.titulo }}" style="{{ shList.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shList.down }}" onPointerMove="{{ shList.move }}" onPointerUp="{{ shList.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:18px 22px 8px; overflow-y:auto">
+          <p style="margin:0; font-size:19px; font-weight:700">{{ ls.titulo }}</p><p style="margin:4px 0 0; font-size:13.5px; font-weight:500; color:rgba(0,0,0,.62)">{{ ls.sub }}</p>
+          <div role="radiogroup" style="display:flex; flex-direction:column; gap:6px; margin-top:14px"><sc-for list="{{ ls.opts }}" as="o" hint-placeholder-count="4"><button role="radio" aria-checked="{{ o.on }}" onClick="{{ o.ir }}" style="{{ o.style }}"><span style="{{ o.dot }}"></span><span style="flex:1; text-align:left">{{ o.nombre }}</span><span style="font-size:12.5px; font-weight:600; color:rgba(0,0,0,.55)">{{ o.meta }}</span></button></sc-for></div>
+          <sc-if value="{{ ls.hayAviso }}" hint-placeholder-val="{{ false }}"><p style="margin:14px 0 0; padding:12px 14px; border-radius:16px; background:#f6f6f4; font-size:13.5px; line-height:1.5; font-weight:600; color:rgba(0,0,0,.72)">{{ ls.aviso }}</p></sc-if>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:14px 22px 24px">
+          <button onClick="{{ shList.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ ls.ok }}" aria-disabled="{{ ls.dis }}" style="{{ ls.btn }}">{{ ls.okTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ prioOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shPrio.close }}" style="{{ shPrio.back }}"></div>
+      <div role="dialog" aria-label="{{ pf.titulo }}" style="{{ shPrio.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shPrio.down }}" onPointerMove="{{ shPrio.move }}" onPointerUp="{{ shPrio.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:20px 22px 8px; display:flex; flex-direction:column; gap:18px; overflow-y:auto">
+          <div style="display:flex; align-items:center; gap:10px"><p style="margin:0; flex:1; font-size:19px; font-weight:700">{{ pf.titulo }}</p><span style="{{ pf.prevChip }}"><span style="{{ pf.prevDot }}"></span>{{ pf.prevTxt }}</span></div>
+          <label style="display:flex; flex-direction:column; gap:8px"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">NOMBRE</span><input value="{{ pf.nombre }}" onChange="{{ pf.onNombre }}" placeholder="Por ejemplo, Para el domingo" style="{{ pf.nombreSt }}"><sc-if value="{{ pf.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Escribí un nombre.</span></sc-if></label>
+          <div style="display:flex; flex-direction:column; gap:10px"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">COLOR</span><div role="radiogroup" style="display:flex; flex-wrap:wrap; gap:10px"><sc-for list="{{ pf.colores }}" as="c" hint-placeholder-count="13"><button role="radio" aria-checked="{{ c.on }}" aria-label="{{ c.nombre }}" onClick="{{ c.ir }}" style="{{ c.style }}"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></sc-if></button></sc-for></div></div>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:12px 22px 24px">
+          <button onClick="{{ shPrio.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ pf.ok }}" aria-disabled="{{ pf.invalid }}" style="{{ pf.btn }}">{{ pf.okTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ cfOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shCf.close }}" style="{{ shCf.back }}; z-index:94"></div>
+      <div role="alertdialog" aria-label="{{ cf.titulo }}" style="{{ shCf.panel }}; z-index:95">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shCf.down }}" onPointerMove="{{ shCf.move }}" onPointerUp="{{ shCf.up }}" style="padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:22px 24px 24px">
+          <p style="margin:0; font-size:19px; line-height:1.3; font-weight:700">{{ cf.titulo }}</p>
+          <p style="margin:8px 0 0; font-size:14.5px; line-height:1.55; font-weight:500; color:rgba(0,0,0,.62)">{{ cf.texto }}</p>
+          <div style="display:flex; gap:8px; margin-top:22px; flex-wrap:wrap">
+            <button onClick="{{ shCf.close }}" style="flex:1; min-width:120px; height:48px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+            <button onClick="{{ cf.ok }}" style="{{ cf.btn }}">{{ cf.okTxt }}</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ secNav.sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ secNav.close }}" style="{{ secNav.sh.back }}"></div>
+      <div role="menu" aria-label="{{ secNav.titulo }}" style="{{ secNav.sh.panel }}">
+        <div onPointerDown="{{ secNav.sh.down }}" onPointerMove="{{ secNav.sh.move }}" onPointerUp="{{ secNav.sh.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none; cursor:grab"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div>
+        <p style="margin:10px 22px 8px; font-size:19px; font-weight:700">{{ secNav.titulo }}</p>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:0 12px 30px; display:flex; flex-direction:column; gap:2px">
+          <sc-for list="{{ secNav.items }}" as="it" hint-placeholder-count="5">
+            <button role="menuitem" aria-current="{{ it.on }}" onClick="{{ it.ir }}" style="{{ it.style }}" style-hover="background:#f6f6f4">
+              <span style="width:38px; height:38px; flex:none; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.path }}"></path></svg></span>
+              <span style="flex:1; min-width:0"><span style="display:block; font-size:14.5px; font-weight:700; color:#0a0a0a">{{ it.t }}</span><span style="display:block; margin-top:2px; font-size:12.5px; line-height:1.35; font-weight:500; color:rgba(0,0,0,.55)">{{ it.desc }}</span></span>
+              <sc-if value="{{ it.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:#dc2626; color:#fff; font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ it.badge }}</span></sc-if>
+              <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="{{ toastStyle }}"><span style="width:24px; height:24px; flex:none; border-radius:999px; background:#16a34a; display:flex; align-items:center; justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span><span style="flex:1">{{ toast }}</span></div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    let tab = 'subs'; try { const m = location.search.match(/tab=(subs|personal|config)/); if (m) tab = m[1]; } catch (e) {}
+    this.state = { w: 1440, forced: null, db: null, tab, q: '', subDet: null, editN: null, nuevo: null, pick: null, menu: null, list: null, prio: null, cf: null, drag: null, toast: null, _dragY: 0 };
+  }
+  componentDidMount() { this.boot(); }
+  boot() { if (!window.AO) { setTimeout(() => this.boot(), 40); return; } this.setState({ db: AO.seed() }); }
+  DEP = 'd1';
+  upd(fn) { this.setState(s => ({ db: fn(s.db) })); }
+  setSub(id, fn) { this.upd(db => ({ ...db, subs: db.subs.map(x => x.id === id ? fn(x) : x) })); }
+  setDept(fn) { this.upd(db => ({ ...db, depts: db.depts.map(d => d.id === this.DEP ? fn(d) : d) })); }
+  confirm(o) { this.setState({ cf: o, _dragY: 0 }); }
+
+  renderVals() {
+    const s = this.state, A = window.AO;
+    if (!A || !s.db) return { st: { carga: true }, v: {}, bp: {}, anchos: [], forzar: [], subsRows: [], bloques: [], encs: [], prios: [], sd: {}, frameW: '1440px', frameH: '880px' };
+    const b = A.bp(s.w), db = s.db, S = A.S, U = A.user;
+    const dept = db.depts.find(d => d.id === this.DEP), subs = db.subs.filter(x => x.dept === dept.id), subOf = id => db.subs.find(x => x.id === id);
+    const n = (k, a, p) => k + ' ' + (k === 1 ? a : p);
+    const st = { carga: s.forced === 'carga', error: s.forced === 'error' }, ok = !st.carga && !st.error;
+    const red = S.prim(false) + '; flex:1; min-width:150px; background:#b42318', blk = S.prim(false) + '; flex:1; min-width:150px';
+    const forzar = [[null, 'Normal'], ['carga', 'Cargando'], ['error', 'Error'], ['sinPrio', 'Sin prioridades']].map(([k, t]) => ({ t, style: S.tool(s.forced === k), ir: () => this.setState({ forced: k }) }));
+    const v = { subsList: ok && s.tab === 'subs' && !s.subDet, subDet: ok && s.tab === 'subs' && !!s.subDet, personal: ok && s.tab === 'personal', config: ok && s.tab === 'config' };
+    const memberMenu = (subId, uid) => () => this.setState({ menu: { sub: subId, u: uid }, _dragY: 0 });
+
+    // Lista de sub-departamentos
+    const k = A.strip(s.q.trim());
+    const rows = subs.filter(x => !k || A.strip(x.nombre + ' ' + U(x.lider).full + ' ' + x.miembros.map(m => U(m).full).join(' ')).includes(k)).map(x => { const l = U(x.lider);
+      return { nombre: x.nombre, dot: S.dot(x.color, 12), bar: 'width:5px; align-self:stretch; flex:none; border-radius:999px; background:' + x.color, lider: l.full, ini: l.ini, av: S.avatar(l, 34), avS: S.avatar(l, 24),
+        miembros: n(x.miembros.length, 'miembro', 'miembros'), ver: () => this.setState({ subDet: x.id, editN: null }) }; });
+
+    // Detalle sub
+    const sx = s.subDet && subOf(s.subDet); let sd = {};
+    if (sx) {
+      const l = U(sx.lider), ts = db.tasks.filter(t => t.sub === sx.id).sort((a, c) => a.fecha < c.fecha ? -1 : 1), en = s.editN;
+      sd = { nombre: sx.nombre, dot: S.dot(sx.color, 18), noEdit: !en, edit: !!en, draft: en ? en.nombre : '', inputSt: S.input(en && !en.nombre.trim()) + '; font-size:20px; font-weight:700; height:56px',
+        onDraft: e => this.setState({ editN: { ...this.state.editN, nombre: e.target.value } }),
+        colores: A.PALETA.map(([c, nm]) => ({ nombre: nm, style: S.swatch(c, en && en.color === c) + '; width:36px; height:36px', ir: () => this.setState({ editN: { ...this.state.editN, color: c } }) })),
+        editar: () => this.setState({ editN: { nombre: sx.nombre, color: sx.color } }), cancelar: () => this.setState({ editN: null }),
+        btn: S.prim(en && !en.nombre.trim()) + '; height:44px',
+        guardar: () => { if (!en.nombre.trim()) return; this.setSub(sx.id, x => ({ ...x, nombre: en.nombre.trim(), color: en.color })); this.setState({ editN: null }); A.toast(this, 'Nombre guardado'); },
+        resumen: n(sx.miembros.length, 'integrante', 'integrantes') + ' · ' + n(ts.length, 'tarea', 'tareas') + ' · ' + dept.nombre,
+        lIni: l.ini, lNombre: l.full, lEmail: l.email, lAv: S.avatar(l, 46), nM: String(sx.miembros.length),
+        cambiarLider: () => this.setState({ pick: { kind: 'lider', sub: sx.id, q: '', sel: [] }, _dragY: 0 }),
+        miembros: sx.miembros.map(id => { const u = U(id); return { ini: u.ini, full: u.full, av: S.avatar(u, 36), aria: 'Opciones para ' + u.full, menu: memberMenu(sx.id, id) }; }),
+        agregar: () => this.setState({ pick: { kind: 'add', sub: sx.id, q: '', sel: [] }, _dragY: 0 }),
+        nT: String(ts.length), sinTareas: ts.length === 0,
+        tareas: ts.map(t => { const fo = t.folder && db.folders.find(x => x.id === t.folder), e = A.ESTADOS[t.estado];
+          return { fecha: A.fmt.ddmm(t.fecha) + ' · ' + A.cap(A.DIAS[A.D(t.fecha).getDay()]).slice(0, 3), hora: A.fmt.horario(t), nombre: t.nombre, estado: e.label, estChip: S.estado(t.estado), estDot: S.dot(e.dot, 7),
+            hayFolder: !!fo, folder: fo ? fo.nombre : '', fDot: S.dot(fo ? fo.color : '#000', 8), reas: () => this.setState({ list: { kind: 'reas', task: t.id, to: null }, _dragY: 0 }) }; }) };
+    }
+
+    // Personal
+    const encs = dept.encargados.map(id => { const u = U(id); return { ini: u.ini, full: u.full, av: S.avatar(u, 34), aria: 'Quitar a ' + u.full + ' de encargados',
+      quitar: () => dept.encargados.length === 1 ? this.confirm({ titulo: 'Tiene que quedar al menos un encargado', texto: 'Sumá a otra persona antes de quitar a ' + u.nombre + '.', okTxt: 'Entendido', btn: blk, ok: () => this.setState({ cf: null }) })
+        : this.confirm({ titulo: '¿Quitar a ' + u.full + ' de encargados?', texto: 'Deja de administrar ' + dept.nombre + ' y de recibir los avisos de tareas completadas. Si es integrante de algún sub-departamento, sigue viendo esas tareas.', okTxt: 'Quitar', btn: red,
+          ok: () => { this.setDept(d => ({ ...d, encargados: d.encargados.filter(x => x !== id) })); this.setState({ cf: null }); A.toast(this, u.nombre + ' ya no es encargado/a'); } }) }; });
+    const bloques = subs.map(x => { const l = U(x.lider);
+      return { nombre: x.nombre, dot: S.dot(x.color, 12), cnt: n(x.miembros.length + 1, 'persona', 'personas'), head: 'display:flex; align-items:center; gap:10px; padding:14px 18px; background:' + A.tint(x.color, '14') + '; box-shadow:inset 0 3px 0 ' + x.color,
+        lIni: l.ini, lNombre: l.full, lAv: S.avatar(l, 38), cambiarAria: 'Cambiar quién dirige ' + x.nombre,
+        cambiar: () => this.setState({ pick: { kind: 'lider', sub: x.id, q: '', sel: [] }, _dragY: 0 }),
+        miembros: x.miembros.map(id => { const u = U(id); return { ini: u.ini, full: u.full, av: S.avatar(u, 30), aria: 'Opciones para ' + u.full, menu: memberMenu(x.id, id) }; }) }; });
+
+    // Prioridades
+    const prioList = s.forced === 'sinPrio' ? [] : dept.prioridades;
+    const usoDe = pid => db.tasks.filter(t => t.dept === dept.id && t.prio === pid).length;
+    const move = (i, j) => { if (j < 0 || j >= prioList.length) return; this.setDept(d => { const a = d.prioridades.slice(); const [it] = a.splice(i, 1); a.splice(j, 0, it); return { ...d, prioridades: a }; }); };
+    const arrowSt = dis => 'width:44px; height:44px; flex:none; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); cursor:pointer; display:flex; align-items:center; justify-content:center' + (dis ? '; opacity:.35' : '');
+    const prios = prioList.map((p, i) => { const uso = usoDe(p.id);
+      return { n: String(i + 1), nombre: p.nombre, chip: S.chip(p.color) + '; height:30px; font-size:13px; padding:0 12px', dot: S.dot(p.color, 9), uso: uso ? n(uso, 'tarea', 'tareas') : 'Sin usar',
+        drag: !b.mobile, arrows: b.mobile, first: i === 0, last: i === prioList.length - 1, upSt: arrowSt(i === 0), downSt: arrowSt(i === prioList.length - 1), up: () => move(i, i - 1), down: () => move(i, i + 1),
+        row: 'min-height:58px; padding:6px 6px 6px ' + (b.mobile ? '12px' : '4px') + '; border-radius:18px; display:flex; align-items:center; gap:10px; transition:background-color .15s; background:' + (s.drag === p.id ? '#ebebe8' : '#f6f6f4') + (s.drag && s.drag !== p.id ? '; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)' : ''),
+        dStart: e => { e.dataTransfer.effectAllowed = 'move'; this.setState({ drag: p.id }); }, dOver: e => e.preventDefault(),
+        dDrop: e => { e.preventDefault(); const from = prioList.findIndex(x => x.id === this.state.drag); if (from >= 0 && from !== i) move(from, i); this.setState({ drag: null }); },
+        dEnd: () => this.setState({ drag: null }),
+        editAria: 'Editar ' + p.nombre, delAria: 'Eliminar ' + p.nombre,
+        editar: () => this.setState({ prio: { id: p.id, nombre: p.nombre, color: p.color, touched: false }, _dragY: 0 }),
+        borrar: () => uso ? this.setState({ list: { kind: 'prioDel', prio: p.id, to: null }, _dragY: 0 })
+          : this.confirm({ titulo: '¿Eliminar la prioridad “' + p.nombre + '”?', texto: 'No la usa ninguna tarea. Deja de aparecer al crear tareas.', okTxt: 'Eliminar', btn: red,
+            ok: () => { this.setDept(d => ({ ...d, prioridades: d.prioridades.filter(x => x.id !== p.id) })); this.setState({ cf: null }); A.toast(this, 'Prioridad eliminada'); } }) }; });
+
+    // Crear sub
+    const nw = s.nuevo; let nv = {};
+    if (nw) {
+      const set = p => this.setState({ nuevo: { ...this.state.nuevo, ...p } }), inv = !nw.nombre.trim() || !nw.lider, tt = nw.touched;
+      const l = nw.lider && U(nw.lider);
+      nv = { nombre: nw.nombre, onNombre: e => set({ nombre: e.target.value }), nombreSt: S.input(tt && !nw.nombre.trim()), errNombre: tt && !nw.nombre.trim(),
+        colores: A.PALETA.map(([c, nm]) => ({ nombre: nm, on: nw.color === c, style: S.swatch(c, nw.color === c), ir: () => set({ color: c }) })),
+        hayLider: !!l, sinLider: !l, lIni: l ? l.ini : '', lNombre: l ? l.full : '', lAv: l ? S.avatar(l, 36) : '', quitarLider: () => set({ lider: null }),
+        lq: nw.lq, onLq: e => set({ lq: e.target.value }), errLider: tt && !l,
+        lBox: 'height:50px; border-radius:16px; background:#f6f6f4; display:flex; align-items:center; gap:10px; padding:0 14px; box-shadow:' + (tt && !l ? 'inset 0 0 0 2px #b42318' : 'inset 0 0 0 1px rgba(0,0,0,.06)'),
+        lRes: A.buscar(nw.lq).slice(0, nw.lq ? 5 : 3).map(u => ({ ini: u.ini, full: u.full, email: u.email, av: S.avatar(u, 36), pick: () => set({ lider: u.id, lq: '', ms: this.state.nuevo.ms.filter(x => x !== u.id) }) })),
+        hayM: nw.ms.length > 0, ms: nw.ms.map(id => { const u = U(id); return { ini: u.ini, full: u.full, av: S.avatar(u, 30), aria: 'Quitar a ' + u.full, quitar: () => set({ ms: this.state.nuevo.ms.filter(x => x !== id) }) }; }),
+        mq: nw.mq, onMq: e => set({ mq: e.target.value }),
+        mRes: A.buscar(nw.mq, [...nw.ms, nw.lider]).slice(0, nw.mq ? 5 : 3).map(u => ({ ini: u.ini, full: u.full, email: u.email, av: S.avatar(u, 36), pick: () => set({ ms: [...this.state.nuevo.ms, u.id], mq: '' }) })),
+        invalid: inv, btn: S.prim(inv) + '; flex:1.3; height:50px',
+        crear: () => { if (inv) { set({ touched: true }); return; } const id = 's' + Date.now();
+          this.upd(d2 => ({ ...d2, subs: [...d2.subs, { id, dept: dept.id, nombre: nw.nombre.trim(), color: nw.color, lider: nw.lider, miembros: nw.ms }] }));
+          this.setState({ nuevo: null }); A.toast(this, nw.nombre.trim() + ' creado. Les avisamos a sus integrantes.'); } };
+    }
+
+    // Selector de personas
+    const pkS = s.pick; let pk = {};
+    if (pkS) {
+      const sx2 = subOf(pkS.sub), single = pkS.kind === 'lider';
+      const excl = pkS.kind === 'enc' ? dept.encargados : pkS.kind === 'add' ? [sx2.lider, ...sx2.miembros] : [sx2.lider];
+      const toggle = id => { const sel = this.state.pick.sel; this.setState({ pick: { ...this.state.pick, sel: single ? [id] : sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id] } }); };
+      const dis = pkS.sel.length === 0;
+      pk = { titulo: pkS.kind === 'enc' ? 'Agregar encargados' : pkS.kind === 'add' ? 'Agregar integrantes a ' + sx2.nombre : 'Cambiar quién dirige ' + sx2.nombre,
+        sub: pkS.kind === 'lider' ? 'Hoy lo dirige ' + U(sx2.lider).full + '. Elegí a la persona nueva.' : 'Podés elegir varias personas.',
+        q: pkS.q, onQ: e => this.setState({ pick: { ...this.state.pick, q: e.target.value } }),
+        res: A.buscar(pkS.q, excl).concat([]).slice(0, 8).map(u => { const on = pkS.sel.includes(u.id); return { ini: u.ini, full: u.full, email: u.email, av: S.avatar(u, 38), on, bg: on ? '#f2f2f0' : 'transparent', toggle: () => toggle(u.id),
+          box: 'width:24px; height:24px; flex:none; border-radius:' + (single ? '999px' : '8px') + '; display:flex; align-items:center; justify-content:center; ' + (on ? 'background:#0a0a0a' : 'box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)') }; }),
+        dis, btn: S.prim(dis) + '; flex:1.3; height:50px', okTxt: pkS.kind === 'lider' ? 'Continuar' : dis ? 'Agregar' : 'Agregar ' + pkS.sel.length,
+        ok: () => { if (dis) return;
+          if (pkS.kind === 'enc') { this.setDept(d => ({ ...d, encargados: [...d.encargados, ...pkS.sel] })); this.setState({ pick: null }); A.toast(this, pkS.sel.length === 1 ? U(pkS.sel[0]).nombre + ' ahora es encargado/a' : 'Encargados agregados'); return; }
+          if (pkS.kind === 'add') { this.setSub(sx2.id, x => ({ ...x, miembros: [...x.miembros, ...pkS.sel] })); this.setState({ pick: null }); A.toast(this, 'Ya ven las tareas de ' + sx2.nombre + ' en su Agenda'); return; }
+          const nu = U(pkS.sel[0]), old = U(sx2.lider);
+          this.setState({ pick: null }); this.confirm({ titulo: '¿' + nu.full + ' va a dirigir ' + sx2.nombre + '?', texto: old.full + ' deja de dirigirlo y queda como integrante. ' + nu.nombre + ' va a recibir las tareas nuevas y va a poder marcarlas como completadas.', okTxt: 'Sí, cambiar', btn: blk,
+            ok: () => { this.setSub(sx2.id, x => ({ ...x, lider: nu.id, miembros: [old.id, ...x.miembros.filter(m => m !== nu.id && m !== old.id)] })); this.setState({ cf: null }); A.toast(this, 'Ahora ' + sx2.nombre + ' lo dirige ' + nu.nombre); } }); } };
+    }
+    // Menú de integrante
+    const mnS = s.menu; let mn = {};
+    if (mnS) { const u = U(mnS.u), sx3 = subOf(mnS.sub);
+      mn = { ini: u.ini, full: u.full, av: S.avatar(u, 40),
+        mover: () => this.setState({ menu: null, list: { kind: 'mover', sub: sx3.id, u: u.id, to: null }, _dragY: 0 }),
+        quitar: () => { this.setState({ menu: null }); this.confirm({ titulo: '¿Quitar a ' + u.full + ' de ' + sx3.nombre + '?', texto: u.nombre + ' va a dejar de ver las tareas de ' + sx3.nombre + ' en su Agenda. Esto no borra las tareas.', okTxt: 'Quitar', btn: red,
+          ok: () => { this.setSub(sx3.id, x => ({ ...x, miembros: x.miembros.filter(m => m !== u.id) })); this.setState({ cf: null }); A.toast(this, u.nombre + ' ya no está en ' + sx3.nombre); } }); } };
+    }
+    // Lista de selección (mover / reasignar / reemplazar prioridad)
+    const lsS = s.list; let ls = {};
+    if (lsS) {
+      const setTo = id => this.setState({ list: { ...this.state.list, to: id } });
+      const subOpt = (x, on) => ({ nombre: x.nombre, meta: n(x.miembros.length + 1, 'persona', 'personas'), on, dot: S.dot(x.color, 12), style: S.pick(x.color, on) + '; width:100%; min-height:52px; border-radius:16px; justify-content:flex-start', ir: () => setTo(x.id) });
+      if (lsS.kind === 'mover') { const u = U(lsS.u), from = subOf(lsS.sub), to = lsS.to && subOf(lsS.to);
+        ls = { titulo: 'Mover a ' + u.full, sub: 'Hoy está en ' + from.nombre + '. ¿A qué sub-departamento pasa?', opts: subs.filter(x => x.id !== from.id).map(x => subOpt(x, lsS.to === x.id)),
+          hayAviso: !!to, aviso: to ? u.nombre + ' deja de ver las tareas de ' + from.nombre + ' y empieza a ver las de ' + to.nombre + '. Las tareas no cambian.' : '', okTxt: 'Mover', dis: !to, btn: S.prim(!to) + '; flex:1.3; height:50px',
+          ok: () => { if (!to) return; this.upd(d2 => ({ ...d2, subs: d2.subs.map(x => x.id === from.id ? { ...x, miembros: x.miembros.filter(m => m !== u.id) } : x.id === to.id ? { ...x, miembros: x.miembros.includes(u.id) || x.lider === u.id ? x.miembros : [...x.miembros, u.id] } : x) })); this.setState({ list: null }); A.toast(this, u.nombre + ' ahora está en ' + to.nombre); } };
+      }
+      if (lsS.kind === 'reas') { const t = db.tasks.find(x => x.id === lsS.task), from = subOf(t.sub), to = lsS.to && subOf(lsS.to);
+        ls = { titulo: 'Reasignar tarea', sub: '“' + t.nombre + '” hoy la tiene ' + from.nombre + '.', opts: subs.filter(x => x.id !== from.id).map(x => subOpt(x, lsS.to === x.id)),
+          hayAviso: !!to, aviso: to ? 'Los integrantes de ' + to.nombre + ' la van a ver en su Agenda y van a recibir un email.' : '', okTxt: 'Reasignar', dis: !to, btn: S.prim(!to) + '; flex:1.3; height:50px',
+          ok: () => { if (!to) return; this.upd(d2 => ({ ...d2, tasks: d2.tasks.map(x => x.id === t.id ? { ...x, sub: to.id } : x) })); this.setState({ list: null }); A.toast(this, 'Ahora la tiene ' + to.nombre); } };
+      }
+      if (lsS.kind === 'prioDel') { const p = dept.prioridades.find(x => x.id === lsS.prio), uso = usoDe(p.id), to = lsS.to && dept.prioridades.find(x => x.id === lsS.to);
+        ls = { titulo: '¿Eliminar “' + p.nombre + '”?', sub: 'La usan ' + n(uso, 'tarea', 'tareas') + '. Elegí qué prioridad van a tener ahora.',
+          opts: dept.prioridades.filter(x => x.id !== p.id).map(x => ({ nombre: x.nombre, meta: '', on: lsS.to === x.id, dot: S.dot(x.color, 12), style: S.pick(x.color, lsS.to === x.id) + '; width:100%; min-height:52px; border-radius:16px; justify-content:flex-start', ir: () => setTo(x.id) })),
+          hayAviso: !!to, aviso: to ? 'Las ' + n(uso, 'tarea', 'tareas') + ' con “' + p.nombre + '” pasan a “' + to.nombre + '”.' : '', okTxt: 'Eliminar y pasar', dis: !to, btn: S.prim(!to) + '; flex:1.3; height:50px; background:#b42318',
+          ok: () => { if (!to) return; this.upd(d2 => ({ ...d2, tasks: d2.tasks.map(t => t.dept === dept.id && t.prio === p.id ? { ...t, prio: to.id } : t), depts: d2.depts.map(d => d.id === dept.id ? { ...d, prioridades: d.prioridades.filter(x => x.id !== p.id) } : d) })); this.setState({ list: null }); A.toast(this, 'Prioridad eliminada'); } };
+      }
+    }
+    // Prioridad form
+    const pfS = s.prio; let pf = {};
+    if (pfS) { const set = p => this.setState({ prio: { ...this.state.prio, ...p } }), inv = !pfS.nombre.trim();
+      const cols = [['rgba(0,0,0,.5)', 'Gris'], ...A.PALETA];
+      pf = { titulo: pfS.id ? 'Editar prioridad' : 'Agregar prioridad', okTxt: pfS.id ? 'Guardar' : 'Agregar', nombre: pfS.nombre, onNombre: e => set({ nombre: e.target.value }), nombreSt: S.input(pfS.touched && inv), err: pfS.touched && inv,
+        prevChip: S.chip(pfS.color) + '; height:30px; font-size:13px; padding:0 12px', prevDot: S.dot(pfS.color, 9), prevTxt: pfS.nombre.trim() || 'Vista previa',
+        colores: cols.map(([c, nm]) => ({ nombre: nm, on: pfS.color === c, style: S.swatch(c, pfS.color === c), ir: () => set({ color: c }) })),
+        invalid: inv, btn: S.prim(inv) + '; flex:1.3; height:50px',
+        ok: () => { if (inv) { set({ touched: true }); return; }
+          this.setDept(d => ({ ...d, prioridades: pfS.id ? d.prioridades.map(x => x.id === pfS.id ? { ...x, nombre: pfS.nombre.trim(), color: pfS.color } : x) : [...d.prioridades, { id: 'p' + Date.now(), nombre: pfS.nombre.trim(), color: pfS.color }] }));
+          if (s.forced === 'sinPrio') this.setState({ forced: null });
+          this.setState({ prio: null }); A.toast(this, pfS.id ? 'Prioridad guardada' : 'Prioridad agregada'); } };
+    }
+    const cf = s.cf || {};
+    const tabSt = on => S.tab(on);
+    return {
+      bp: b, ...A.frame(s.w), anchos: A.anchos(this), forzar, st, v,
+      headPad: b.mobile ? '56px 16px 14px' : '22px 28px 16px', bodyPad: b.mobile ? '16px 16px 48px' : '22px 28px 48px', h1: b.mobile ? '22px' : '26px',
+      deptNombre: dept.nombre, deptPath: A.I[dept.icon], deptCircle: S.iconCircle(dept.color, 48), tabOffA: S.tab(false) + '; text-decoration:none',
+      tabSubs: tabSt(s.tab === 'subs'),
+      secNav: Object.assign(A.secMenu(this, [
+        { t: 'Tareas', desc: 'Todo lo que tiene el departamento', icon: 'calendar', href: 'Departamento - Tareas.dc.html' },
+        { t: 'Solicitudes', desc: 'Pedidos que llegan de otras personas', icon: 'inbox', badge: db.solicitudes.filter(r => r.dept === dept.id && r.estado === 'nueva').length, href: 'Departamento - Tareas.dc.html?tab=solicitudes' },
+        { t: 'Sub-departamentos', desc: 'Los equipos que reciben las tareas', icon: 'grid', on: s.tab === 'subs', go: () => this.setState({ tab: 'subs', subDet: null }) },
+        { t: 'Personal', desc: 'Encargados y quién tiene a cargo a quién', icon: 'users', on: s.tab === 'personal', go: () => this.setState({ tab: 'personal' }) },
+        { t: 'Configuración', desc: 'Prioridades del departamento', icon: 'settings', on: s.tab === 'config', go: () => this.setState({ tab: 'config' }) }
+      ], b.mobile, 'Secciones del departamento'), { tituloMay: 'SECCIONES DEL DEPARTAMENTO' }),
+       tabPers: tabSt(s.tab === 'personal'), tabConf: tabSt(s.tab === 'config'),
+      goSubs: () => this.setState({ tab: 'subs', subDet: null }), goPers: () => this.setState({ tab: 'personal' }), goConf: () => this.setState({ tab: 'config' }),
+      reintentar: () => { this.setState({ forced: 'carga' }); setTimeout(() => this.setState({ forced: null }), 1000); },
+      q: s.q, onQ: e => this.setState({ q: e.target.value }), subsRows: rows, tabla: !b.mobile && rows.length > 0, tarjetas: b.mobile && rows.length > 0,
+      subsVacio: rows.length === 0, subsVacioTxt: s.q ? 'No encontramos ese sub-departamento' : 'Todavía no hay sub-departamentos',
+      abrirNuevo: () => this.setState({ nuevo: { nombre: '', color: '#db2777', lider: null, lq: '', ms: [], mq: '', touched: false }, _dragY: 0 }),
+      sd, sdCols: s.w >= 1024 ? 'minmax(0,1fr) minmax(0,1.25fr)' : 'minmax(0,1fr)', volverSubs: () => this.setState({ subDet: null, editN: null }),
+      encs, addEnc: () => this.setState({ pick: { kind: 'enc', q: '', sel: [] }, _dragY: 0 }), bloques,
+      persCols: b.mobile ? 'minmax(0,1fr)' : s.w < 1100 ? 'repeat(2,minmax(0,1fr))' : 'repeat(' + Math.min(4, bloques.length) + ',minmax(0,1fr))',
+      orgLine: !b.mobile, noOrgLine: b.mobile, orgTop: b.mobile ? '' : 'padding-top:16px; border-top:2px solid rgba(0,0,0,.12); border-radius:0',
+      prios, hayPrios: prios.length > 0, sinPrios: prios.length === 0, prioIntro: b.mobile ? 'Usá las flechas para ordenarlas. La primera es la menos urgente.' : 'Arrastrá desde la manija para ordenarlas. La primera es la menos urgente.',
+      addPrio: () => this.setState({ prio: { nombre: '', color: '#2563eb', touched: false }, _dragY: 0 }),
+      usarSugeridas: () => { this.setDept(d => ({ ...d, prioridades: [{ id: 'p1', nombre: 'Baja', color: 'rgba(0,0,0,.5)' }, { id: 'p2', nombre: 'Normal', color: '#2563eb' }, { id: 'p3', nombre: 'Alta', color: '#c2410c' }, { id: 'p4', nombre: 'Urgente', color: '#dc2626' }] })); this.setState({ forced: null }); A.toast(this, 'Listo, ya tenés las cuatro sugeridas'); },
+      nuevoOn: !!nw, nv, shNuevo: A.sheet(this, 'nuevo', b.mobile, { w: 580 }),
+      pickOn: !!pkS, pk, shPick: A.sheet(this, 'pick', b.mobile, { w: 500 }),
+      menuOn: !!mnS, mn, shMenu: A.sheet(this, 'menu', b.mobile, { w: 400 }),
+      listOn: !!lsS && !!ls.titulo, ls, shList: A.sheet(this, 'list', b.mobile, { w: 480 }),
+      prioOn: !!pfS, pf, shPrio: A.sheet(this, 'prio', b.mobile, { w: 480 }),
+      cfOn: !!s.cf, cf, shCf: A.sheet(this, 'cf', b.mobile, { w: 440 }),
+      toastOn: !!s.toast, toast: s.toast, toastStyle: A.toastStyle(b.mobile)
+    };
+  }
+}
+</script>
+</body>
+</html>

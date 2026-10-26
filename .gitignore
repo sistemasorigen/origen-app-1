@@ -47,3 +47,8 @@ tmp_*.js
 !.env.example
 supabase/.temp/
 sql/grant_superadmin.sql
+
+# Capturas de pantalla (por ejemplo design-claude/screenshots/, las que deja
+# Claude Design). El repo es público y `npm run deploy` hace `git add -A`:
+# una captura con datos reales se publicaría sin que nadie la mire.
+screenshots/

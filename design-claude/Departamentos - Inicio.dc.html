@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><script src="./agenda-core.js"></script><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif;color:#0a0a0a}button,input{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}a:focus-visible,button:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}@keyframes aoShim{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:16px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ANCHO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ anchos }}" as="a" hint-placeholder-count="5"><button onClick="{{ a.ir }}" style="{{ a.style }}">{{ a.t }}</button></sc-for></div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">PERFIL</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ perfiles }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.ir }}" style="{{ p.style }}">{{ p.t }}</button></sc-for></div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ forzar }}" as="f" hint-placeholder-count="2"><button onClick="{{ f.ir }}" style="{{ f.style }}">{{ f.t }}</button></sc-for></div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:#f6f6f4; box-shadow:0 6px 28px rgba(0,0,0,.14); display:flex; flex-direction:column">
+    <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none; padding:47px 8px 0; display:flex; align-items:center; gap:4px">
+        <button aria-label="Abrir el menú" style="width:44px; height:44px; border:0; border-radius:999px; background:transparent; display:flex; align-items:center; justify-content:center; cursor:pointer"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"></path></svg></button>
+        <span style="font-size:16px; font-weight:600">Origen</span>
+      </div>
+    </sc-if>
+    <div style="flex:1; min-height:0; overflow-y:auto; padding:{{ pad }}">
+      <div style="max-width:1080px; margin:0 auto">
+        <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">ADMINISTRACIÓN</p>
+        <h1 style="margin:4px 0 0; font-size:{{ h1 }}; font-weight:700; letter-spacing:-.025em">Departamentos</h1>
+        <p style="margin:8px 0 0; font-size:14.5px; line-height:1.55; font-weight:500; color:rgba(0,0,0,.62)">{{ intro }}</p>
+
+        <sc-if value="{{ carga }}" hint-placeholder-val="{{ false }}">
+          <div aria-busy="true" style="display:grid; grid-template-columns:{{ cols }}; gap:12px; margin-top:24px">
+            <div style="height:180px; border-radius:28px; background:#fff; animation:aoShim 1.2s infinite"></div>
+            <div style="height:180px; border-radius:28px; background:#fff; animation:aoShim 1.2s .15s infinite"></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hayDepts }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:28px 4px 12px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">{{ deptsLbl }}</p>
+          <div style="display:grid; grid-template-columns:{{ cols }}; gap:12px">
+            <sc-for list="{{ depts }}" as="d" hint-placeholder-count="1">
+              <a href="{{ d.href }}" style="position:relative; display:flex; flex-direction:column; gap:18px; padding:22px; border-radius:28px; background:#fff; text-decoration:none; color:#0a0a0a; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:box-shadow .15s" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+                <div style="display:flex; align-items:center; gap:14px">
+                  <span style="{{ d.circle }}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ d.path }}"></path></svg></span>
+                  <span style="flex:1; min-width:0"><span style="display:block; font-size:20px; font-weight:700; letter-spacing:-.015em">{{ d.nombre }}</span><span style="display:block; margin-top:3px; font-size:13px; font-weight:600; color:rgba(0,0,0,.55)">{{ d.rol }}</span></span>
+                  <sc-if value="{{ d.hayNuevas }}" hint-placeholder-val="{{ false }}"><span aria-label="{{ d.badgeAria }}" style="min-width:26px; height:26px; padding:0 8px; border-radius:999px; background:#dc2626; color:#fff; font-size:12.5px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ d.nuevas }}</span></sc-if>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; padding-top:16px; border-top:1px solid rgba(0,0,0,.06)">
+                  <span style="flex:1; font-size:14px; line-height:1.45; font-weight:600; color:rgba(0,0,0,.62)">{{ d.resumen }}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </div>
+              </a>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ haySubs }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:30px 4px 12px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">SUB-DEPARTAMENTOS QUE DIRIJO</p>
+          <div style="display:grid; grid-template-columns:{{ cols }}; gap:12px">
+            <sc-for list="{{ subs }}" as="d" hint-placeholder-count="1">
+              <a href="Sub-departamento - Panel.dc.html" style="display:flex; align-items:center; gap:14px; padding:18px 20px; border-radius:26px; background:#fff; text-decoration:none; color:#0a0a0a; box-shadow:0 1px 2px rgba(0,0,0,.04)" style-hover="box-shadow:0 6px 20px rgba(0,0,0,.08)">
+                <span style="{{ d.bar }}"></span>
+                <span style="flex:1; min-width:0"><span style="display:block; font-size:17px; font-weight:700">{{ d.nombre }}</span><span style="display:block; margin-top:3px; font-size:13px; font-weight:600; color:rgba(0,0,0,.55)">{{ d.dept }}</span><span style="display:block; margin-top:8px; font-size:13.5px; font-weight:600; color:rgba(0,0,0,.62)">{{ d.resumen }}</span></span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+              </a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:12px">
+    <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.5)">EN EL MENÚ DESLIZABLE</p>
+    <div style="width:300px; background:#fff; border-radius:26px; padding:14px 12px; box-shadow:0 4px 18px rgba(0,0,0,.08)">
+      <p style="margin:4px 12px 8px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">GENERAL</p>
+      <div style="height:46px; padding:0 12px; border-radius:16px; display:flex; align-items:center; gap:12px; font-size:14.5px; font-weight:600; color:rgba(0,0,0,.62)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4 M16 2v4 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3 10h18"></path></svg>Agenda Origen</div>
+      <p style="margin:14px 12px 8px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">ADMINISTRACIÓN</p>
+      <div style="height:46px; padding:0 12px; border-radius:16px; display:flex; align-items:center; gap:12px; font-size:14.5px; font-weight:700; color:#fff; background:#0a0a0a"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z"></path></svg><span style="flex:1">Departamentos</span><span style="min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#dc2626; font-size:11px; display:flex; align-items:center; justify-content:center">3</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { w: 1440, perfil: 'u1', forced: null, db: null };
+  componentDidMount() { this.boot(); }
+  boot() { if (!window.AO) { setTimeout(() => this.boot(), 40); return; } this.setState({ db: AO.seed() }); }
+  renderVals() {
+    const s = this.state, A = window.AO;
+    if (!A || !s.db) return { carga: true, bp: {}, anchos: [], perfiles: [], forzar: [], depts: [], subs: [], frameW: '1440px', frameH: '880px' };
+    const b = A.bp(s.w), db = s.db, S = A.S, me = s.perfil;
+    const n = (k, a, p) => k + ' ' + (k === 1 ? a : p);
+    const sa = me === 'super';
+    const myD = sa ? db.depts : db.depts.filter(d => d.encargados.includes(me));
+    const myS = sa ? [] : db.subs.filter(x => x.lider === me);
+    const carga = s.forced === 'carga';
+    const depts = carga ? [] : myD.map(d => {
+      const enP = db.tasks.filter(t => t.dept === d.id && t.estado === 'proceso').length;
+      const nv = db.solicitudes.filter(r => r.dept === d.id && r.estado === 'nueva').length;
+      return { nombre: d.nombre, path: A.I[d.icon], circle: S.iconCircle(d.color, 56), href: 'Departamento - Tareas.dc.html',
+        rol: sa ? 'Súper Admin' : 'Sos encargado/a', hayNuevas: nv > 0, nuevas: String(nv), badgeAria: n(nv, 'solicitud sin revisar', 'solicitudes sin revisar'),
+        resumen: n(enP, 'tarea en proceso', 'tareas en proceso') + (nv ? ' · ' + n(nv, 'solicitud nueva', 'solicitudes nuevas') : ' · Sin solicitudes nuevas') };
+    });
+    const subs = carga ? [] : myS.map(x => {
+      const enP = db.tasks.filter(t => t.sub === x.id && t.estado === 'proceso').length;
+      const hoy = db.tasks.filter(t => t.sub === x.id && t.fecha === A.HOY && t.estado !== 'completada').length;
+      return { nombre: x.nombre, dept: db.depts.find(d => d.id === x.dept).nombre + ' · ' + n(x.miembros.length, 'integrante', 'integrantes'), bar: 'width:6px; align-self:stretch; flex:none; border-radius:999px; background:' + x.color,
+        resumen: n(enP, 'tarea en proceso', 'tareas en proceso') + ' · ' + (hoy ? n(hoy, 'para hoy', 'para hoy') : 'Nada para hoy') };
+    });
+    const nombre = sa ? 'Héctor' : A.user(me).nombre;
+    return {
+      bp: b, ...A.frame(s.w), anchos: A.anchos(this),
+      perfiles: [['u1', 'Encargada de Creativos'], ['u3', 'Dirige Diseño'], ['super', 'Súper Admin']].map(([k, t]) => ({ t, style: S.tool(s.perfil === k), ir: () => this.setState({ perfil: k }) })),
+      forzar: [[null, 'Normal'], ['carga', 'Cargando']].map(([k, t]) => ({ t, style: S.tool(s.forced === k), ir: () => this.setState({ forced: k }) })),
+      pad: b.mobile ? '8px 16px 40px' : '32px 32px 48px', h1: b.mobile ? '26px' : '32px',
+      intro: 'Hola ' + nombre + '. Estos son los equipos que tenés a cargo.',
+      cols: b.mobile ? 'minmax(0,1fr)' : 'repeat(auto-fill,minmax(320px,1fr))',
+      carga, hayDepts: depts.length > 0, depts, deptsLbl: sa ? 'TODOS LOS DEPARTAMENTOS' : 'MIS DEPARTAMENTOS', haySubs: subs.length > 0, subs
+    };
+  }
+}
+</script>
+</body>
+</html>

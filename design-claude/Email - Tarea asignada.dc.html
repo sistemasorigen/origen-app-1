@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><script src="./agenda-emails.js"></script><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e4e2dd;font-family:Manrope,system-ui,sans-serif}button{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}</style></helmet>
+
+<div style="min-height:100vh; padding:28px 28px 64px; display:flex; flex-direction:column; gap:22px">
+  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; background:#fff; border-radius:24px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1160px">
+    <div style="display:flex; flex-direction:column; gap:3px; min-width:0; flex:1 1 320px">
+      <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ASUNTO · A TODOS LOS INTEGRANTES DEL SUB-DEPARTAMENTO (INCLUYE A QUIEN LO DIRIGE)</span>
+      <span style="font-size:15px; font-weight:700; color:#0a0a0a">{{ asunto }}</span>
+      <span style="font-size:13px; font-weight:500; color:rgba(0,0,0,.6)">Preencabezado: {{ pre }}</span>
+    </div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tCarpeta }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tHora }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <div style="display:flex; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ tVars }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.ir }}" style="{{ b.style }}">{{ b.t }}</button></sc-for></div>
+    <button onClick="{{ copiar }}" style="height:40px; padding:0 16px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:700; cursor:pointer">{{ copyLbl }}</button>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start">
+    <sc-for list="{{ vistas }}" as="v" hint-placeholder-count="3">
+      <div style="display:flex; flex-direction:column; gap:10px; flex:none">
+        <div style="display:flex; align-items:center; gap:8px"><span style="height:26px; padding:0 10px; border-radius:999px; background:#0a0a0a; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center">{{ v.id }}</span><span style="font-size:13px; font-weight:600; color:rgba(0,0,0,.62)">{{ v.t }}</span></div>
+        <iframe title="{{ v.t }}" srcDoc="{{ v.html }}" onLoad="{{ fit }}" style="width:{{ v.w }}; height:900px; border:0; border-radius:{{ v.r }}; background:#f6f6f4; box-shadow:0 6px 24px rgba(0,0,0,.12); display:block"></iframe>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { carpeta: true, hora: true, vars: false, copied: false, ready: !!window.AOMail };
+  componentDidMount() { const t = () => window.AOMail ? this.setState({ ready: true }) : setTimeout(t, 40); t(); }
+  data(vars) {
+    const s = this.state;
+    if (vars) return { vars: true, nombre: '{{nombre}}', nombre_tarea: '{{nombre_tarea}}', fecha_corta: '{{fecha_corta}}', dia: '{{dia}}', horario: '{{horario}}', departamento: '{{departamento}}', sub_departamento: '{{sub_departamento}}', color: '#db2777', prioridad: '{{prioridad}}', prio_color: '#c2410c', carpeta: '{{carpeta}}', detalles: '{{detalles}}', creador: '{{creador}}', fecha_creacion: '{{fecha_creacion}}', link_agenda: '{{link_agenda}}' };
+    return { nombre: 'Sofía', nombre_tarea: 'Placas para la Serie Noviembre', fecha_corta: 'lun 26/10', dia: 'Lunes 26 de octubre', horario: s.hora ? '19:00 a 20:30' : 'Todo el día', departamento: 'Creativos', sub_departamento: 'Diseño', color: '#db2777', prioridad: 'Alta', prio_color: '#c2410c', carpeta: s.carpeta ? 'Serie Noviembre' : '',
+      detalles: 'Cuatro placas, una por domingo:\n· Portada de la serie\n· Versión historia (1080×1920)\n· Versión pantalla del auditorio (16:9)\n\nLos títulos de cada mensaje están en la carpeta compartida.', creador: 'Tomás Aguirre', fecha_creacion: '20/10/2026 a las 18:40', link_agenda: 'https://app.origeniglesia.org/agenda' };
+  }
+  renderVals() {
+    const s = this.state, M = window.AOMail;
+    const seg = on => 'height:32px; padding:0 12px; border:0; border-radius:15px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; background:' + (on ? '#0a0a0a' : 'transparent') + '; color:' + (on ? '#fff' : 'rgba(0,0,0,.62)');
+    const d = this.data(s.vars), light = M ? M.asignada(d, false) : '', dark = M ? M.asignada(d, true) : '';
+    const tg = (k, a, b2) => [[true, a], [false, b2]].map(([v, t]) => ({ t, style: seg(s[k] === v), ir: () => this.setState({ [k]: v }) }));
+    return {
+      asunto: 'Nueva tarea: ' + d.nombre_tarea + ' · ' + d.fecha_corta, pre: d.departamento + ' te asignó una tarea en Agenda Origen',
+      tCarpeta: tg('carpeta', 'Con carpeta', 'Sin carpeta'), tHora: tg('hora', 'Con horario', 'Todo el día'), tVars: [[false, 'Datos de ejemplo'], [true, 'Variables']].map(([v, t]) => ({ t, style: seg(s.vars === v), ir: () => this.setState({ vars: v }) })),
+      vistas: [{ id: 'A', t: 'Escritorio · 680 px', w: '680px', r: '14px', html: light }, { id: 'B', t: 'Celular · 375 px', w: '375px', r: '36px', html: light }, { id: 'C', t: 'Modo oscuro · 375 px', w: '375px', r: '36px', html: dark }],
+      fit: e => { try { const f = e.target; f.style.height = Math.max(400, f.contentDocument.documentElement.scrollHeight) + 'px'; } catch (er) {} },
+      copyLbl: s.copied ? '¡HTML copiado!' : 'Copiar HTML con variables',
+      copiar: () => { try { navigator.clipboard.writeText(M.asignada(this.data(true), false)); } catch (er) {} this.setState({ copied: true }); clearTimeout(this.ct); this.ct = setTimeout(() => this.setState({ copied: false }), 2000); }
+    };
+  }
+}
+</script>
+</body>
+</html>

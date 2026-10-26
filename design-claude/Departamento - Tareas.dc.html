@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><script src="./agenda-core.js"></script><style>*,*::before,*::after{box-sizing:border-box}body{margin:0;background:#e9e7e3;font-family:Manrope,system-ui,sans-serif;color:#0a0a0a}button,input,textarea,select{font-family:inherit}a{color:#0a0a0a}a:hover{color:#0a0a0a}button:focus-visible,input:focus-visible,a:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #0a0a0a;outline-offset:2px}input:focus,textarea:focus,select:focus{outline:none}.ao-s::-webkit-scrollbar{display:none}@keyframes aoFade{from{opacity:0}to{opacity:1}}@keyframes aoUp{from{transform:translateY(100%)}to{transform:none}}@keyframes aoPop{from{opacity:0;margin-top:10px}to{opacity:1;margin-top:0}}@keyframes aoSide{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}@keyframes aoToast{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes aoCheck{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}@keyframes aoShim{0%{opacity:.55}50%{opacity:1}100%{opacity:.55}}@keyframes aoIn{0%{opacity:0;transform:translateY(-8px) scale(.98);box-shadow:0 0 0 3px rgba(21,128,61,.5)}100%{opacity:1;transform:none;box-shadow:0 0 0 0 rgba(21,128,61,0)}}@keyframes aoOut{to{opacity:0;transform:translateY(16px) scale(.97)}}@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}</style></helmet>
+
+<div style="min-height:100vh; padding:20px 16px 56px; display:flex; flex-direction:column; align-items:safe center; gap:16px">
+  <div style="display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; background:#fff; border-radius:24px; padding:8px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); max-width:1200px">
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ANCHO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ anchos }}" as="a" hint-placeholder-count="5"><button onClick="{{ a.ir }}" style="{{ a.style }}">{{ a.t }}</button></sc-for></div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.07em; color:rgba(0,0,0,.55)">ESTADO</span>
+    <div style="display:flex; flex-wrap:wrap; gap:3px; background:#f2f2f0; border-radius:18px; padding:3px"><sc-for list="{{ forzar }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.ir }}" style="{{ f.style }}">{{ f.t }}</button></sc-for></div>
+  </div>
+
+  <div style="position:relative; flex:none; overflow:hidden; width:{{ frameW }}; height:{{ frameH }}; border-radius:{{ frameR }}; background:#f6f6f4; box-shadow:0 6px 28px rgba(0,0,0,.14); display:flex; flex-direction:column">
+    <div style="flex:none; background:#fff; border-bottom:1px solid rgba(0,0,0,.06); padding:{{ headPad }}">
+      <div style="display:flex; align-items:center; gap:12px">
+        <a href="Departamentos - Inicio.dc.html" aria-label="Volver a Departamentos" style="width:44px; height:44px; flex:none; border-radius:999px; background:#f2f2f0; color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5 M12 19l-7-7 7-7"></path></svg></a>
+        <span style="{{ deptCircle }}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ deptPath }}"></path></svg></span>
+        <div style="min-width:0; flex:1">
+          <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">DEPARTAMENTO</p>
+          <h1 style="margin:2px 0 0; font-size:{{ h1 }}; font-weight:700; letter-spacing:-.02em">{{ deptNombre }}</h1>
+        </div>
+      </div>
+      <div style="position:relative; display:flex; margin-top:16px">
+        <button onClick="{{ secNav.toggle }}" aria-haspopup="menu" aria-expanded="{{ secNav.open }}" style="height:48px; max-width:100%; padding:0 16px 0 7px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:700">
+          <span style="width:34px; height:34px; flex:none; border-radius:999px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ secNav.actualPath }}"></path></svg></span>
+          <span style="flex:none; white-space:nowrap">{{ secNav.actual }}</span>
+          <sc-if value="{{ secNav.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#dc2626; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ secNav.badge }}</span></sc-if>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none; opacity:.75"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <sc-if value="{{ secNav.pop }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ secNav.close }}" style="position:fixed; inset:0; z-index:40"></div>
+          <div role="menu" aria-label="{{ secNav.titulo }}" style="position:absolute; left:0; top:56px; z-index:41; width:340px; background:#fff; border-radius:24px; padding:8px; box-shadow:0 18px 50px rgba(0,0,0,.18); display:flex; flex-direction:column; gap:2px; animation:aoPop .18s ease both">
+          <p style="margin:6px 12px 6px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">{{ secNav.tituloMay }}</p>
+          <sc-for list="{{ secNav.items }}" as="it" hint-placeholder-count="5">
+            <button role="menuitem" aria-current="{{ it.on }}" onClick="{{ it.ir }}" style="{{ it.style }}" style-hover="background:#f6f6f4">
+              <span style="width:38px; height:38px; flex:none; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.path }}"></path></svg></span>
+              <span style="flex:1; min-width:0"><span style="display:block; font-size:14.5px; font-weight:700; color:#0a0a0a">{{ it.t }}</span><span style="display:block; margin-top:2px; font-size:12.5px; line-height:1.35; font-weight:500; color:rgba(0,0,0,.55)">{{ it.desc }}</span></span>
+              <sc-if value="{{ it.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:#dc2626; color:#fff; font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ it.badge }}</span></sc-if>
+              <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+            </button>
+          </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div ref="{{ bodyRef }}" style="flex:1; min-height:0; overflow-y:auto; padding:{{ bodyPad }}">
+      <div style="max-width:980px; margin:0 auto">
+
+      <sc-if value="{{ isTareas }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative; display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <button onClick="{{ per.toggle }}" aria-expanded="{{ per.open }}" style="height:46px; padding:0 14px 0 14px; border:0; border-radius:999px; background:#fff; color:#0a0a0a; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:9px; box-shadow:0 1px 2px rgba(0,0,0,.05); flex:{{ perFlex }}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4 M16 2v4 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3 10h18"></path></svg>
+            <span style="flex:1; text-align:left; white-space:nowrap">{{ per.label }}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+          </button>
+          <span style="flex:{{ spacerFlex }}"></span>
+          <button onClick="{{ abrirCarpeta }}" style="height:46px; padding:0 16px; border:0; border-radius:999px; background:#ebebe8; color:rgba(0,0,0,.72); font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:7px; flex:{{ btnFlex }}; justify-content:center; white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z M12 10v6 M9 13h6"></path></svg>Crear carpeta</button>
+          <button onClick="{{ abrirCrear }}" style="height:46px; padding:0 18px 0 14px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:7px; flex:{{ btnFlex }}; justify-content:center; white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14 M5 12h14"></path></svg>Crear tarea</button>
+
+          <sc-if value="{{ perPop }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ per.close }}" style="position:fixed; inset:0; z-index:40"></div>
+            <div role="dialog" aria-label="Elegir período" style="position:absolute; left:0; top:54px; z-index:41; width:{{ perW }}; background:#fff; border-radius:26px; box-shadow:0 18px 50px rgba(0,0,0,.18); display:flex; overflow:hidden; animation:aoPop .18s ease both">
+              <div style="flex:none; width:176px; padding:16px 12px; border-right:1px solid rgba(0,0,0,.06); display:flex; flex-direction:column; gap:6px">
+                <p style="margin:0 6px 6px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">ATAJOS</p>
+                <sc-for list="{{ per.atajos }}" as="x" hint-placeholder-count="5"><button onClick="{{ x.ir }}" style="{{ x.style }}; justify-content:flex-start">{{ x.t }}</button></sc-for>
+              </div>
+              <div style="flex:1; min-width:0; padding:16px 18px 14px">
+                <div style="display:flex; gap:22px">
+                  <sc-for list="{{ per.months }}" as="m" hint-placeholder-count="2">
+                    <div style="flex:1; min-width:0">
+                      <p style="margin:0 0 8px; height:34px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700">{{ m.titulo }}</p>
+                      <div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); row-gap:2px">
+                        <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><span style="height:26px; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:rgba(0,0,0,.38)">{{ d }}</span></sc-for>
+                        <sc-for list="{{ m.cells }}" as="c" hint-placeholder-count="35"><button onClick="{{ c.ir }}" aria-label="{{ c.aria }}" style="{{ c.style }}">{{ c.n }}<span style="{{ c.dot }}"></span></button></sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <button onClick="{{ per.prev }}" aria-label="Mes anterior" style="position:absolute; left:200px; top:16px; width:34px; height:34px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+                <button onClick="{{ per.next }}" aria-label="Mes siguiente" style="position:absolute; right:18px; top:16px; width:34px; height:34px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid rgba(0,0,0,.06)">
+                  <span style="flex:1; font-size:13px; font-weight:600; color:rgba(0,0,0,.62)">{{ per.draftTxt }}</span>
+                  <button onClick="{{ per.close }}" style="height:42px; padding:0 16px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13.5px; font-weight:700; cursor:pointer">Cancelar</button>
+                  <button onClick="{{ per.aplicar }}" style="height:42px; padding:0 18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:13.5px; font-weight:700; cursor:pointer">Aplicar</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ st.carga }}" hint-placeholder-val="{{ false }}">
+          <div aria-busy="true" aria-label="Cargando tareas" style="margin-top:20px; display:flex; flex-direction:column; gap:10px">
+            <div style="height:56px; border-radius:20px; background:#fff; animation:aoShim 1.2s infinite"></div>
+            <div style="width:180px; height:14px; margin:8px 4px; border-radius:8px; background:#e8e8e5; animation:aoShim 1.2s infinite"></div>
+            <div style="height:76px; border-radius:22px; background:#fff; animation:aoShim 1.2s .1s infinite"></div>
+            <div style="height:76px; border-radius:22px; background:#fff; animation:aoShim 1.2s .2s infinite"></div>
+            <div style="height:56px; border-radius:20px; background:#fff; animation:aoShim 1.2s .3s infinite"></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ st.error }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px; background:#fff; border-radius:26px; padding:44px 24px; text-align:center; display:flex; flex-direction:column; align-items:center">
+            <span style="width:56px; height:56px; border-radius:999px; background:rgba(180,35,24,.1); color:#b42318; display:flex; align-items:center; justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0 M12 8v4 M12 16h.01"></path></svg></span>
+            <p style="margin:16px 0 0; font-size:18px; font-weight:700">No pudimos cargar las tareas</p>
+            <p style="margin:8px 0 0; font-size:14px; font-weight:500; color:rgba(0,0,0,.62)">Puede ser la conexión. Probá de nuevo en un momento.</p>
+            <button onClick="{{ reintentar }}" style="height:48px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:700; cursor:pointer">Reintentar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ st.vacio }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:20px; background:#fff; border-radius:26px; padding:48px 24px; text-align:center; display:flex; flex-direction:column; align-items:center">
+            <span style="width:60px; height:60px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4 M16 2v4 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3 10h18"></path></svg></span>
+            <p style="margin:16px 0 0; font-size:19px; font-weight:700">No hay tareas en este período</p>
+            <p style="margin:8px 0 0; max-width:340px; font-size:14px; line-height:1.6; font-weight:500; color:rgba(0,0,0,.62)">Elegí otras fechas arriba o cargá la primera tarea.</p>
+            <button onClick="{{ abrirCrear }}" style="height:48px; padding:0 22px; margin-top:18px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:700; cursor:pointer">Crear tarea</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ st.ok }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; flex-direction:column; gap:12px; margin-top:20px">
+            <sc-for list="{{ secciones }}" as="sec" hint-placeholder-count="3">
+              <section style="display:flex; flex-direction:column">
+                <button onClick="{{ sec.toggle }}" aria-expanded="{{ sec.open }}" style="min-height:56px; padding:0 18px 0 14px; border:0; border-radius:20px; background:#fff; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="{{ sec.rot }}"><path d="M6 9l6 6 6-6"></path></svg>
+                  <span style="{{ sec.chip }}"><span style="{{ sec.dot }}"></span>{{ sec.label }}</span>
+                  <span style="flex:1"></span>
+                  <span style="font-size:13.5px; font-weight:700; color:rgba(0,0,0,.62)">{{ sec.count }}</span>
+                </button>
+                <sc-if value="{{ sec.open }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex; flex-direction:column; gap:18px; padding:16px 0 8px">
+                    <sc-if value="{{ sec.nada }}" hint-placeholder-val="{{ false }}"><p style="margin:0 6px; font-size:13.5px; font-weight:600; color:rgba(0,0,0,.55)">{{ sec.nadaTxt }}</p></sc-if>
+                    <sc-for list="{{ sec.days }}" as="day" hint-placeholder-count="2">
+                      <div style="display:flex; flex-direction:column; gap:8px">
+                        <h3 style="margin:0 6px 2px; font-size:14px; font-weight:700; color:{{ day.ink }}">{{ day.titulo }}</h3>
+                        <sc-for list="{{ day.folders }}" as="fo" hint-placeholder-count="1">
+                          <div style="border-radius:22px; background:{{ fo.bg }}; transition:background-color .15s">
+                            <button onClick="{{ fo.toggle }}" aria-expanded="{{ fo.open }}" style="width:100%; min-height:52px; padding:0 16px; border:0; border-radius:22px; background:transparent; cursor:pointer; display:flex; align-items:center; gap:11px; text-align:left">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="{{ fo.fill }}" stroke="{{ fo.color }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"></path></svg>
+                              <span style="flex:1; min-width:0; font-size:14.5px; font-weight:700; color:#0a0a0a">{{ fo.nombre }}</span>
+                              <span style="font-size:13px; font-weight:600; color:rgba(0,0,0,.55)">{{ fo.cnt }}</span>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="{{ fo.rot }}"><path d="M6 9l6 6 6-6"></path></svg>
+                            </button>
+                            <sc-if value="{{ fo.open }}" hint-placeholder-val="{{ false }}">
+                              <div style="display:flex; flex-direction:column; gap:8px; padding:0 8px 8px">
+                                <sc-for list="{{ fo.tasks }}" as="t" hint-placeholder-count="2">
+                                  <button onClick="{{ t.abrir }}" style="{{ t.card }}">
+                                    <span style="{{ t.bar }}"></span>
+                                    <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:7px">
+                                      <span style="font-size:15px; font-weight:700; line-height:1.3; color:#0a0a0a; {{ t.strike }}">{{ t.nombre }}</span>
+                                      <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap">
+                                        <span style="font-size:12.5px; font-weight:600; color:rgba(0,0,0,.62); margin-right:2px; white-space:nowrap">{{ t.hora }}</span>
+                                        <span style="{{ t.subChip }}"><span style="{{ t.subDot }}"></span>{{ t.sub }}</span>
+                                        <span style="{{ t.prioChip }}"><span style="{{ t.prioDot }}"></span>{{ t.prio }}</span>
+                                      </span>
+                                    </span>
+                                  </button>
+                                </sc-for>
+                              </div>
+                            </sc-if>
+                          </div>
+                        </sc-for>
+                        <sc-for list="{{ day.sueltas }}" as="t" hint-placeholder-count="1">
+                          <button onClick="{{ t.abrir }}" style="{{ t.card }}">
+                            <span style="{{ t.bar }}"></span>
+                            <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:7px">
+                              <span style="font-size:15px; font-weight:700; line-height:1.3; color:#0a0a0a; {{ t.strike }}">{{ t.nombre }}</span>
+                              <span style="display:flex; align-items:center; gap:6px; flex-wrap:wrap">
+                                <span style="font-size:12.5px; font-weight:600; color:rgba(0,0,0,.62); margin-right:2px; white-space:nowrap">{{ t.hora }}</span>
+                                <span style="{{ t.subChip }}"><span style="{{ t.subDot }}"></span>{{ t.sub }}</span>
+                                <span style="{{ t.prioChip }}"><span style="{{ t.prioDot }}"></span>{{ t.prio }}</span>
+                              </span>
+                            </span>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </section>
+            </sc-for>
+            <p style="margin:4px 8px 0; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.5)">Los divisores que pliegues quedan así la próxima vez que entres.</p>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isSolic }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <sc-for list="{{ solSecs }}" as="sec" hint-placeholder-count="2">
+            <section style="display:flex; flex-direction:column">
+              <button onClick="{{ sec.toggle }}" aria-expanded="{{ sec.open }}" style="min-height:56px; padding:0 18px 0 14px; border:0; border-radius:20px; background:#fff; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; box-shadow:0 1px 2px rgba(0,0,0,.04)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="{{ sec.rot }}"><path d="M6 9l6 6 6-6"></path></svg>
+                <span style="flex:1; font-size:15px; font-weight:700">{{ sec.label }}</span>
+                <span style="{{ sec.badge }}">{{ sec.count }}</span>
+              </button>
+              <sc-if value="{{ sec.open }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid; grid-template-columns:{{ solCols }}; gap:10px; padding:12px 0 6px">
+                  <sc-if value="{{ sec.vacio }}" hint-placeholder-val="{{ false }}">
+                    <div style="grid-column:1/-1; background:#fff; border-radius:24px; padding:34px 20px; text-align:center; display:flex; flex-direction:column; align-items:center">
+                      <span style="width:52px; height:52px; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg></span>
+                      <p style="margin:12px 0 0; font-size:16px; font-weight:700">{{ sec.vacioTxt }}</p>
+                      <p style="margin:6px 0 0; font-size:13.5px; font-weight:500; color:rgba(0,0,0,.62)">{{ sec.vacioSub }}</p>
+                    </div>
+                  </sc-if>
+                  <sc-for list="{{ sec.items }}" as="r" hint-placeholder-count="2">
+                    <article style="{{ r.card }}">
+                      <div style="display:flex; align-items:center; gap:12px">
+                        <span style="{{ r.av }}">{{ r.ini }}</span>
+                        <div style="flex:1; min-width:0"><p style="margin:0; font-size:15px; font-weight:700">{{ r.nombre }}</p><p style="margin:2px 0 0; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.55)">{{ r.cuando }}</p></div>
+                        <span style="{{ r.prioChip }}"><span style="{{ r.prioDot }}"></span>{{ r.prio }}</span>
+                      </div>
+                      <p style="margin:0; font-size:14.5px; line-height:1.6; font-weight:500; color:rgba(0,0,0,.8); white-space:pre-line; {{ r.clamp }}">{{ r.detalles }}</p>
+                      <sc-if value="{{ r.largo }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.verMas }}" style="align-self:flex-start; height:32px; margin-top:-8px; padding:0; border:0; background:transparent; cursor:pointer; font-size:13.5px; font-weight:700; color:#0a0a0a; text-decoration:underline; text-underline-offset:3px">{{ r.verTxt }}</button></sc-if>
+                      <div style="display:flex; gap:8px; margin-top:auto">
+                        <sc-if value="{{ r.nueva }}" hint-placeholder-val="{{ true }}">
+                          <button onClick="{{ r.rechazar }}" style="flex:1; height:46px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14px; font-weight:700; cursor:pointer">Rechazar</button>
+                          <button onClick="{{ r.aceptar }}" style="flex:1; height:46px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14px; font-weight:700; cursor:pointer">Aceptar</button>
+                        </sc-if>
+                        <sc-if value="{{ r.aceptada }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ r.asignar }}" style="flex:1; height:46px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M5 7a4 4 0 1 0 8 0a4 4 0 1 0-8 0 M19 8v6 M22 11h-6"></path></svg>Asignar tarea</button>
+                        </sc-if>
+                      </div>
+                    </article>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </section>
+          </sc-for>
+        </div>
+      </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ perSheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ per.close }}" style="{{ shPer.back }}"></div>
+      <div role="dialog" aria-label="Elegir período" style="{{ shPer.panel }}">
+        <div onPointerDown="{{ shPer.down }}" onPointerMove="{{ shPer.move }}" onPointerUp="{{ shPer.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:10px 20px 8px">
+          <p style="margin:0; font-size:19px; font-weight:700">Elegí el período</p>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:14px"><sc-for list="{{ per.atajos }}" as="x" hint-placeholder-count="5"><button onClick="{{ x.ir }}" style="{{ x.style }}">{{ x.t }}</button></sc-for></div>
+          <sc-for list="{{ per.months }}" as="m" hint-placeholder-count="1">
+            <div style="margin-top:16px">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px">
+                <button onClick="{{ per.prev }}" aria-label="Mes anterior" style="width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>
+                <p style="margin:0; flex:1; text-align:center; font-size:15px; font-weight:700">{{ m.titulo }}</p>
+                <button onClick="{{ per.next }}" aria-label="Mes siguiente" style="width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); row-gap:2px">
+                <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><span style="height:26px; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:rgba(0,0,0,.38)">{{ d }}</span></sc-for>
+                <sc-for list="{{ m.cells }}" as="c" hint-placeholder-count="35"><button onClick="{{ c.ir }}" aria-label="{{ c.aria }}" style="{{ c.style }}; height:44px">{{ c.n }}<span style="{{ c.dot }}"></span></button></sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <p style="margin:12px 0 0; font-size:13px; font-weight:600; color:rgba(0,0,0,.62)">{{ per.draftTxt }}</p>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:12px 20px 28px">
+          <button onClick="{{ per.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ per.aplicar }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:14.5px; font-weight:700; cursor:pointer">Aplicar</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ detOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cerrarDet }}" style="{{ det.back }}"></div>
+      <div role="dialog" aria-label="Detalle de la tarea" style="{{ det.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shDet.down }}" onPointerMove="{{ shDet.move }}" onPointerUp="{{ shDet.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none; cursor:grab"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <sc-if value="{{ noMobile }}" hint-placeholder-val="{{ true }}"><div style="flex:none; display:flex; justify-content:flex-end; padding:12px 12px 0"><button onClick="{{ cerrarDet }}" aria-label="Cerrar" style="width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg></button></div></sc-if>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:6px 24px 20px">
+          <div style="display:flex; align-items:flex-start; gap:12px"><span style="{{ det.bar }}"></span><h2 style="margin:0; flex:1; font-size:21px; line-height:1.25; font-weight:700; letter-spacing:-.015em">{{ det.nombre }}</h2></div>
+          <div style="display:flex; margin-top:12px"><span style="{{ det.estChip }}"><sc-if value="{{ det.anim }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation:aoCheck .45s ease both"><path d="M20 6L9 17l-5-5"></path></svg></sc-if><sc-if value="{{ det.noAnim }}" hint-placeholder-val="{{ true }}"><span style="{{ det.estDot }}"></span></sc-if>{{ det.estado }}</span></div>
+          <div style="display:flex; flex-direction:column; gap:13px; margin-top:20px">
+            <div style="display:flex; gap:12px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 2v4 M16 2v4 M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M3 10h18"></path></svg><span style="font-size:14.5px; font-weight:600">{{ det.cuando }}</span></div>
+            <div style="display:flex; gap:12px; align-items:center"><span style="{{ det.deptIcon }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ deptPath }}"></path></svg></span><span style="font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:7px; flex-wrap:wrap">{{ deptNombre }}<span style="color:rgba(0,0,0,.38)">›</span><span style="{{ det.subChip }}"><span style="{{ det.subDot }}"></span>{{ det.sub }}</span></span></div>
+            <div style="display:flex; gap:12px; align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z M4 22v-7"></path></svg><span style="{{ det.prioChip }}"><span style="{{ det.prioDot }}"></span>{{ det.prio }}</span></div>
+            <div style="display:flex; gap:12px; align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"></path></svg><span style="font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:7px"><span style="{{ det.folderDot }}"></span>{{ det.folder }}</span></div>
+          </div>
+          <p style="margin:22px 0 10px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">LA TIENEN</p>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <sc-for list="{{ det.gente }}" as="g" hint-placeholder-count="4"><div style="display:flex; align-items:center; gap:10px"><span style="{{ g.av }}">{{ g.ini }}</span><span style="flex:1; font-size:14px; font-weight:600">{{ g.nombre }}</span><sc-if value="{{ g.lider }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px; font-weight:700; color:rgba(0,0,0,.5)">Dirige</span></sc-if></div></sc-for>
+            <sc-if value="{{ det.nadie }}" hint-placeholder-val="{{ false }}"><p style="margin:0; font-size:13.5px; font-weight:500; color:rgba(0,0,0,.62)">Todavía no se asignó a un sub-departamento.</p></sc-if>
+          </div>
+          <p style="margin:22px 0 8px; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">DETALLES</p>
+          <p style="margin:0; font-size:14.5px; line-height:1.65; font-weight:500; white-space:pre-line; color:rgba(0,0,0,.8)">{{ det.detalles }}</p>
+          <div style="margin-top:20px; padding:12px 14px; border-radius:16px; background:#f6f6f4; display:flex; flex-direction:column; gap:4px">
+            <sc-if value="{{ det.hayCompleto }}" hint-placeholder-val="{{ false }}"><p style="margin:0; font-size:12.5px; line-height:1.5; font-weight:700; color:#15803d">{{ det.completo }}</p></sc-if>
+            <p style="margin:0; font-size:12.5px; line-height:1.5; font-weight:600; color:rgba(0,0,0,.55)">{{ det.creada }}</p>
+            <sc-if value="{{ det.haySolicitud }}" hint-placeholder-val="{{ false }}"><p style="margin:0; font-size:12.5px; line-height:1.5; font-weight:600; color:rgba(0,0,0,.55)">{{ det.solicitud }}</p></sc-if>
+          </div>
+        </div>
+        <div style="flex:none; padding:12px 18px {{ det.padB }}; border-top:1px solid rgba(0,0,0,.06); display:flex; flex-direction:column; gap:8px">
+          <div style="display:flex; gap:6px">
+            <button onClick="{{ editar }}" style="flex:1; height:44px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a2.83 2.83 0 0 0-4-4L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"></path></svg>Editar</button>
+            <button onClick="{{ abrirReas }}" style="flex:1; height:44px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:13.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4 M20 7H4 M8 21l-4-4 4-4 M4 17h16"></path></svg>{{ det.reasTxt }}</button>
+            <button onClick="{{ pedirBorrar }}" aria-label="Eliminar tarea" style="width:44px; height:44px; flex:none; border:0; border-radius:999px; background:#f2f2f0; color:#b42318; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+          </div>
+          <sc-if value="{{ det.puedeCompletar }}" hint-placeholder-val="{{ true }}"><button onClick="{{ pedirCompletar }}" style="width:100%; height:52px; border:0; border-radius:999px; background:#0a0a0a; color:#fff; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Marcar como completada</button></sc-if>
+          <sc-if value="{{ det.puedeVolver }}" hint-placeholder-val="{{ false }}"><button onClick="{{ volverProceso }}" style="width:100%; height:52px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:15px; font-weight:700; cursor:pointer">Volver a En proceso</button></sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ formOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shForm.close }}" style="{{ shForm.back }}"></div>
+      <div role="dialog" aria-label="{{ f.titulo }}" style="{{ shForm.panel }}">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shForm.down }}" onPointerMove="{{ shForm.move }}" onPointerUp="{{ shForm.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none; cursor:grab"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="flex:none; display:flex; align-items:center; gap:10px; padding:16px 16px 6px 22px">
+          <p style="margin:0; flex:1; font-size:20px; font-weight:700">{{ f.titulo }}</p>
+          <button onClick="{{ shForm.close }}" aria-label="Cerrar" style="width:44px; height:44px; border:0; border-radius:999px; background:#f2f2f0; cursor:pointer; display:flex; align-items:center; justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18 M6 6l12 12"></path></svg></button>
+        </div>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:10px 22px 18px; display:flex; flex-direction:column; gap:20px">
+          <sc-if value="{{ f.hayRef }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:18px; background:#f6f6f4; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)">
+              <span style="{{ f.refAv }}">{{ f.refIni }}</span>
+              <span style="flex:1; min-width:0; font-size:13.5px; line-height:1.45; font-weight:600; color:rgba(0,0,0,.72)">Pedido por <strong style="color:#0a0a0a">{{ f.refNombre }}</strong> · prioridad pedida: <strong style="color:#0a0a0a">{{ f.refPrio }}</strong></span>
+            </div>
+          </sc-if>
+          <label style="display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">NOMBRE DE LA TAREA</span>
+            <input value="{{ f.nombre }}" onChange="{{ f.onNombre }}" placeholder="Por ejemplo, Placa del almuerzo" style="{{ f.nombreSt }}">
+            <sc-if value="{{ f.errNombre }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Escribí un nombre para la tarea.</span></sc-if>
+          </label>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">SUB-DEPARTAMENTO</span>
+            <label style="{{ f.comboBox }}">
+              <span style="{{ f.comboDot }}"></span>
+              <input value="{{ f.comboVal }}" onChange="{{ f.onCombo }}" onFocus="{{ f.openCombo }}" role="combobox" aria-expanded="{{ f.comboOpen }}" placeholder="Buscá o elegí uno" style="flex:1; min-width:0; border:0; background:transparent; font-size:15px; font-weight:600; color:#0a0a0a">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+            </label>
+            <sc-if value="{{ f.comboOpen }}" hint-placeholder-val="{{ false }}">
+              <div role="listbox" style="display:flex; flex-direction:column; gap:2px; padding:6px; border-radius:18px; background:#fff; box-shadow:0 8px 28px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.06)">
+                <sc-for list="{{ f.subOpts }}" as="o" hint-placeholder-count="5"><button role="option" onClick="{{ o.ir }}" style="min-height:46px; padding:0 12px; border:0; border-radius:12px; background:{{ o.bg }}; cursor:pointer; display:flex; align-items:center; gap:10px; text-align:left; font-size:14.5px; font-weight:700; color:#0a0a0a" style-hover="background:#f6f6f4"><span style="{{ o.dot }}"></span><span style="flex:1">{{ o.nombre }}</span><span style="font-size:12px; font-weight:600; color:rgba(0,0,0,.5)">{{ o.meta }}</span></button></sc-for>
+                <sc-if value="{{ f.sinRes }}" hint-placeholder-val="{{ false }}"><p style="margin:0; padding:12px; font-size:13.5px; font-weight:600; color:rgba(0,0,0,.55)">No hay sub-departamentos con ese nombre.</p></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ f.errSub }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Elegí un sub-departamento o “Sin asignar todavía”.</span></sc-if>
+          </div>
+          <div style="display:grid; grid-template-columns:{{ f.cols2 }}; gap:14px">
+            <label style="display:flex; flex-direction:column; gap:8px">
+              <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">CARPETA</span>
+              <span style="position:relative; display:block">
+                <select value="{{ f.folder }}" onChange="{{ f.onFolder }}" style="{{ f.selSt }}">
+                  <option value="">Sin carpeta</option>
+                  <sc-for list="{{ f.folders }}" as="o" hint-placeholder-count="3"><option value="{{ o.id }}">{{ o.nombre }}</option></sc-for>
+                  <option value="__new">Nueva carpeta…</option>
+                </select>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; right:16px; top:18px; pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg>
+              </span>
+            </label>
+            <label style="display:flex; flex-direction:column; gap:8px">
+              <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">DÍA</span>
+              <input type="date" value="{{ f.fecha }}" onChange="{{ f.onFecha }}" style="{{ f.fechaSt }}">
+              <sc-if value="{{ f.errFecha }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Elegí el día.</span></sc-if>
+            </label>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <button onClick="{{ f.toggleAll }}" role="switch" aria-checked="{{ f.all }}" style="min-height:52px; padding:0 14px; border:0; border-radius:16px; background:#f6f6f4; cursor:pointer; display:flex; align-items:center; gap:12px; text-align:left; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0 M12 6v6l4 2"></path></svg>
+              <span style="flex:1; font-size:14.5px; font-weight:700">Todo el día</span>
+              <span style="{{ f.track }}"><span style="{{ f.knob }}"></span></span>
+            </button>
+            <sc-if value="{{ f.horario }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px">
+                <label style="display:flex; flex-direction:column; gap:6px"><span style="font-size:13px; font-weight:700; color:rgba(0,0,0,.62)">Desde</span><input type="time" value="{{ f.desde }}" onChange="{{ f.onDesde }}" style="{{ f.desdeSt }}"></label>
+                <label style="display:flex; flex-direction:column; gap:6px"><span style="font-size:13px; font-weight:700; color:rgba(0,0,0,.62)">Hasta</span><input type="time" value="{{ f.hasta }}" onChange="{{ f.onHasta }}" style="{{ f.hastaSt }}"></label>
+              </div>
+              <sc-if value="{{ f.errHora }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">{{ f.errHoraTxt }}</span></sc-if>
+            </sc-if>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">PRIORIDAD</span>
+            <div role="radiogroup" aria-label="Prioridad" style="display:flex; flex-wrap:wrap; gap:6px"><sc-for list="{{ f.prios }}" as="p" hint-placeholder-count="4"><button role="radio" aria-checked="{{ p.on }}" onClick="{{ p.ir }}" style="{{ p.style }}"><span style="{{ p.dot }}"></span>{{ p.nombre }}</button></sc-for></div>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">DETALLES</span>
+            <textarea value="{{ f.detalles }}" onChange="{{ f.onDet }}" rows="5" placeholder="Qué hay que hacer, para cuándo y cualquier dato útil" style="width:100%; min-height:130px; padding:14px 16px; border:0; border-radius:16px; background:#f6f6f4; resize:vertical; font-size:15px; line-height:1.55; font-weight:500; color:#0a0a0a; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)"></textarea>
+          </label>
+          <div style="padding:14px 16px; border-radius:18px; background:#f6f6f4">
+            <p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">LA VAN A RECIBIR</p>
+            <sc-if value="{{ f.hayGente }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:12px">
+                <sc-for list="{{ f.gente }}" as="g" hint-placeholder-count="4"><span style="display:flex; align-items:center; gap:7px; font-size:13px; font-weight:700"><span style="{{ g.av }}">{{ g.ini }}</span>{{ g.nombre }}</span></sc-for>
+              </div>
+              <p style="margin:12px 0 0; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.55)">Les llega a la Agenda y por email.</p>
+            </sc-if>
+            <sc-if value="{{ f.sinGente }}" hint-placeholder-val="{{ true }}"><p style="margin:8px 0 0; font-size:13.5px; line-height:1.5; font-weight:600; color:rgba(0,0,0,.62)">{{ f.sinGenteTxt }}</p></sc-if>
+          </div>
+          <p style="margin:0; font-size:12.5px; font-weight:600; color:rgba(0,0,0,.5)">{{ f.registro }}</p>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:14px 22px 24px; border-top:1px solid rgba(0,0,0,.06)">
+          <button onClick="{{ shForm.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ f.guardar }}" aria-disabled="{{ f.invalid }}" style="{{ f.btn }}">{{ f.btnTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ carOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shCar.close }}" style="{{ shCar.back }}; z-index:90"></div>
+      <div role="dialog" aria-label="Crear carpeta" style="{{ shCar.panel }}; z-index:91">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shCar.down }}" onPointerMove="{{ shCar.move }}" onPointerUp="{{ shCar.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:20px 22px 8px; display:flex; flex-direction:column; gap:18px; overflow-y:auto">
+          <div style="display:flex; align-items:center; gap:12px">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="{{ car.fill }}" stroke="{{ car.color }}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"></path></svg>
+            <p style="margin:0; font-size:19px; font-weight:700">Crear carpeta</p>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">NOMBRE</span>
+            <input value="{{ car.nombre }}" onChange="{{ car.onNombre }}" placeholder="Por ejemplo, Semana Santa" style="{{ car.nombreSt }}">
+            <sc-if value="{{ car.err }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px; font-weight:700; color:#b42318">Escribí un nombre para la carpeta.</span></sc-if>
+          </label>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">COLOR</span>
+            <div role="radiogroup" aria-label="Color" style="display:flex; flex-wrap:wrap; gap:10px"><sc-for list="{{ car.colores }}" as="c" hint-placeholder-count="12"><button role="radio" aria-checked="{{ c.on }}" aria-label="{{ c.nombre }}" onClick="{{ c.ir }}" style="{{ c.style }}"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></sc-if></button></sc-for></div>
+          </div>
+          <div style="padding:12px 14px; border-radius:16px; background:#f6f6f4"><p style="margin:0; font-size:11px; font-weight:700; letter-spacing:.08em; color:rgba(0,0,0,.38)">FECHA DE CREACIÓN</p><p style="margin:5px 0 0; font-size:14px; font-weight:600; color:rgba(0,0,0,.62)">lunes 26/10/2026 · 14:32</p></div>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:12px 22px 24px">
+          <button onClick="{{ shCar.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ car.guardar }}" aria-disabled="{{ car.invalid }}" style="{{ car.btn }}">Crear carpeta</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ reasOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shReas.close }}" style="{{ shReas.back }}; z-index:90"></div>
+      <div role="dialog" aria-label="Reasignar" style="{{ shReas.panel }}; z-index:91">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shReas.down }}" onPointerMove="{{ shReas.move }}" onPointerUp="{{ shReas.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:20px 22px 8px; overflow-y:auto">
+          <p style="margin:0; font-size:19px; font-weight:700">{{ reas.titulo }}</p>
+          <p style="margin:6px 0 0; font-size:14px; font-weight:500; color:rgba(0,0,0,.62)">{{ reas.sub }}</p>
+          <div role="radiogroup" style="display:flex; flex-direction:column; gap:6px; margin-top:16px">
+            <sc-for list="{{ reas.opts }}" as="o" hint-placeholder-count="4"><button role="radio" aria-checked="{{ o.on }}" onClick="{{ o.ir }}" style="{{ o.style }}"><span style="{{ o.dot }}"></span><span style="flex:1; text-align:left">{{ o.nombre }}</span><span style="font-size:12.5px; font-weight:600; color:rgba(0,0,0,.55)">{{ o.meta }}</span></button></sc-for>
+          </div>
+          <sc-if value="{{ reas.hayAviso }}" hint-placeholder-val="{{ false }}"><p style="margin:14px 0 0; padding:12px 14px; border-radius:16px; background:#f6f6f4; font-size:13.5px; line-height:1.5; font-weight:600; color:rgba(0,0,0,.72)">{{ reas.aviso }}</p></sc-if>
+        </div>
+        <div style="flex:none; display:flex; gap:8px; padding:14px 22px 24px">
+          <button onClick="{{ shReas.close }}" style="flex:1; height:50px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+          <button onClick="{{ reas.ok }}" aria-disabled="{{ reas.dis }}" style="{{ reas.btn }}">{{ reas.okTxt }}</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ cfOn }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ shCf.close }}" style="{{ shCf.back }}; z-index:94"></div>
+      <div role="alertdialog" aria-label="{{ cf.titulo }}" style="{{ shCf.panel }}; z-index:95">
+        <sc-if value="{{ bp.mobile }}" hint-placeholder-val="{{ false }}"><div onPointerDown="{{ shCf.down }}" onPointerMove="{{ shCf.move }}" onPointerUp="{{ shCf.up }}" style="padding:10px 0 4px; display:flex; justify-content:center; touch-action:none"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div></sc-if>
+        <div style="padding:22px 24px 24px">
+          <span style="{{ cf.ico }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ cf.path }}"></path></svg></span>
+          <p style="margin:16px 0 0; font-size:19px; line-height:1.3; font-weight:700">{{ cf.titulo }}</p>
+          <p style="margin:8px 0 0; font-size:14.5px; line-height:1.55; font-weight:500; color:rgba(0,0,0,.62)">{{ cf.texto }}</p>
+          <div style="display:flex; gap:8px; margin-top:22px; flex-wrap:wrap">
+            <button onClick="{{ shCf.close }}" style="flex:1; min-width:120px; height:48px; border:0; border-radius:999px; background:#f2f2f0; color:rgba(0,0,0,.62); font-size:14.5px; font-weight:700; cursor:pointer">Cancelar</button>
+            <button onClick="{{ cf.ok }}" style="{{ cf.btn }}">{{ cf.okTxt }}</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ secNav.sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ secNav.close }}" style="{{ secNav.sh.back }}"></div>
+      <div role="menu" aria-label="{{ secNav.titulo }}" style="{{ secNav.sh.panel }}">
+        <div onPointerDown="{{ secNav.sh.down }}" onPointerMove="{{ secNav.sh.move }}" onPointerUp="{{ secNav.sh.up }}" style="flex:none; padding:10px 0 4px; display:flex; justify-content:center; touch-action:none; cursor:grab"><span style="width:44px; height:5px; border-radius:999px; background:rgba(0,0,0,.16)"></span></div>
+        <p style="margin:10px 22px 8px; font-size:19px; font-weight:700">{{ secNav.titulo }}</p>
+        <div style="flex:1; min-height:0; overflow-y:auto; padding:0 12px 30px; display:flex; flex-direction:column; gap:2px">
+          <sc-for list="{{ secNav.items }}" as="it" hint-placeholder-count="5">
+            <button role="menuitem" aria-current="{{ it.on }}" onClick="{{ it.ir }}" style="{{ it.style }}" style-hover="background:#f6f6f4">
+              <span style="width:38px; height:38px; flex:none; border-radius:999px; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); color:#0a0a0a; display:flex; align-items:center; justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.path }}"></path></svg></span>
+              <span style="flex:1; min-width:0"><span style="display:block; font-size:14.5px; font-weight:700; color:#0a0a0a">{{ it.t }}</span><span style="display:block; margin-top:2px; font-size:12.5px; line-height:1.35; font-weight:500; color:rgba(0,0,0,.55)">{{ it.desc }}</span></span>
+              <sc-if value="{{ it.hayBadge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px; height:22px; padding:0 7px; border-radius:999px; background:#dc2626; color:#fff; font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center">{{ it.badge }}</span></sc-if>
+              <sc-if value="{{ it.on }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 6L9 17l-5-5"></path></svg></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="{{ toastStyle }}"><span style="width:24px; height:24px; flex:none; border-radius:999px; background:#16a34a; display:flex; align-items:center; justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span><span style="flex:1">{{ toast }}</span></div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    let tab = 'tareas'; try { if (/tab=solicitudes/.test(location.search)) tab = 'solicitudes'; } catch (e) {}
+    this.state = { w: 1440, forced: null, db: null, tab, per: { from: '2026-10-19', to: '2026-11-15' }, perOpen: false,
+      col: null, openF: { 'proceso|2026-10-26|f1': true, 'proceso|2026-10-28|f2': true }, solCol: {}, exp: {},
+      sel: null, anim: null, form: null, car: null, reas: null, cf: null, toast: null, fresh: null, leaving: null, _dragY: 0 };
+    this.bodyRef = React.createRef();
+  }
+  componentDidMount() { this.boot(); }
+  boot() { if (!window.AO) { setTimeout(() => this.boot(), 40); return; } const c = AO.remember('deptCol'); this.setState({ db: AO.seed(), col: c || { completada: true } }); }
+  ME = 'u1'; DEP = 'd1';
+  min(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+  upd(fn) { this.setState(s => ({ db: fn(s.db) })); }
+  setTask(id, patch) { this.upd(db => ({ ...db, tasks: db.tasks.map(t => t.id === id ? { ...t, ...patch } : t) })); }
+  flash(id) { this.setState({ fresh: id }); clearTimeout(this._ft); this._ft = setTimeout(() => this.setState({ fresh: null }), 1600); }
+
+  renderVals() {
+    const s = this.state, A = window.AO;
+    if (!A || !s.db) return { st: { carga: true }, bp: {}, anchos: [], forzar: [], secciones: [], solSecs: [], per: {}, det: {}, f: {}, isTareas: true, frameW: '1440px', frameH: '880px' };
+    const b = A.bp(s.w), db = s.db, S = A.S, me = this.ME;
+    const dept = db.depts.find(d => d.id === this.DEP);
+    const subs = db.subs.filter(x => x.dept === dept.id);
+    const subOf = id => db.subs.find(x => x.id === id);
+    const prioOf = id => dept.prioridades.find(p => p.id === id);
+    const n = (k, a, p) => k + ' ' + (k === 1 ? a : p);
+    const all = db.tasks.filter(t => t.dept === dept.id);
+    const inPer = t => t.fecha >= s.per.from && t.fecha <= s.per.to;
+    const sorter = (a, c) => (a.desde ? this.min(a.desde) : -1) - (c.desde ? this.min(c.desde) : -1);
+    const forzar = [[null, 'Normal'], ['carga', 'Cargando'], ['error', 'Error'], ['vacio', 'Sin tareas']].map(([k, t]) => ({ t, style: S.tool(s.forced === k), ir: () => this.setState({ forced: k }) }));
+
+    const card = t => {
+      const sub = t.sub && subOf(t.sub), c = sub ? sub.color : 'rgba(0,0,0,.3)', p = prioOf(t.prio), done = t.estado === 'completada';
+      return { nombre: t.nombre, hora: A.fmt.horario(t), sub: sub ? sub.nombre : 'Sin asignar', subChip: S.chip(c), subDot: S.dot(c, 7),
+        prio: p ? p.nombre : '—', prioChip: S.chip(p ? p.color : 'rgba(0,0,0,.4)'), prioDot: S.dot(p ? p.color : 'rgba(0,0,0,.4)', 7),
+        strike: done ? 'text-decoration:line-through; color:rgba(0,0,0,.5)' : '',
+        card: 'width:100%; min-height:72px; padding:14px 16px 14px 14px; border:0; border-radius:20px; background:#fff; cursor:pointer; display:flex; gap:12px; text-align:left; box-shadow:0 1px 2px rgba(0,0,0,.05)' + (s.fresh === t.id ? '; animation:aoIn 1.2s ease both' : ''),
+        bar: 'width:4px; flex:none; align-self:stretch; border-radius:999px; background:' + c,
+        abrir: () => this.setState({ sel: t.id, anim: null, _dragY: 0 }) };
+    };
+    const col = s.col || {};
+    const vis = s.forced === 'vacio' ? [] : all.filter(inPer);
+    const secciones = ['espera', 'proceso', 'completada'].map(k => {
+      const e = A.ESTADOS[k], list = vis.filter(t => t.estado === k), open = !col[k];
+      const days = [...new Set(list.map(t => t.fecha))].sort();
+      return { label: e.label, count: String(list.length), open, rot: S.rot(open), chip: S.estado(k) + '; height:30px; font-size:13px; padding:0 12px 0 10px', dot: S.dot(e.dot, 8),
+        nada: list.length === 0, nadaTxt: k === 'espera' ? 'No hay tareas esperando asignación.' : k === 'proceso' ? 'No hay tareas en proceso en este período.' : 'Todavía no se completó ninguna en este período.',
+        toggle: () => { const c2 = { ...col, [k]: open }; A.remember('deptCol', c2); this.setState({ col: c2 }); },
+        days: days.map(day => {
+          const dl = list.filter(t => t.fecha === day).sort(sorter);
+          const fids = [...new Set(dl.filter(t => t.folder).map(t => t.folder))];
+          return { titulo: A.fmt.dia(day) + (day === A.HOY ? ' · Hoy' : ''), ink: day === A.HOY ? '#0a0a0a' : 'rgba(0,0,0,.62)',
+            folders: fids.map(fid => { const fo = db.folders.find(x => x.id === fid), key = k + '|' + day + '|' + fid, op = !!s.openF[key] || dl.some(t => t.id === s.fresh && t.folder === fid), ts = dl.filter(t => t.folder === fid);
+              return { nombre: fo.nombre, color: fo.color, fill: A.tint(fo.color, '33'), cnt: n(ts.length, 'tarea', 'tareas'), open: op, rot: S.rot(op), bg: op ? '#ebebe8' : '#fff',
+                toggle: () => this.setState({ openF: { ...this.state.openF, [key]: !op } }), tasks: ts.map(card) }; }),
+            sueltas: dl.filter(t => !t.folder).map(card) };
+        }) };
+    });
+    const st = { carga: s.forced === 'carga', error: s.forced === 'error' };
+    st.vacio = !st.carga && !st.error && vis.length === 0; st.ok = !st.carga && !st.error && !st.vacio;
+
+    const per = A.period(this, b.mobile, d => all.some(t => t.fecha === d));
+
+    // Solicitudes
+    const sols = db.solicitudes.filter(r => r.dept === dept.id);
+    const nuevas = sols.filter(r => r.estado === 'nueva'), acept = sols.filter(r => r.estado === 'aceptada');
+    const solItem = r => { const u = A.user(r.por), p = prioOf(r.prio), ex = !!s.exp[r.id], largo = r.detalles.length > 150;
+      return { ini: u.ini, nombre: u.full, av: S.avatar(u, 42), cuando: A.fmt.hace(r.at), prio: p ? p.nombre : '—', prioChip: S.chip(p ? p.color : 'rgba(0,0,0,.4)'), prioDot: S.dot(p ? p.color : 'rgba(0,0,0,.4)', 7),
+        detalles: r.detalles, largo, verTxt: ex ? 'Ver menos' : 'Ver más', verMas: () => this.setState({ exp: { ...this.state.exp, [r.id]: !ex } }),
+        clamp: largo && !ex ? 'display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden' : '',
+        card: 'background:#fff; border-radius:24px; padding:18px; display:flex; flex-direction:column; gap:14px; box-shadow:0 1px 2px rgba(0,0,0,.05)' + (s.leaving === r.id ? '; animation:aoOut .35s ease both' : s.fresh === r.id ? '; animation:aoIn 1s ease both' : ''),
+        nueva: r.estado === 'nueva', aceptada: r.estado === 'aceptada',
+        rechazar: () => this.setState({ cf: { kind: 'rechazar', id: r.id }, _dragY: 0 }),
+        aceptar: () => { this.setState({ leaving: r.id }); setTimeout(() => { this.upd(db2 => ({ ...db2, solicitudes: db2.solicitudes.map(x => x.id === r.id ? { ...x, estado: 'aceptada' } : x) })); this.setState({ leaving: null, solCol: { ...this.state.solCol, acept: false } }); this.flash(r.id); A.toast(this, 'Solicitud aceptada. Queda lista para asignar.'); }, 340); },
+        asignar: () => this.openForm({ mode: 'asignar', sol: r.id, detalles: r.detalles, prio: r.prio }) };
+    };
+    const sc = s.solCol;
+    const solSecs = [
+      { k: 'nuevas', label: 'Nuevas', list: nuevas, vacioTxt: 'No hay solicitudes nuevas', vacioSub: 'Cuando alguien pida una tarea a ' + dept.nombre + ', aparece acá.', red: true },
+      { k: 'acept', label: 'Tareas aceptadas', list: acept, vacioTxt: 'No hay tareas aceptadas sin asignar', vacioSub: 'Las que aceptes esperan acá hasta que las asignes.' }
+    ].map(x => { const open = !sc[x.k]; return { label: x.label, count: String(x.list.length), open, rot: S.rot(open), vacio: x.list.length === 0, vacioTxt: x.vacioTxt, vacioSub: x.vacioSub,
+      badge: 'min-width:26px; height:26px; padding:0 8px; border-radius:999px; font-size:12.5px; font-weight:800; display:flex; align-items:center; justify-content:center; ' + (x.red && x.list.length ? 'background:#dc2626; color:#fff' : 'background:#f2f2f0; color:rgba(0,0,0,.62)'),
+      toggle: () => this.setState({ solCol: { ...sc, [x.k]: open } }), items: x.list.map(solItem) }; });
+
+    // Detalle
+    const selT = s.sel && db.tasks.find(t => t.id === s.sel);
+    const shDet = A.sheet(this, 'sel', b.mobile);
+    let det = {};
+    if (selT) {
+      const r = A.resolve(db, selT), u = A.user;
+      det = {
+        back: b.mobile ? shDet.back : 'position:absolute; inset:0; z-index:60; background:rgba(10,10,10,.12); animation:aoFade .18s ease both',
+        panel: b.mobile ? shDet.panel : 'position:absolute; top:12px; right:12px; bottom:12px; z-index:61; width:' + (b.desk ? '420px' : '400px') + '; background:#fff; border-radius:28px; box-shadow:0 20px 60px rgba(0,0,0,.2); display:flex; flex-direction:column; overflow:hidden; animation:aoSide .22s ease both',
+        padB: b.mobile ? '30px' : '18px',
+        nombre: selT.nombre, estado: r.est.label, anim: s.anim === selT.id, noAnim: s.anim !== selT.id,
+        estChip: S.estado(selT.estado) + '; height:30px; padding:0 12px 0 10px; font-size:12.5px', estDot: S.dot(r.est.dot, 8),
+        bar: 'width:5px; height:30px; margin-top:1px; flex:none; border-radius:999px; background:' + r.color,
+        cuando: A.fmt.dia(selT.fecha) + ' · ' + A.fmt.horario(selT),
+        deptIcon: 'width:18px; height:18px; flex:none; border-radius:999px; background:' + dept.color + '; color:#fff; display:flex; align-items:center; justify-content:center',
+        sub: r.sub ? r.sub.nombre : 'Sin asignar', subChip: S.chip(r.color) + '; height:26px; font-size:12.5px', subDot: S.dot(r.color, 8),
+        prio: r.prio ? r.prio.nombre : '—', prioChip: S.chip(r.prio ? r.prio.color : 'rgba(0,0,0,.4)') + '; height:26px; font-size:12.5px', prioDot: S.dot(r.prio ? r.prio.color : 'rgba(0,0,0,.4)', 8),
+        folder: r.folder ? r.folder.nombre : 'Sin carpeta', folderDot: S.dot(r.folder ? r.folder.color : 'rgba(0,0,0,.2)', 9),
+        gente: r.gente.map((p, i) => ({ ini: p.ini, nombre: p.full + (p.id === me ? ' (vos)' : ''), av: S.avatar(p, 32), lider: i === 0 })), nadie: !r.sub,
+        detalles: selT.detalles, creada: 'Creada el ' + A.fmt.stamp(selT.creada) + ' por ' + u(selT.por).full,
+        haySolicitud: !!selT.solicitud, solicitud: selT.solicitud ? 'Solicitada por ' + u(selT.solicitud.por).full + ' el ' + A.fmt.stamp(selT.solicitud.at) : '',
+        hayCompleto: !!selT.completo, completo: selT.completo ? 'Completada por ' + u(selT.completo.por).full + ' el ' + A.fmt.stamp(selT.completo.at) : '',
+        puedeCompletar: selT.estado === 'proceso', puedeVolver: selT.estado === 'completada', reasTxt: selT.sub ? 'Reasignar' : 'Asignar'
+      };
+    }
+
+    // Formulario de tarea
+    const f = s.form; let fv = {};
+    if (f) {
+      const set = p => this.setState({ form: { ...this.state.form, ...p } });
+      const subSel = f.sub && f.sub !== '__none' ? subOf(f.sub) : null;
+      const horaBad = !f.all && (!f.desde || !f.hasta || f.hasta <= f.desde);
+      const invalid = !f.nombre.trim() || !f.sub || !f.fecha || horaBad;
+      const tt = f.touched;
+      const q = A.strip(f.subQ || '');
+      const opts = [...subs.map(x => ({ id: x.id, nombre: x.nombre, color: x.color, meta: n(x.miembros.length + 1, 'persona', 'personas') })), { id: '__none', nombre: 'Sin asignar todavía', color: 'rgba(0,0,0,.25)', meta: 'Queda esperando' }]
+        .filter(o => !q || A.strip(o.nombre).includes(q));
+      const gente = subSel ? [subSel.lider, ...subSel.miembros.filter(m => m !== subSel.lider)].map(A.user) : [];
+      fv = {
+        titulo: f.mode === 'asignar' ? 'Asignar tarea' : f.mode === 'editar' ? 'Editar tarea' : 'Crear tarea',
+        btnTxt: f.mode === 'asignar' ? 'Asignar tarea' : f.mode === 'editar' ? 'Guardar cambios' : 'Crear tarea',
+        hayRef: !!f.ref, refNombre: f.ref ? A.user(f.ref.por).full : '', refIni: f.ref ? A.user(f.ref.por).ini : '', refAv: f.ref ? S.avatar(A.user(f.ref.por), 34) : '', refPrio: f.ref && prioOf(f.ref.prio) ? prioOf(f.ref.prio).nombre : '',
+        nombre: f.nombre, onNombre: e => set({ nombre: e.target.value }), errNombre: tt && !f.nombre.trim(), nombreSt: S.input(tt && !f.nombre.trim()),
+        comboOpen: !!f.subOpen, comboVal: f.subOpen ? (f.subQ || '') : subSel ? subSel.nombre : f.sub === '__none' ? 'Sin asignar todavía' : '',
+        onCombo: e => set({ subQ: e.target.value, subOpen: true }), openCombo: () => set({ subOpen: true, subQ: '' }),
+        comboBox: 'height:52px; padding:0 16px; border-radius:16px; background:#f6f6f4; display:flex; align-items:center; gap:10px; cursor:text; box-shadow:' + (tt && !f.sub ? 'inset 0 0 0 2px #b42318' : f.subOpen ? 'inset 0 0 0 2px #0a0a0a' : 'inset 0 0 0 1px rgba(0,0,0,.06)'),
+        comboDot: S.dot(subSel ? subSel.color : 'rgba(0,0,0,.2)', 10), errSub: tt && !f.sub,
+        subOpts: opts.map(o => ({ nombre: o.nombre, meta: o.meta, dot: S.dot(o.color, 10), bg: f.sub === o.id ? '#f2f2f0' : 'transparent', ir: () => set({ sub: o.id, subOpen: false, subQ: '' }) })), sinRes: opts.length === 0,
+        cols2: b.mobile ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))',
+        folder: f.folder || '', folders: db.folders.filter(x => x.dept === dept.id).map(x => ({ id: x.id, nombre: x.nombre })),
+        onFolder: e => { const v = e.target.value; if (v === '__new') this.setState({ car: { nombre: '', color: '#4f46e5', touched: false, fromForm: true }, _dragY: 0 }); else set({ folder: v }); },
+        selSt: S.input(false) + '; appearance:none; -webkit-appearance:none; padding-right:40px; cursor:pointer',
+        fecha: f.fecha, onFecha: e => set({ fecha: e.target.value }), fechaSt: S.input(tt && !f.fecha), errFecha: tt && !f.fecha,
+        all: f.all, toggleAll: () => set({ all: !f.all, desde: f.desde || '19:00', hasta: f.hasta || '20:30' }), track: S.switch(f.all), knob: S.knob(f.all), horario: !f.all,
+        desde: f.desde, hasta: f.hasta, onDesde: e => set({ desde: e.target.value }), onHasta: e => set({ hasta: e.target.value }),
+        desdeSt: S.input(tt && horaBad && !f.desde), hastaSt: S.input(horaBad && (tt || (f.desde && f.hasta))),
+        errHora: horaBad && (tt || (f.desde && f.hasta)), errHoraTxt: !f.desde || !f.hasta ? 'Completá desde y hasta qué hora.' : 'La hora de “Hasta” tiene que ser después de “Desde”.',
+        prios: dept.prioridades.map(p => ({ nombre: p.nombre, on: f.prio === p.id, dot: S.dot(p.color, 9), style: S.pick(p.color, f.prio === p.id), ir: () => set({ prio: p.id }) })),
+        detalles: f.detalles, onDet: e => set({ detalles: e.target.value }),
+        hayGente: gente.length > 0, sinGente: gente.length === 0, sinGenteTxt: f.sub === '__none' ? 'Nadie todavía. La tarea queda en “Esperando asignación” hasta que elijas un sub-departamento.' : 'Elegí un sub-departamento para ver quiénes la reciben.',
+        gente: gente.map((u, i) => ({ ini: u.ini, nombre: u.nombre + (i === 0 ? ' · dirige' : ''), av: S.avatar(u, 28) })),
+        registro: (f.mode === 'editar' ? 'Se va a registrar el cambio: ' : 'Se va a registrar: ') + A.fmt.registro() + ' · por ' + A.user(me).full,
+        invalid, btn: S.prim(invalid) + '; flex:1.4; height:50px',
+        guardar: () => {
+          if (invalid) { set({ touched: true, subOpen: false }); return; }
+          const sub = f.sub === '__none' ? null : f.sub;
+          const base = { nombre: f.nombre.trim(), sub, folder: f.folder || null, fecha: f.fecha, desde: f.all ? undefined : f.desde, hasta: f.all ? undefined : f.hasta, prio: f.prio, detalles: f.detalles.trim() };
+          if (f.mode === 'editar') {
+            const old = db.tasks.find(t => t.id === f.id);
+            this.setTask(f.id, { ...base, estado: old.estado === 'completada' ? 'completada' : sub ? 'proceso' : 'espera' });
+            this.setState({ form: null }); this.flash(f.id); A.toast(this, 'Cambios guardados'); return;
+          }
+          const id = 'n' + Date.now(), sol = f.sol && db.solicitudes.find(r => r.id === f.sol);
+          const t = { id, dept: dept.id, ...base, estado: sub ? 'proceso' : 'espera', creada: '2026-10-26T14:32', por: me, ...(sol ? { solicitud: { por: sol.por, at: sol.at } } : {}) };
+          this.upd(d2 => ({ ...d2, tasks: [...d2.tasks, t], solicitudes: sol ? d2.solicitudes.filter(r => r.id !== sol.id) : d2.solicitudes }));
+          const k = t.estado, c2 = { ...(this.state.col || {}), [k]: false };
+          const perOk = t.fecha >= s.per.from && t.fecha <= s.per.to;
+          this.setState({ form: null, col: c2, tab: f.mode === 'asignar' ? this.state.tab : 'tareas', per: perOk ? s.per : { from: t.fecha < s.per.from ? t.fecha : s.per.from, to: t.fecha > s.per.to ? t.fecha : s.per.to }, forced: null });
+          this.flash(id);
+          A.toast(this, f.mode === 'asignar' ? 'Tarea asignada. Ya está en la lista de tareas.' : sub ? 'Tarea creada. Les avisamos por email.' : 'Tarea creada. Queda esperando asignación.');
+        }
+      };
+    }
+    // Carpeta
+    const c = s.car; let car = {};
+    if (c) {
+      const set = p => this.setState({ car: { ...this.state.car, ...p } }), inv = !c.nombre.trim();
+      car = { nombre: c.nombre, onNombre: e => set({ nombre: e.target.value }), nombreSt: S.input(c.touched && inv), err: c.touched && inv, color: c.color, fill: A.tint(c.color, '33'),
+        colores: A.PALETA.map(([col2, nm]) => ({ nombre: nm, on: c.color === col2, style: S.swatch(col2, c.color === col2), ir: () => set({ color: col2 }) })),
+        invalid: inv, btn: S.prim(inv) + '; flex:1.3; height:50px',
+        guardar: () => { if (inv) { set({ touched: true }); return; }
+          const id = 'f' + Date.now();
+          this.upd(d2 => ({ ...d2, folders: [...d2.folders, { id, dept: dept.id, nombre: c.nombre.trim(), color: c.color, creada: '2026-10-26T14:32' }] }));
+          if (c.fromForm) this.setState({ car: null, form: { ...this.state.form, folder: id } }); else this.setState({ car: null });
+          A.toast(this, 'Carpeta “' + c.nombre.trim() + '” creada'); } };
+    }
+    // Reasignar
+    const rs = s.reas && db.tasks.find(t => t.id === s.reas.id); let reas = {};
+    if (rs) {
+      const to = s.reas.to && subOf(s.reas.to);
+      reas = { titulo: rs.sub ? 'Reasignar tarea' : 'Asignar a un sub-departamento', sub: '“' + rs.nombre + '”' + (rs.sub ? ' hoy la tiene ' + subOf(rs.sub).nombre + '.' : ' está esperando asignación.'),
+        opts: subs.filter(x => x.id !== rs.sub).map(x => ({ nombre: x.nombre, meta: n(x.miembros.length + 1, 'persona', 'personas'), on: s.reas.to === x.id, dot: S.dot(x.color, 12), style: S.pick(x.color, s.reas.to === x.id) + '; width:100%; min-height:52px; border-radius:16px; justify-content:flex-start', ir: () => this.setState({ reas: { ...this.state.reas, to: x.id } }) })),
+        hayAviso: !!to, aviso: to ? 'Los integrantes de ' + to.nombre + ' la van a ver en su Agenda y van a recibir un email.' + (rs.sub ? ' ' + subOf(rs.sub).nombre + ' deja de verla.' : '') : '',
+        dis: !to, btn: S.prim(!to) + '; flex:1.3; height:50px', okTxt: rs.sub ? 'Reasignar' : 'Asignar',
+        ok: () => { if (!to) return; this.setTask(rs.id, { sub: to.id, estado: rs.estado === 'completada' ? 'completada' : 'proceso' }); this.setState({ reas: null }); A.toast(this, 'Ahora la tiene ' + to.nombre); } };
+    }
+    // Confirmaciones
+    const cfS = s.cf; let cf = {};
+    if (cfS) {
+      const red = 'width:52px; height:52px; border-radius:999px; background:rgba(180,35,24,.1); color:#b42318; display:flex; align-items:center; justify-content:center';
+      const green = 'width:52px; height:52px; border-radius:999px; background:rgba(21,128,61,.12); color:#15803d; display:flex; align-items:center; justify-content:center';
+      const trash = A.I.trash;
+      if (cfS.kind === 'rechazar') { const r = db.solicitudes.find(x => x.id === cfS.id), u = A.user(r.por);
+        cf = { titulo: '¿Rechazar la solicitud de ' + u.full + '?', texto: 'No se va a crear ninguna tarea. ' + u.nombre + ' va a ver que su pedido fue rechazado.', ico: red, path: A.I.x, okTxt: 'Rechazar', btn: S.prim(false) + '; flex:1; min-width:140px; background:#b42318',
+          ok: () => { this.upd(d2 => ({ ...d2, solicitudes: d2.solicitudes.filter(x => x.id !== r.id) })); this.setState({ cf: null }); A.toast(this, 'Solicitud rechazada'); } }; }
+      if (cfS.kind === 'borrar' && selT) { const r = A.resolve(db, selT);
+        cf = { titulo: '¿Eliminar “' + selT.nombre + '”?', texto: (r.gente.length ? 'Se va a borrar de la Agenda de ' + n(r.gente.length, 'persona', 'personas') + ' de ' + r.sub.nombre + '. ' : '') + 'Esto no se puede deshacer.', ico: red, path: trash, okTxt: 'Eliminar tarea', btn: S.prim(false) + '; flex:1; min-width:150px; background:#b42318',
+          ok: () => { this.upd(d2 => ({ ...d2, tasks: d2.tasks.filter(t => t.id !== selT.id) })); this.setState({ cf: null, sel: null }); A.toast(this, 'Tarea eliminada'); } }; }
+      if (cfS.kind === 'completar' && selT) {
+        cf = { titulo: '¿Marcar “' + selT.nombre + '” como completada?', texto: 'Se le va a avisar por email a los encargados del departamento.', ico: green, path: A.I.check, okTxt: 'Sí, completada', btn: S.prim(false) + '; flex:1; min-width:150px',
+          ok: () => { this.setTask(selT.id, { estado: 'completada', completo: { por: me, at: '2026-10-26T14:32' } }); this.setState({ cf: null, anim: selT.id }); A.toast(this, 'Tarea completada. Les avisamos a los encargados.'); } }; }
+    }
+    const sel = !!selT;
+    return {
+      bp: b, noMobile: !b.mobile, ...A.frame(s.w), anchos: A.anchos(this, { sel: null, form: null, perOpen: false }), forzar,
+      headPad: b.mobile ? '56px 16px 14px' : '22px 28px 16px', bodyPad: b.mobile ? '16px 16px 48px' : '22px 28px 48px', h1: b.mobile ? '22px' : '26px',
+      deptNombre: dept.nombre, deptPath: A.I[dept.icon], deptCircle: S.iconCircle(dept.color, 48),
+      tabT: S.tab(s.tab === 'tareas'), tabS: S.tab(s.tab === 'solicitudes'), tabOffA: S.tab(false) + '; text-decoration:none',
+      tabTareas: s.tab === 'tareas' ? 'page' : 'false', tabSolic: s.tab === 'solicitudes' ? 'page' : 'false',
+      goTareas: () => this.setState({ tab: 'tareas' }), goSol: () => this.setState({ tab: 'solicitudes' }),
+      hayNuevas: nuevas.length > 0, nNuevas: String(nuevas.length),
+      secNav: Object.assign(A.secMenu(this, [
+        { t: 'Tareas', desc: 'Todo lo que tiene el departamento', icon: 'calendar', on: s.tab === 'tareas', go: () => this.setState({ tab: 'tareas' }) },
+        { t: 'Solicitudes', desc: 'Pedidos que llegan de otras personas', icon: 'inbox', on: s.tab === 'solicitudes', badge: nuevas.length, go: () => this.setState({ tab: 'solicitudes' }) },
+        { t: 'Sub-departamentos', desc: 'Los equipos que reciben las tareas', icon: 'grid', href: 'Departamento - Equipo.dc.html?tab=subs' },
+        { t: 'Personal', desc: 'Encargados y quién tiene a cargo a quién', icon: 'users', href: 'Departamento - Equipo.dc.html?tab=personal' },
+        { t: 'Configuración', desc: 'Prioridades del departamento', icon: 'settings', href: 'Departamento - Equipo.dc.html?tab=config' }
+      ], b.mobile, 'Secciones del departamento'), { tituloMay: 'SECCIONES DEL DEPARTAMENTO' }),
+      isTareas: s.tab === 'tareas', isSolic: s.tab === 'solicitudes' && !st.carga && !st.error,
+      perFlex: b.mobile ? '1 1 100%' : '0 0 auto', btnFlex: b.mobile ? '1 1 0' : '0 0 auto', spacerFlex: b.mobile ? '0 0 0' : '1',
+      per, perPop: per.open && !b.mobile, perSheet: per.open && b.mobile, perW: s.w < 1100 ? 'min(720px, calc(100vw - 80px))' : '760px', shPer: A.sheet(this, 'perOpen', true),
+      dow: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
+      st, secciones, solSecs, solCols: b.mobile ? 'minmax(0,1fr)' : 'repeat(auto-fill,minmax(340px,1fr))',
+      reintentar: () => { this.setState({ forced: 'carga' }); setTimeout(() => this.setState({ forced: null }), 1000); },
+      abrirCrear: () => this.openForm({ mode: 'crear' }),
+      abrirCarpeta: () => this.setState({ car: { nombre: '', color: '#4f46e5', touched: false }, _dragY: 0 }),
+      detOn: sel, det, shDet, cerrarDet: () => this.setState({ sel: null, _dragY: 0 }),
+      editar: () => { const t = selT; this.setState({ sel: null }); this.openForm({ mode: 'editar', id: t.id, nombre: t.nombre, sub: t.sub || '__none', folder: t.folder || '', fecha: t.fecha, all: !t.desde, desde: t.desde || '', hasta: t.hasta || '', prio: t.prio, detalles: t.detalles }); },
+      abrirReas: () => this.setState({ reas: { id: s.sel, to: null }, _dragY: 0 }),
+      pedirBorrar: () => this.setState({ cf: { kind: 'borrar' }, _dragY: 0 }), pedirCompletar: () => this.setState({ cf: { kind: 'completar' }, _dragY: 0 }),
+      volverProceso: () => { this.setTask(selT.id, { estado: 'proceso', completo: null }); this.setState({ anim: null }); A.toast(this, 'La tarea volvió a En proceso'); },
+      formOn: !!f, f: fv, shForm: A.sheet(this, 'form', b.mobile, { w: 620 }),
+      carOn: !!c, car, shCar: A.sheet(this, 'car', b.mobile, { w: 460 }),
+      reasOn: !!rs, reas, shReas: A.sheet(this, 'reas', b.mobile, { w: 480 }),
+      cfOn: !!cfS && !!cf.titulo, cf, shCf: A.sheet(this, 'cf', b.mobile, { w: 440 }),
+      toastOn: !!s.toast, toast: s.toast, toastStyle: A.toastStyle(b.mobile)
+    };
+  }
+  openForm(o) {
+    const sol = o.sol && this.state.db.solicitudes.find(r => r.id === o.sol);
+    this.setState({ _dragY: 0, form: { mode: o.mode, id: o.id, nombre: o.nombre || '', sub: o.sub || '', subQ: '', subOpen: false, folder: o.folder || '', fecha: o.fecha || (o.mode === 'crear' ? '2026-10-27' : ''), all: o.all !== undefined ? o.all : true, desde: o.desde || '', hasta: o.hasta || '', prio: o.prio || 'p2', detalles: o.detalles || '', sol: o.sol, ref: sol ? { por: sol.por, prio: sol.prio } : null, touched: false } });
+  }
+}
+</script>
+</body>
+</html>
