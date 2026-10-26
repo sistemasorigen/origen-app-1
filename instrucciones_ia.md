@@ -716,6 +716,20 @@ conserva el ref. Confirmar el ref vigente antes de usar el MCP.
 ### Prode y Trivia
 Ver secciones 18 y 20 (`prode_*`, `trivia_*`).
 
+### Agenda Origen (sección 39)
+| Tabla | Descripción |
+|---|---|
+| `agenda_departamentos` | Nombre, color, ícono (nombre lucide). Lectura abierta a `authenticated` |
+| `agenda_departamento_encargados` | Quién administra cada departamento (pertenencia, no rol) |
+| `agenda_subdepartamentos` | Equipos del departamento, con `lider_id` (quien lo dirige) |
+| `agenda_subdepartamento_miembros` | Miembros. Quien dirige **no** va acá: cuenta una vez |
+| `agenda_carpetas` | Carpetas por departamento |
+| `agenda_prioridades` | Prioridades por departamento, con `orden`. Lectura abierta a `authenticated` |
+| `agenda_solicitudes` | Pedidos de cualquiera con sesión a un departamento. `numero` correlativo |
+| `agenda_tareas` | Tareas. `estado` lo pone la base. Columnas `email_*` para los avisos |
+
+Las ocho tienen RLS y **ninguna policy de escritura**: todo va por RPC.
+
 ### Columnas y comportamientos que hay que conocer
 - **`groups.status` va en minúsculas** (`approved`, `pending`, `rejected`) y
   `group_registrations.status` en mayúsculas. Comparar con `upper()` o
@@ -2089,6 +2103,100 @@ propia del Día del Niño y no se puede probar sin cámara).
 - `prode-sync-results` falla cada 5 minutos (`404` en el login de la API)
 - Nocturna: datos de pago, teléfono y texto de la puerta antes de abrir
 - El plan de Resend: 100 emails por día
+
+---
+
+## 39. AGENDA ORIGEN Y DEPARTAMENTOS
+
+Calendario de tareas por **departamentos** y **sub-departamentos**, con
+solicitudes que manda cualquiera. Base: `sql/agenda_origen.sql` (pruebas en
+`sql/PROBAR_agenda_origen.sql`, deshacer en `sql/ROLLBACK_agenda_origen.sql`).
+Servicios: `services/agenda.ts`. Colores, íconos y estados:
+`src/contenido/agendaPaleta.ts` (única fuente). Diseños: `design-claude/`
+(Agenda Origen, Sistemas - Departamentos, Departamentos - Inicio, Departamento
+- Tareas, Departamento - Equipo, Sub-departamento - Panel, Solicitudes y los
+dos emails de tarea); el modelo de ejemplo está en `design-claude/agenda-core.js`.
+
+### El acceso va por pertenencia, no por rol
+**No hay `UserRole` para esto ni `ALTER TYPE`.** Ser encargado de un
+departamento es una fila en `agenda_departamento_encargados`; dirigir un
+sub-departamento es su `lider_id`; ser miembro es una fila en
+`agenda_subdepartamento_miembros`. `agenda_mi_acceso()` dice qué ve cada uno y
+es lo que usan el menú, las rutas y `/departamentos`.
+
+| Quién | Qué puede |
+|---|---|
+| `SUPER_ADMIN` | Crear y borrar departamentos (sólo él). Se comporta como encargado de **todos** |
+| Encargado del departamento | Todo su departamento: equipos, gente, carpetas, prioridades, tareas, solicitudes, y cambiar los encargados (siempre al menos uno) |
+| Quien dirige un sub-departamento | Ver su panel (equipo en solo lectura, encargados, contadores) y cambiar el estado de las tareas de su equipo |
+| Miembro de un sub-departamento | Ver sus tareas en la Agenda y cambiarles el estado |
+| Cualquiera con sesión | Ver el listado de departamentos (nombre, color, ícono) y mandarles solicitudes (máx. 10 por día) |
+
+Quien dirige no va en la tabla de miembros: si es las dos cosas, cuenta una
+vez. Al cambiar quién dirige, el anterior **queda como miembro** (no pierde
+sus tareas).
+
+### Estados de una tarea (los pone la base)
+`'esperando'` (sin sub-departamento) · `'en_proceso'` (con sub) ·
+`'completada'` (la marcó alguien del equipo, un encargado o SUPER_ADMIN).
+- Crear o editar con sub `NULL` → `'esperando'`. Crear con sub, o asignar sub
+  a una `'esperando'` → `'en_proceso'` y `asignada_at = now()`.
+- Editar una completada **sin cambiar el sub** → sigue completada. Cambiarle
+  el sub (reasignar) sólo desde `'esperando'` o `'en_proceso'`: en una
+  completada devuelve `motivo: 'completada'`.
+- `'completada'` exige sub (`CHECK`). Una `'esperando'` no se completa
+  (`motivo: 'sin_sub'`). Volver a `'en_proceso'` limpia `completada_at/por`.
+- Borrar un sub-departamento: sus tareas no completadas pasan a
+  `'esperando'` sin sub; **las completadas se borran con él** (no pueden
+  quedar sin equipo). La RPC devuelve cuántas de cada una.
+- Solicitudes: `'nueva'` → `'aceptada'` | `'rechazada'`; `'aceptada'` →
+  `'asignada'` al crear la tarea desde ella. Borrar esa tarea la devuelve a
+  `'aceptada'`.
+
+### Las escrituras van SOLO por RPC
+Las ocho tablas tienen RLS. Las únicas policies son de **lectura** para
+`authenticated` en `agenda_departamentos` y `agenda_prioridades` (no tienen
+datos de personas). `anon` no tiene ningún privilegio de tabla y
+`authenticated` sólo `SELECT`: una escritura directa da error de permiso.
+Nombres y fotos salen de `users` **sólo adentro de las RPC**. Los ids de lo
+que se crea los genera el cliente (`nuevoId()`): un reintento devuelve lo que
+ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce.
+
+### Lista de RPC
+- **Acceso:** `agenda_mi_acceso`, `agenda_buscar_usuarios` (SUPER_ADMIN y
+  encargados; el email va enmascarado si no es SUPER_ADMIN; sin acentos con
+  `translate`, porque `unaccent` no está instalada).
+- **Sistemas (SUPER_ADMIN):** `agenda_departamentos_admin`,
+  `agenda_guardar_departamento`, `agenda_eliminar_departamento`.
+- **Panel del departamento:** `agenda_departamento`,
+  `agenda_tareas_departamento` (hasta 400 días), `agenda_crear_tarea`,
+  `agenda_editar_tarea`, `agenda_reasignar_tarea`, `agenda_eliminar_tarea`,
+  `agenda_guardar_carpeta`, `agenda_eliminar_carpeta`,
+  `agenda_guardar_prioridad`, `agenda_ordenar_prioridades`,
+  `agenda_eliminar_prioridad` (en uso exige reemplazo),
+  `agenda_prioridades_sugeridas`, `agenda_guardar_subdepartamento`,
+  `agenda_eliminar_subdepartamento`, `agenda_agregar_miembros`,
+  `agenda_quitar_miembro`, `agenda_mover_miembro`, `agenda_cambiar_lider`,
+  `agenda_cambiar_encargados`, `agenda_solicitudes_departamento`,
+  `agenda_revisar_solicitud`.
+- **Panel del sub-departamento:** `agenda_subdepartamento` (contadores con la
+  fecha de hoy en hora argentina), `agenda_tareas_subdepartamento`.
+- **Agenda:** `agenda_mis_tareas` (hasta 100 días; con el interruptor, el
+  encargado suma todo su departamento), `agenda_tarea`,
+  `agenda_cambiar_estado_tarea`.
+- **Solicitudes:** `agenda_departamentos_para_solicitar`,
+  `agenda_crear_solicitud` (10 por persona por día argentino).
+- Helpers internos (nadie de afuera los ejecuta): `agenda_es_encargado`,
+  `agenda_dirige`, `agenda_es_miembro`, `agenda_puede_ver_tarea`,
+  `agenda_valida_del_departamento` (sub, carpeta y prioridad del mismo
+  departamento: una sola validación para crear, editar, reasignar y el
+  reemplazo de prioridad), `agenda_valida_campos_tarea`, entre otros.
+
+### Emails
+Se agregan en el **prompt 8** (tarea asignada → a todo el equipo, incluido
+quien lo dirige; tarea completada → sólo a los encargados). Las columnas ya
+están: `agenda_tareas.asignada_at`, `email_asignada_at`,
+`email_completada_at`, `email_error`. Hoy no se manda nada.
 
 ---
 
