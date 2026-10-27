@@ -40,7 +40,12 @@ export const guardarDestino = (location: { pathname: string; search?: string }) 
     }
 };
 
-const SinAcceso: React.FC = () => {
+/**
+ * `volverA`: a dónde lleva el botón en vez del inicio. Lo usa el panel de un
+ * departamento (Agenda Origen), donde lo natural es volver a la lista de
+ * departamentos y no a la portada.
+ */
+const SinAcceso: React.FC<{ volverA?: { etiqueta: string; ruta: string } }> = ({ volverA }) => {
     const { user, isLoadingSession, isLoadingProfile } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -58,7 +63,7 @@ const SinAcceso: React.FC = () => {
 
     const irAlInicio = () => {
         setAbierto(false);
-        navigate('/', { replace: true });
+        navigate(volverA?.ruta ?? '/', { replace: true });
     };
 
     // Sin lista de dependencias a propósito: se vuelve a suscribir en cada
@@ -139,7 +144,7 @@ const SinAcceso: React.FC = () => {
                                 autoFocus
                                 className="w-full py-4 mt-6 bg-black text-white font-semibold text-sm rounded-full hover:bg-neutral-800 active:scale-[0.99] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                             >
-                                Ir al inicio
+                                {volverA?.etiqueta ?? 'Ir al inicio'}
                             </button>
                         </motion.div>
                     </motion.div>

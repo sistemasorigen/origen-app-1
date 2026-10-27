@@ -13,6 +13,8 @@ import PaginaMovimientosVarios from './pages/punto-informacion/PaginaMovimientos
 import PaginaReportarStock from './pages/punto-informacion/PaginaReportarStock';
 import Groups from './pages/groups/Grupos';
 import Admin from './pages/admin/Administrador';
+import DepartamentosInicio from './pages/departamentos/DepartamentosInicio';
+import PanelDepartamento from './pages/departamentos/PanelDepartamento';
 import AuthScreen from './pages/auth/PantallaAutenticacion';
 import Store from './pages/primarias/Tienda';
 import Alabanza from './pages/primarias/Alabanza';
@@ -759,6 +761,13 @@ const AppContent: React.FC = () => {
                                         ? <Admin currentUser={user} onConfigUpdate={refreshConfig} />
                                         : <SinAcceso />
                                 } />
+                                {/* Agenda Origen. Sin guard de rol: el acceso va por
+                                    pertenencia y lo decide la base (agenda_mi_acceso /
+                                    agenda_departamento), cada pantalla con su estado
+                                    de "no tenés acceso". /departamentos/:id/sub/:subId
+                                    queda reservada para el panel de quien dirige. */}
+                                <Route path="/departamentos" element={<DepartamentosInicio />} />
+                                <Route path="/departamentos/:id" element={<PanelDepartamento />} />
                                 <Route path="/store" element={<Store currentUser={user} />} />
                                 <Route path="/alabanza" element={<Alabanza currentUser={user} onLoginRequest={handleLogin} />} />
                                 <Route path="/reportes" element={

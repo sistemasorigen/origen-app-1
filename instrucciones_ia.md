@@ -2117,6 +2117,22 @@ Servicios: `services/agenda.ts`. Colores, íconos y estados:
 - Tareas, Departamento - Equipo, Sub-departamento - Panel, Solicitudes y los
 dos emails de tarea); el modelo de ejemplo está en `design-claude/agenda-core.js`.
 
+### Pantallas
+- `/panel-admin?tab=departamentos` — Sistemas crea, edita y borra departamentos
+  (`pages/admin/DepartamentosAdmin.tsx`).
+- `/departamentos` — los departamentos que administra cada uno
+  (`pages/departamentos/DepartamentosInicio.tsx`). El ítem del menú se ve
+  con `agenda_mi_acceso` (SUPER_ADMIN o encargado), no por rol.
+- `/departamentos/:id?tab=subdepartamentos|personal|config&sub=<id>` — el
+  panel (`pages/departamentos/PanelDepartamento.tsx` y `equipo/`). Las
+  pestañas son una lista de config; la pestaña y el detalle viven en la URL
+  (el atrás del navegador funciona). Quién entra lo decide
+  `agenda_departamento` (sin_permiso → `SinAcceso`, no_existe → aviso).
+- `/departamentos/:id/sub/:subId` está **reservada** para el panel de quien
+  dirige un sub-departamento.
+- `hooks/useAccesoAgenda.ts`: `agenda_mi_acceso` una vez por sesión, en
+  memoria; `recargar()` no vuelve a "cargando" (el menú no parpadea).
+
 ### El acceso va por pertenencia, no por rol
 **No hay `UserRole` para esto ni `ALTER TYPE`.** Ser encargado de un
 departamento es una fila en `agenda_departamento_encargados`; dirigir un
@@ -2146,9 +2162,17 @@ sus tareas).
   completada devuelve `motivo: 'completada'`.
 - `'completada'` exige sub (`CHECK`). Una `'esperando'` no se completa
   (`motivo: 'sin_sub'`). Volver a `'en_proceso'` limpia `completada_at/por`.
-- Borrar un sub-departamento: sus tareas no completadas pasan a
-  `'esperando'` sin sub; **las completadas se borran con él** (no pueden
-  quedar sin equipo). La RPC devuelve cuántas de cada una.
+- **Los sub-departamentos se ARCHIVAN, no se borran**
+  (`sql/agenda_archivar_subdepartamentos.sql`, `agenda_archivar_subdepartamento`):
+  sus tareas no completadas pasan a `'esperando'` sin sub; **las completadas
+  quedan con su sub** como historial, y las filas de miembros también. Un sub
+  archivado no aparece en el panel, en `agenda_mi_acceso` ni en los conteos de
+  Sistemas, y no se puede usar ni editar: las RPC devuelven
+  `motivo: 'archivado'`. Sus completadas siguen en la Agenda, en el
+  departamento y en el detalle, con `subdepartamento.archivado = true`, y no
+  se pueden reabrir. El nombre de un archivado se puede volver a usar (índice
+  único parcial). `agenda_eliminar_subdepartamento` quedó sin `EXECUTE` para
+  `authenticated`.
 - Solicitudes: `'nueva'` → `'aceptada'` | `'rechazada'`; `'aceptada'` →
   `'asignada'` al crear la tarea desde ella. Borrar esa tarea la devuelve a
   `'aceptada'`.
@@ -2175,7 +2199,7 @@ ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce
   `agenda_guardar_prioridad`, `agenda_ordenar_prioridades`,
   `agenda_eliminar_prioridad` (en uso exige reemplazo),
   `agenda_prioridades_sugeridas`, `agenda_guardar_subdepartamento`,
-  `agenda_eliminar_subdepartamento`, `agenda_agregar_miembros`,
+  `agenda_archivar_subdepartamento`, `agenda_agregar_miembros`,
   `agenda_quitar_miembro`, `agenda_mover_miembro`, `agenda_cambiar_lider`,
   `agenda_cambiar_encargados`, `agenda_solicitudes_departamento`,
   `agenda_revisar_solicitud`.

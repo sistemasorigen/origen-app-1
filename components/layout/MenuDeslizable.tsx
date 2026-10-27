@@ -25,13 +25,15 @@ import {
     LayoutDashboard,
     Users,
     UserCheck,
-    Baby
+    Baby,
+    LayoutGrid
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { useSinLeer } from '../../contexts/NotificationContext';
+import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Los tokens del diseño (design-claude/Menu Deslizable.dc)
@@ -267,6 +269,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
      */
     const sinLeer = useSinLeer();
     const pop = usePop(sinLeer);
+    /** De qué departamentos de Agenda Origen es encargado (para "Departamentos"). */
+    const accesoAgenda = useAccesoAgenda();
 
     /**
      * La píldora negra que marca dónde estás, y que se desliza de un ítem a
@@ -535,6 +539,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // ─────────────────────────────────────────────────────────────────────
     const menuAdmin: MenuItem[] = [
         {
+            // Agenda Origen. No va por roles: se ve según de qué departamento
+            // es encargado cada uno (agenda_mi_acceso). Ver puedeVer().
+            label: 'Departamentos',
+            icon: LayoutGrid,
+            path: '/departamentos',
+            requiresAuth: true,
+        },
+        {
             label: 'Audiencia Servicios',
             icon: HeartHandshake,
             path: '/audiencia-servicios',
@@ -708,6 +720,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // "Administración" sin nada debajo le dice al voluntario que hay algo que
     // no está viendo.
     const puedeVer = (item: MenuItem): boolean => {
+        if (item.path === '/departamentos') {
+            // Sólo SUPER_ADMIN y encargados: hoy /departamentos no tiene
+            // pantalla para quien sólo DIRIGE un sub-departamento (llega en el
+            // prompt 6 de Agenda Origen). Por eso no es puedeVerDepartamentos,
+            // que ya lo incluye. Mientras se pregunta, no aparece: que no
+            // parpadee apareciendo y desapareciendo.
+            if (!currentUser || accesoAgenda.cargando) return false;
+            return accesoAgenda.acceso.superAdmin || accesoAgenda.acceso.encargado.length > 0;
+        }
         if (item.label === 'Prode Mundial') {
             if (!prodeActivo) return false;
             if (currentUser?.gender === 'Femenino') return false;

@@ -12,6 +12,11 @@ import { Avatar, Cargando, ErrorDeCampo, RotuloPaso } from './piezas';
  * "luc"— se descarta, así un resultado viejo nunca pisa a uno nuevo.
  *
  * Quien ya está elegido no aparece en los resultados.
+ *
+ * Lo reusa el panel de un departamento (pages/departamentos/equipo/) para
+ * elegir quién dirige un sub-departamento (`uno`), sus integrantes y los
+ * encargados: los textos y los ids se pasan por props; sin ellas es el paso 4
+ * del formulario de Sistemas, como siempre.
  */
 
 const ESPERA_MS = 300;
@@ -30,7 +35,25 @@ const SelectorDeEncargados: React.FC<{
     color: string;
     /** Texto del error (falta elegir, o lo que dijo la base). */
     error: string | null;
-}> = ({ elegidos, onCambiar, color, error }) => {
+    /** El rótulo de arriba. null = sin rótulo (cuando ya lo dice la hoja). */
+    rotulo?: string | null;
+    /** Prefijo de los ids (dos selectores en la misma hoja no pueden compartirlos). */
+    idBase?: string;
+    /** Una sola persona: elegir reemplaza, y con alguien elegido no se busca más. */
+    uno?: boolean;
+    /** Personas que no se ofrecen (por ejemplo, quien dirige al elegir miembros). */
+    excluir?: string[];
+    etiquetaBusqueda?: string;
+    placeholder?: string;
+    /** Lo que lee el lector de pantalla en cada resultado. */
+    textoAgregar?: string;
+    etiquetaElegidos?: string;
+}> = ({
+    elegidos, onCambiar, color, error,
+    rotulo = '4 · Encargados del departamento', idBase = 'dep', uno = false, excluir = [],
+    etiquetaBusqueda = 'Buscar usuarios para sumar como encargados', placeholder = 'Buscar por nombre o email',
+    textoAgregar = 'Sumar como encargado', etiquetaElegidos = 'Encargados elegidos',
+}) => {
     const [texto, setTexto] = useState('');
     const [busqueda, setBusqueda] = useState<Busqueda>({ estado: 'quieto' });
     const pedido = useRef(0);
@@ -51,20 +74,21 @@ const SelectorDeEncargados: React.FC<{
         return () => window.clearTimeout(t);
     }, [texto]);
 
-    const yaElegidos = new Set(elegidos.map(p => p.id));
+    const yaElegidos = new Set([...elegidos.map(p => p.id), ...excluir]);
     const resultados = busqueda.estado === 'listo' ? busqueda.usuarios.filter(u => !yaElegidos.has(u.id)) : [];
 
     const agregar = (u: PersonaBuscada) => {
-        onCambiar([...elegidos, { id: u.id, nombre: u.nombre, avatarUrl: u.avatarUrl }]);
+        const persona = { id: u.id, nombre: u.nombre, avatarUrl: u.avatarUrl };
+        onCambiar(uno ? [persona] : [...elegidos, persona]);
         setTexto('');
     };
 
     return (
-        <div className="flex flex-col gap-2.5" role="group" aria-labelledby="dep-paso-encargados">
-            <RotuloPaso id="dep-paso-encargados">4 · Encargados del departamento</RotuloPaso>
+        <div className="flex flex-col gap-2.5" role="group" aria-labelledby={rotulo ? `${idBase}-paso-encargados` : undefined} aria-label={rotulo ? undefined : etiquetaElegidos}>
+            {rotulo && <RotuloPaso id={`${idBase}-paso-encargados`}>{rotulo}</RotuloPaso>}
 
             {elegidos.length > 0 && (
-                <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label="Encargados elegidos">
+                <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" aria-label={etiquetaElegidos}>
                     {elegidos.map(p => (
                         <li key={p.id} className="flex h-11 items-center gap-2 rounded-full bg-[#f2f2f0] pl-1 text-[13.5px] font-bold text-[#0a0a0a]">
                             <Avatar persona={p} color={color} tam={34} />
@@ -82,6 +106,7 @@ const SelectorDeEncargados: React.FC<{
                 </ul>
             )}
 
+            {!(uno && elegidos.length > 0) && (<>
             <label
                 className="dep-pastilla flex h-[50px] items-center gap-2.5 rounded-2xl bg-[#f6f6f4] px-3.5"
                 style={{ boxShadow: error ? 'inset 0 0 0 2px #b42318' : 'inset 0 0 0 1px rgba(0,0,0,.06)' }}
@@ -91,19 +116,21 @@ const SelectorDeEncargados: React.FC<{
                     type="search"
                     value={texto}
                     onChange={e => setTexto(e.target.value)}
-                    placeholder="Buscar por nombre o email"
-                    aria-label="Buscar usuarios para sumar como encargados"
+                    placeholder={placeholder}
+                    aria-label={etiquetaBusqueda}
                     aria-invalid={!!error}
-                    aria-describedby={error ? 'dep-error-encargados' : 'dep-ayuda-encargados'}
+                    aria-describedby={error ? `${idBase}-error-encargados` : `${idBase}-ayuda-encargados`}
                     autoComplete="off"
                     className="campo-desnudo min-w-0 flex-1 text-[14.5px] font-semibold"
                 />
                 {busqueda.estado === 'buscando' && <span className="flex-none text-black/50"><Cargando /></span>}
             </label>
 
-            {error && <ErrorDeCampo id="dep-error-encargados">{error}</ErrorDeCampo>}
+            </>)}
 
-            <div id="dep-ayuda-encargados" aria-live="polite" className="flex flex-col gap-0.5">
+            {error && <ErrorDeCampo id={`${idBase}-error-encargados`}>{error}</ErrorDeCampo>}
+
+            <div id={`${idBase}-ayuda-encargados`} aria-live="polite" className="flex flex-col gap-0.5">
                 {busqueda.estado === 'corto' && (
                     <p className="m-0 px-1 text-[12.5px] font-semibold text-black/[.6]">Escribí al menos 2 letras.</p>
                 )}
@@ -130,7 +157,7 @@ const SelectorDeEncargados: React.FC<{
                             <span className="block truncate text-[12.5px] font-medium text-black/[.6]">{u.email || 'Sin email'}</span>
                         </span>
                         <Plus size={18} strokeWidth={2.2} className="flex-none text-black/[.62]" aria-hidden="true" />
-                        <span className="sr-only">Sumar como encargado</span>
+                        <span className="sr-only">{textoAgregar}</span>
                     </button>
                 ))}
             </div>

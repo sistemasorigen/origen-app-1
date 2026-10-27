@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Pruebas de sql/agenda_origen.sql
+-- Pruebas de sql/agenda_origen.sql y sql/agenda_archivar_subdepartamentos.sql
 --
 -- Todo corre adentro de BEGIN … ROLLBACK y de UN bloque que termina con
 -- RAISE EXCEPTION a propósito: así se deshace entero —usuarios, departamentos,
@@ -15,8 +15,9 @@
 -- Ojo: la secuencia de agenda_solicitudes.numero no se deshace; cada corrida
 -- gasta números (no hace daño: sólo deja huecos).
 --
--- Para ensayar ANTES de aplicar: BEGIN; + sql/agenda_origen.sql + el DO de
--- abajo + ROLLBACK; en un solo envío.
+-- Para ensayar ANTES de aplicar: BEGIN; + los .sql que falten (en orden:
+-- agenda_origen, agenda_archivar_subdepartamentos) + el DO de abajo +
+-- ROLLBACK; en un solo envío.
 --
 -- Cómo se cambia de persona: set_config('request.jwt.claims', …) con el id y
 -- SET LOCAL ROLE authenticated (o anon). RESET ROLE vuelve al dueño, que es
@@ -620,26 +621,142 @@ BEGIN
                      '1', r2->>'motivo', r3->>'motivo');
 
     -- ════════════════════════════════════════════════════════════════════════
-    -- 10 · Borrar un sub-departamento
+    -- 10 · Archivar un sub-departamento (sql/agenda_archivar_subdepartamentos.sql)
     -- ════════════════════════════════════════════════════════════════════════
     PERFORM set_config('request.jwt.claims', json_build_object('sub', v_encA, 'role', 'authenticated')::text, true);
     SET LOCAL ROLE authenticated;
     r := public.agenda_crear_tarea(v_t4, v_depA, v_subA2, NULL, NULL, 'Queda esperando PRUEBA', NULL, v_hoy, true, NULL, NULL);
     r := public.agenda_crear_tarea(v_t5, v_depA, v_subA2, NULL, NULL, 'Ya hecha PRUEBA', NULL, v_hoy, true, NULL, NULL);
     r := public.agenda_cambiar_estado_tarea(v_t5, 'completada');
-    r := public.agenda_eliminar_subdepartamento(v_subA2);
-    IF (r->>'ok')::boolean IS NOT TRUE OR (r->>'pasaron_a_esperando')::int <> 2 OR (r->>'completadas_borradas')::int <> 1 THEN
+    r := public.agenda_archivar_subdepartamento(v_subA2);
+    IF (r->>'ok')::boolean IS NOT TRUE OR (r->>'tareas_a_esperando')::int <> 2 OR (r->>'completadas_conservadas')::int <> 1 THEN
         RAISE EXCEPTION 'FALLÓ 10: %', r;
     END IF;
     RESET ROLE;
     SELECT count(*) INTO v_n FROM public.agenda_tareas
      WHERE id IN (v_t2, v_t4) AND estado = 'esperando' AND subdepartamento_id IS NULL AND asignada_at IS NULL;
-    IF v_n <> 2 OR EXISTS (SELECT 1 FROM public.agenda_tareas WHERE id = v_t5)
-       OR EXISTS (SELECT 1 FROM public.agenda_subdepartamento_miembros WHERE subdepartamento_id = v_subA2) THEN
-        RAISE EXCEPTION 'FALLÓ 10: quedaron % en esperando', v_n;
+    IF v_n <> 2
+       OR NOT EXISTS (SELECT 1 FROM public.agenda_tareas WHERE id = v_t5 AND estado = 'completada' AND subdepartamento_id = v_subA2)
+       OR NOT EXISTS (SELECT 1 FROM public.agenda_subdepartamento_miembros WHERE subdepartamento_id = v_subA2 AND user_id = v_miembro2)
+       OR NOT EXISTS (SELECT 1 FROM public.agenda_subdepartamentos WHERE id = v_subA2 AND archivado_at IS NOT NULL AND archivado_por = v_encA) THEN
+        RAISE EXCEPTION 'FALLÓ 10: % en esperando, o la completada / los miembros / la marca no quedaron', v_n;
     END IF;
-    o := o || format(E'| 10 | Borrar un sub con 2 tareas en proceso y 1 completada | las 2 → esperando sin sub; la completada se borra; sin miembros colgados | %s → esperando · %s completada borrada | ✅ |\n',
-                     r->>'pasaron_a_esperando', r->>'completadas_borradas');
+    -- La completada sigue en la Agenda de quien estaba en el equipo, marcada.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_miembro2, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+    r2 := public.agenda_mis_tareas(v_hoy - 7, v_hoy + 7);
+    SELECT x INTO r3 FROM jsonb_array_elements(r2->'tareas') x WHERE x->>'id' = v_t5::text;
+    IF r3 IS NULL OR (r3->'subdepartamento'->>'archivado')::boolean IS NOT TRUE THEN
+        RAISE EXCEPTION 'FALLÓ 10: la completada no se ve en mis_tareas, o sin la marca: %', r3;
+    END IF;
+    r3 := public.agenda_tarea(v_t5);
+    IF (r3->>'ok')::boolean IS NOT TRUE OR (r3->'tarea'->>'puede_cambiar_estado')::boolean IS NOT FALSE THEN
+        RAISE EXCEPTION 'FALLÓ 10: detalle de la completada archivada %', r3;
+    END IF;
+    RESET ROLE;
+    o := o || format(E'| 10 | Archivar un sub con 2 tareas en proceso y 1 completada | 2 → esperando sin sub; la completada queda con su sub y se ve en mis_tareas con archivado=true; los miembros quedan | %s → esperando · %s conservada · en mis_tareas con archivado=true · detalle sin "cambiar estado" | ✅ |\n',
+                     r->>'tareas_a_esperando', r->>'completadas_conservadas');
+
+    -- ════════════════════════════════════════════════════════════════════════
+    -- 10b · El nombre de un archivado se puede volver a usar
+    -- ════════════════════════════════════════════════════════════════════════
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_encA, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+    r := public.agenda_guardar_subdepartamento(gen_random_uuid(), v_depA, 'video prueba', '#2563eb', v_encA, '{}');
+    IF (r->>'ok')::boolean IS NOT TRUE THEN RAISE EXCEPTION 'FALLÓ 10b: nombre de un archivado %', r; END IF;
+    r2 := public.agenda_guardar_subdepartamento(gen_random_uuid(), v_depA, 'VIDEO PRUEBA', '#2563eb', v_encA, '{}');
+    IF r2->>'motivo' IS DISTINCT FROM 'nombre_duplicado' THEN RAISE EXCEPTION 'FALLÓ 10b: dos activos con el mismo nombre %', r2; END IF;
+    RESET ROLE;
+    o := o || format(E'| 10b | Crear "video prueba" con "Video PRUEBA" archivado; y otro igual con el nuevo activo | ok · nombre_duplicado | %s · %s | ✅ |\n',
+                     CASE WHEN (r->>'ok')::boolean THEN 'ok' END, r2->>'motivo');
+
+    -- ════════════════════════════════════════════════════════════════════════
+    -- 10c · Con un sub archivado, todo lo que lo usa → 'archivado'
+    -- ════════════════════════════════════════════════════════════════════════
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_encA, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+    v_bloq := 0;
+    v_txt := '';
+    FOR r IN SELECT x FROM (VALUES
+        (public.agenda_agregar_miembros(v_subA2, ARRAY[v_comun])),
+        (public.agenda_quitar_miembro(v_subA2, v_miembro2)),
+        (public.agenda_cambiar_lider(v_subA2, v_miembro2)),
+        (public.agenda_guardar_subdepartamento(v_subA2, v_depA, 'Video renombrado PRUEBA', '#2563eb', NULL, '{}')),
+        (public.agenda_mover_miembro(v_subA2, v_subA3, v_miembro2)),
+        (public.agenda_mover_miembro(v_subA3, v_subA2, v_lider)),
+        (public.agenda_crear_tarea(gen_random_uuid(), v_depA, v_subA2, NULL, NULL, 'A un archivado PRUEBA', NULL, v_hoy, true, NULL, NULL)),
+        (public.agenda_editar_tarea(v_t8, v_subA2, NULL, NULL, 'Sin equipo PRUEBA', NULL, v_hoy, true, NULL, NULL)),
+        (public.agenda_reasignar_tarea(v_t2, v_subA2)),
+        (public.agenda_subdepartamento(v_subA2)),
+        (public.agenda_tareas_subdepartamento(v_subA2, v_hoy - 7, v_hoy + 7)),
+        (public.agenda_cambiar_estado_tarea(v_t5, 'en_proceso')),
+        (public.agenda_archivar_subdepartamento(v_subA2))
+    ) AS t(x) LOOP
+        v_bloq := v_bloq + 1;
+        IF r->>'motivo' IS DISTINCT FROM 'archivado' THEN
+            RAISE EXCEPTION 'FALLÓ 10c: la llamada % no dijo archivado: %', v_bloq, r;
+        END IF;
+    END LOOP;
+    -- Editar una completada de un sub archivado SIN cambiarle el sub sí se puede.
+    r := public.agenda_editar_tarea(v_t5, v_subA2, NULL, NULL, 'Ya hecha (corregida) PRUEBA', NULL, v_hoy, true, NULL, NULL);
+    IF r->'tarea'->>'estado' IS DISTINCT FROM 'completada' THEN RAISE EXCEPTION 'FALLÓ 10c: editar la completada del archivado %', r; END IF;
+    -- No aparece en el panel del departamento.
+    r2 := public.agenda_departamento(v_depA);
+    SELECT count(*) INTO v_n FROM jsonb_array_elements(r2->'subdepartamentos') x WHERE x->>'id' = v_subA2::text;
+    IF v_n <> 0 THEN RAISE EXCEPTION 'FALLÓ 10c: el archivado aparece en agenda_departamento'; END IF;
+    -- Ni en el acceso de quien era miembro.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_miembro2, 'role', 'authenticated')::text, true);
+    r3 := public.agenda_mi_acceso();
+    SELECT count(*) INTO v_m FROM jsonb_array_elements(r3->'miembro') x WHERE x->>'id' = v_subA2::text;
+    IF v_m <> 0 THEN RAISE EXCEPTION 'FALLÓ 10c: el archivado aparece en mi_acceso %', r3; END IF;
+    -- Ni en los conteos de Sistemas.
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_super, 'role', 'authenticated')::text, true);
+    r3 := public.agenda_departamentos_admin();
+    SELECT x INTO r FROM jsonb_array_elements(r3->'departamentos') x WHERE x->>'id' = v_depA::text;
+    RESET ROLE;
+    SELECT count(*) INTO v_n FROM public.agenda_subdepartamentos WHERE departamento_id = v_depA AND archivado_at IS NULL;
+    IF (r->>'cant_subdepartamentos')::int <> v_n THEN
+        RAISE EXCEPTION 'FALLÓ 10c: Sistemas cuenta % subs, activos hay %', r->>'cant_subdepartamentos', v_n;
+    END IF;
+    o := o || format(E'| 10c | Sub archivado en agregar/quitar miembros, cambiar líder, guardar, mover (origen y destino), crear/editar/reasignar tarea, su panel y sus tareas, reabrir su completada, archivar de nuevo | archivado ×13; editar la completada sin cambiar sub → ok; fuera de agenda_departamento, mi_acceso y los conteos de Sistemas | archivado ×%s · editar ok · fuera de los tres (Sistemas cuenta %s activos) | ✅ |\n',
+                     v_bloq, v_n);
+
+    -- ════════════════════════════════════════════════════════════════════════
+    -- 10d · Archivar: sólo encargados
+    -- ════════════════════════════════════════════════════════════════════════
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_miembro, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+    r := public.agenda_archivar_subdepartamento(v_subA1);      -- v_miembro dirige A1 desde el caso 14
+    IF r->>'motivo' IS DISTINCT FROM 'sin_permiso' THEN RAISE EXCEPTION 'FALLÓ 10d: quien dirige archivó %', r; END IF;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', v_lider, 'role', 'authenticated')::text, true);
+    r2 := public.agenda_archivar_subdepartamento(v_subA3);     -- v_lider es miembro de A3 desde el caso 19
+    IF r2->>'motivo' IS DISTINCT FROM 'sin_permiso' THEN RAISE EXCEPTION 'FALLÓ 10d: un miembro archivó %', r2; END IF;
+    BEGIN
+        r3 := public.agenda_eliminar_subdepartamento(v_subA3);
+        RAISE EXCEPTION 'FALLÓ 10d: authenticated todavía puede llamar a eliminar_subdepartamento';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    RESET ROLE;
+    o := o || format(E'| 10d | Archivar como quien dirige y como miembro; eliminar_subdepartamento como authenticated | sin_permiso ×2; error de permiso | %s · %s · error de permiso | ✅ |\n',
+                     r->>'motivo', r2->>'motivo');
+
+    -- ════════════════════════════════════════════════════════════════════════
+    -- 10e · anon no ejecuta la RPC nueva
+    -- ════════════════════════════════════════════════════════════════════════
+    IF has_function_privilege('anon', 'public.agenda_archivar_subdepartamento(uuid)', 'EXECUTE')
+       OR NOT has_function_privilege('authenticated', 'public.agenda_archivar_subdepartamento(uuid)', 'EXECUTE')
+       OR has_function_privilege('authenticated', 'public.agenda_eliminar_subdepartamento(uuid)', 'EXECUTE') THEN
+        RAISE EXCEPTION 'FALLÓ 10e: permisos de archivar / eliminar';
+    END IF;
+    BEGIN
+        SET LOCAL ROLE anon;
+        PERFORM public.agenda_archivar_subdepartamento(v_subA3);
+        RESET ROLE;
+        RAISE EXCEPTION 'FALLÓ 10e: anon llamó a archivar';
+    EXCEPTION WHEN insufficient_privilege THEN
+        RESET ROLE;
+    END;
+    o := o || E'| 10e | has_function_privilege de archivar (anon / authenticated) y de eliminar (authenticated); anon la llama | no / sí / no; error de permiso | no / sí / no · error de permiso | ✅ |\n';
 
     -- ════════════════════════════════════════════════════════════════════════
     -- 15 · Encargados: nunca cero

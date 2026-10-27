@@ -46,7 +46,7 @@ export type MotivoAgenda =
     | 'en_uso' | 'reemplazo_invalido' | 'ya_tiene' | 'lista_incompleta'
     | 'es_quien_dirige' | 'no_es_miembro' | 'mismo_sub'
     | 'solicitud_inexistente' | 'solicitud_ajena' | 'solicitud_no_aceptada' | 'ya_revisada'
-    | 'accion_desconocida' | 'texto_corto' | 'limite_diario'
+    | 'accion_desconocida' | 'texto_corto' | 'limite_diario' | 'archivado'
     | 'red';
 
 export type Falla = {
@@ -168,7 +168,11 @@ export interface PanelDepartamento {
 export interface Tarea {
     id: string;
     departamento: DepartamentoBase;
-    subdepartamento: { id: string; nombre: string; color: string } | null;
+    /**
+     * archivado: el sub ya no existe como equipo. Sólo pasa con completadas,
+     * que se conservan como historial (sql/agenda_archivar_subdepartamentos.sql).
+     */
+    subdepartamento: { id: string; nombre: string; color: string; archivado?: boolean } | null;
     carpeta: { id: string; nombre: string; color: string } | null;
     prioridad: { id: string; nombre: string; color: string; orden: number } | null;
     nombre: string;
@@ -327,6 +331,7 @@ export const mensajeDeMotivo = (motivo: MotivoAgenda, falla?: Pick<Falla, 'canti
         case 'ya_revisada': return 'Otra persona ya la revisó.';
         case 'accion_desconocida': return 'No se pudo hacer. Probá de nuevo.';
         case 'texto_corto': return 'Escribí al menos 2 letras.';
+        case 'archivado': return 'Ese sub-departamento está archivado.';
         case 'limite_diario': return `Ya mandaste ${falla?.limite ?? 10} solicitudes hoy. Mañana podés mandar más.`;
         case 'red': return 'No pudimos conectarnos. Probá de nuevo en un momento.';
     }
@@ -374,7 +379,10 @@ const tarea = (t: Crudo): Tarea => {
     return {
         id: txt(t.id),
         departamento: departamentoBase(obj(t.departamento) ?? {}),
-        subdepartamento: colorido(t.subdepartamento),
+        subdepartamento: (() => {
+            const s = colorido(t.subdepartamento);
+            return s ? { ...s, archivado: obj(t.subdepartamento)?.archivado === true } : null;
+        })(),
         carpeta: colorido(t.carpeta),
         prioridad: prio ? { id: txt(prio.id), nombre: txt(prio.nombre), color: txt(prio.color), orden: num(prio.orden) } : null,
         nombre: txt(t.nombre),
@@ -653,13 +661,13 @@ export const guardarSubdepartamento = (datos: {
     }, d => ({ id: txt(d.id), creado: d.creado === true }));
 
 /**
- * Sus tareas sin completar vuelven a 'esperando'; las completadas se borran
- * con el sub (una completada no puede quedar sin equipo). La respuesta dice
- * cuántas de cada una.
+ * Archiva el sub (no se borra: sql/agenda_archivar_subdepartamentos.sql).
+ * Sus tareas sin completar vuelven a 'esperando'; las completadas quedan con
+ * su sub, como historial. La respuesta dice cuántas de cada una.
  */
-export const eliminarSubdepartamento = (id: string) =>
-    llamar<{ pasaronAEsperando: number; completadasBorradas: number }>('agenda_eliminar_subdepartamento', { p_id: id },
-        d => ({ pasaronAEsperando: num(d.pasaron_a_esperando), completadasBorradas: num(d.completadas_borradas) }));
+export const archivarSubdepartamento = (id: string) =>
+    llamar<{ tareasAEsperando: number; completadasConservadas: number }>('agenda_archivar_subdepartamento', { p_id: id },
+        d => ({ tareasAEsperando: num(d.tareas_a_esperando), completadasConservadas: num(d.completadas_conservadas) }));
 
 export const agregarMiembros = (subdepartamentoId: string, userIds: string[]) =>
     llamar<{ agregados: number }>('agenda_agregar_miembros', { p_sub: subdepartamentoId, p_users: userIds },

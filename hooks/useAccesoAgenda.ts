@@ -38,13 +38,20 @@ const publicar = (nuevo: Estado) => {
 };
 
 const traer = (userId: string): Promise<void> => {
-    publicar({ ...estado, userId, cargando: true });
+    // Recargar NO vuelve a "cargando" si ya había algo de esta persona: el
+    // menú esconde "Departamentos" mientras carga, y una recarga (la que hace
+    // /departamentos para tener los números al día) lo haría parpadear.
+    const yaHabia = estado.userId === userId && !estado.fallo && !estado.cargando;
+    if (!yaHabia) publicar({ ...estado, userId, cargando: true });
     const promesa = getMiAcceso().then(r => {
         // Si en el medio cambió la sesión, esta respuesta ya no es de nadie.
         if (estado.userId !== userId) return;
-        publicar(r.ok
-            ? { userId, acceso: { superAdmin: r.superAdmin, encargado: r.encargado, dirijo: r.dirijo, miembro: r.miembro }, cargando: false, fallo: false }
-            : { userId, acceso: VACIO, cargando: false, fallo: true });
+        if (r.ok) {
+            publicar({ userId, acceso: { superAdmin: r.superAdmin, encargado: r.encargado, dirijo: r.dirijo, miembro: r.miembro }, cargando: false, fallo: false });
+        } else if (!yaHabia) {
+            publicar({ userId, acceso: VACIO, cargando: false, fallo: true });
+        }
+        // Una recarga que falla deja lo que había: es más cierto que vaciarlo.
     }).finally(() => { if (enCurso === promesa) enCurso = null; });
     enCurso = promesa;
     return promesa;
