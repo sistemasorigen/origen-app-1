@@ -165,6 +165,7 @@ export const ICONOS: Record<string, string> = {
     historial: 'M4 12a8 8 0 102.4-5.7M4 4.5V9h4.5M12 8v4.5l3 2',
     bolsa: 'M5 8h14l-1.2 12H6.2zM9 8a3 3 0 016 0',
     entrada: 'M3.5 7h17v3.2a1.8 1.8 0 000 3.6V17h-17v-3.2a1.8 1.8 0 000-3.6zM14.5 7v10',
+    solicitud: 'M9 3.5h6v3H9zM9 5H6v15.5h12V5h-3M9 11.5h6M9 15.5h4',
     servir: 'M12 9.2c-1-1.8-4-1.5-4 .8 0 1.8 4 4 4 4s4-2.2 4-4c0-2.3-3-2.6-4-.8zM3 16h3.5l3.5 3h6.5l4.5-3.5M3 16v4',
     campana: 'M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15zM10 20.5a2 2 0 004 0',
     celular: 'M7.5 3h9v18h-9zM11 18h2',

@@ -221,6 +221,26 @@ export interface Solicitud {
     prioridad: { id: string | null; nombre: string; color: string | null } | null;
 }
 
+/**
+ * Una solicitud vista por quien la pidió, en /perfil/solicitudes.
+ *
+ * No es la `Solicitud` de arriba, que es la del lado del equipo: ésta no
+ * lleva solicitante —es uno mismo— pero sí el departamento al que se le
+ * pidió y, si ya la convirtieron en tarea, qué pasó con esa tarea.
+ */
+export interface MiSolicitud {
+    id: string;
+    numero: number;
+    estado: EstadoSolicitud;
+    detalles: string;
+    createdAt: string;
+    revisadaAt: string | null;
+    departamento: DepartamentoBase;
+    /** id null: la prioridad se borró y queda el nombre que se pidió. */
+    prioridad: { id: string | null; nombre: string; color: string | null } | null;
+    tarea: { nombre: string; estado: EstadoTarea; fecha: string } | null;
+}
+
 export interface PanelSubdepartamento {
     /** Hoy en Argentina, 'YYYY-MM-DD', según la base. */
     hoy: string;
@@ -560,6 +580,22 @@ const solicitud = (r: Crudo): Solicitud => {
         revisadaAt: txtONull(r.revisada_at),
         solicitante: persona(r.solicitante),
         prioridad: p ? { id: txtONull(p.id), nombre: txt(p.nombre), color: txtONull(p.color) } : null,
+    };
+};
+
+const miSolicitud = (r: Crudo): MiSolicitud => {
+    const p = obj(r.prioridad);
+    const t = obj(r.tarea);
+    return {
+        id: txt(r.id),
+        numero: num(r.numero),
+        estado: txt(r.estado) as EstadoSolicitud,
+        detalles: txt(r.detalles),
+        createdAt: txt(r.created_at),
+        revisadaAt: txtONull(r.revisada_at),
+        departamento: departamentoBase(obj(r.departamento) ?? {}),
+        prioridad: p ? { id: txtONull(p.id), nombre: txt(p.nombre), color: txtONull(p.color) } : null,
+        tarea: t ? { nombre: txt(t.nombre), estado: txt(t.estado) as EstadoTarea, fecha: txt(t.fecha) } : null,
     };
 };
 
@@ -917,3 +953,13 @@ export const crearSolicitud = (datos: { id?: string; departamentoId: string; pri
         yaExistia: d.ya_existia === true,
         restantes: d.restantes === undefined ? null : num(d.restantes),
     }));
+
+/**
+ * Lo que pidió quien llama, de lo más nuevo a lo más viejo (/perfil/solicitudes).
+ *
+ * No lleva parámetro de persona a propósito: la base filtra por auth.uid() y
+ * no hay forma de pedir las de otro. Ver sql/agenda_mis_solicitudes.sql.
+ */
+export const getMisSolicitudes = () =>
+    llamar<{ solicitudes: MiSolicitud[] }>('agenda_mis_solicitudes', {},
+        d => ({ solicitudes: lista(d.solicitudes).map(miSolicitud) }));

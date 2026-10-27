@@ -14,6 +14,7 @@ import { Destacada, type Destacado } from './Destacada';
 
 export type SeccionDeMiCuenta =
     | 'editar' | 'grupos' | 'historial' | 'compras' | 'inscripciones' | 'servicio'
+    | 'solicitudes'
     | 'seguridad' | 'privacidad' | 'terminos' | 'tutoriales' | 'contacto'
     | 'reportar' | 'app';
 
@@ -22,6 +23,7 @@ export interface ConteosDeMiCuenta {
     compras: number;
     inscripciones: number;
     servicio: number;
+    solicitudes: number;
 }
 
 export interface ListaMiCuentaProps {
@@ -191,6 +193,8 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                             activa={activa === 'inscripciones'} onClick={() => onIr('inscripciones')} />
                         <Fila icono={ICONOS.servir} nombre="Dónde sirvo" valor={cuenta(conteos.servicio)}
                             activa={activa === 'servicio'} onClick={() => onIr('servicio')} />
+                        <Fila icono={ICONOS.solicitud} nombre="Solicitudes" valor={cuenta(conteos.solicitudes)}
+                            activa={activa === 'solicitudes'} onClick={() => onIr('solicitudes')} />
                     </GrupoDeFilas>
 
                     <GrupoDeFilas titulo="PREFERENCIAS">
