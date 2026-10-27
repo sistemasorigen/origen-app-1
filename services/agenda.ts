@@ -283,6 +283,71 @@ export const sumarDias = (iso: string, dias: number): string => {
     return fechaIso(d);
 };
 
+/**
+ * Cómo se dicen las fechas de la Agenda.
+ *
+ * Los nombres de días y meses viven acá y en ningún otro lado del módulo:
+ * la pestaña de tareas, el detalle, los formularios y la Agenda muestran la
+ * misma fecha escrita igual. Todo parte de fechaDesdeIso, nunca de
+ * new Date('YYYY-MM-DD').
+ */
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const conMayuscula = (texto: string): string => texto.charAt(0).toUpperCase() + texto.slice(1);
+
+/** '2026-10-26' → 'lunes 26 de octubre'. */
+export const fechaLarga = (iso: string): string => {
+    const d = fechaDesdeIso(iso);
+    return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+};
+
+/** '2026-10-26' → 'Lun 26 oct'. */
+export const fechaCorta = (iso: string): string => {
+    const d = fechaDesdeIso(iso);
+    return `${conMayuscula(DIAS_CORTOS[d.getDay()])} ${d.getDate()} ${MESES_CORTOS[d.getMonth()]}`;
+};
+
+/**
+ * El título de un día en una lista: 'Hoy · lunes 26 de octubre',
+ * 'Mañana · …', 'Ayer · …' o 'Miércoles 28 de octubre'.
+ *
+ * Hoy y mañana adelante porque es lo que se busca primero; el resto con la
+ * fecha sola, que ya dice todo.
+ */
+export const fechaDeDia = (iso: string, hoy: string = hoyIso()): string => {
+    if (iso === hoy) return `Hoy · ${fechaLarga(iso)}`;
+    if (iso === sumarDias(hoy, 1)) return `Mañana · ${fechaLarga(iso)}`;
+    if (iso === sumarDias(hoy, -1)) return `Ayer · ${fechaLarga(iso)}`;
+    return conMayuscula(fechaLarga(iso));
+};
+
+/**
+ * Un timestamp de la base → '26/10/2026 a las 14:32', en hora local.
+ *
+ * Acá sí se usa new Date: lo que viene es un instante completo con su zona
+ * (to_jsonb de un timestamptz), no una fecha suelta. Se acepta el formato
+ * con espacio en vez de T porque no todos los drivers lo escriben igual.
+ */
+export const fechaYHora = (ts: string | null): string => {
+    if (!ts) return '';
+    const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return '';
+    return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()} a las ${dos(d.getHours())}:${dos(d.getMinutes())}`;
+};
+
+/** 'lunes 26/10/2026 · 14:32': el sello al pie de los formularios. */
+export const sello = (cuando: Date = new Date()): string =>
+    `${DIAS[cuando.getDay()]} ${dos(cuando.getDate())}/${dos(cuando.getMonth() + 1)}/${cuando.getFullYear()}`
+    + ` · ${dos(cuando.getHours())}:${dos(cuando.getMinutes())}`;
+
+/** '19:00 – 20:30', o 'Todo el día'. */
+export const horarioDeTarea = (t: Pick<Tarea, 'todoElDia' | 'horaDesde' | 'horaHasta'>): string =>
+    t.todoElDia || !t.horaDesde ? 'Todo el día' : `${t.horaDesde} – ${t.horaHasta || t.horaDesde}`;
+
 /** El id de algo nuevo. Generarlo UNA vez por envío y reusarlo si se reintenta. */
 export const nuevoId = (): string => safeUUID();
 

@@ -93,6 +93,31 @@ export const atajosDeRango = (anios: number[]): { etiqueta: string; rango: Rango
     ];
 };
 
+/**
+ * Los atajos de las tareas, que sí existen en el futuro.
+ *
+ * "Este mes" acá es el mes ENTERO y no "del 1 a hoy" como en Audiencia: una
+ * tarea del 30 cuenta aunque hoy sea el 5. Por eso es una función aparte y
+ * no un parámetro de atajosDeRango: son dos listas distintas, no la misma
+ * con una variante.
+ */
+export const atajosDeTareas = (): { etiqueta: string; rango: Rango }[] => {
+    const h = new Date();
+    const [y, m, d] = [h.getFullYear(), h.getMonth(), h.getDate()];
+    // La semana arranca el lunes, como el calendario.
+    const lunes = new Date(y, m, d - ((h.getDay() + 6) % 7));
+    const domingo = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + 6);
+    return [
+        { etiqueta: 'Esta semana', rango: { desde: isoDe(lunes), hasta: isoDe(domingo) } },
+        { etiqueta: 'Este mes', rango: { desde: isoDe(new Date(y, m, 1)), hasta: isoDe(new Date(y, m + 1, 0)) } },
+        { etiqueta: 'Próximo mes', rango: { desde: isoDe(new Date(y, m + 1, 1)), hasta: isoDe(new Date(y, m + 2, 0)) } },
+        // El mismo día, tres meses después. Un 31 cae en el 1 del mes que
+        // sigue si el mes de destino es más corto, y está bien: es un atajo.
+        { etiqueta: 'Próximos 3 meses', rango: { desde: isoDe(h), hasta: isoDe(new Date(y, m + 3, d)) } },
+        { etiqueta: 'Mes pasado', rango: { desde: isoDe(new Date(y, m - 1, 1)), hasta: isoDe(new Date(y, m, 0)) } },
+    ];
+};
+
 const fechaEnCampo = (iso: string | null) => {
     if (!iso) return '';
     const d = fechaDeIso(iso);
@@ -136,9 +161,20 @@ interface Props {
     /** Cuántos servicios hay cargados en cada día ('YYYY-MM-DD' → cantidad). */
     serviciosPorDia: Map<string, number>;
     atajos: { etiqueta: string; rango: Rango }[];
+    /**
+     * Deja elegir días que todavía no pasaron y avanzar el calendario sin
+     * tope. Audiencia no tiene servicios en el futuro y lo deja en false; las
+     * tareas de la Agenda sí los tienen.
+     */
+    permitirFuturo?: boolean;
+    /** Cómo se llama lo que se cuenta, en el resumen y en cada día. */
+    nombreDelConteo?: { uno: string; varios: string };
 }
 
-const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, atajos }) => {
+const SelectorDeRango: React.FC<Props> = ({
+    valor, onCambiar, serviciosPorDia, atajos,
+    permitirFuturo = false, nombreDelConteo = { uno: 'servicio', varios: 'servicios' },
+}) => {
     const [abierto, setAbierto] = useState(false);
     const [desde, setDesde] = useState<string | null>(valor.desde);
     const [hasta, setHasta] = useState<string | null>(valor.hasta);
@@ -154,7 +190,11 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
     const esMovil = useEsMovil();
     const raiz = useRef<HTMLDivElement>(null);
     const hoy = hoyIso();
-    const mesDeHoy = mesDe(hoy);
+    /**
+     * Hasta qué mes se puede avanzar. Sin futuro, el mes de hoy; con futuro,
+     * sin tope: Math.min contra Infinity devuelve el otro lado.
+     */
+    const topeDeMes = permitirFuturo ? Infinity : mesDe(hoy);
 
     useBloqueoDeFondo(abierto && esMovil);
 
@@ -164,7 +204,7 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
         setMesVisible(v => {
             const primero = esMovil ? v : v - 1;
             if (m >= primero && m <= v) return v;
-            return Math.min(esMovil ? m : m + 1, mesDeHoy);
+            return Math.min(esMovil ? m : m + 1, topeDeMes);
         });
     };
 
@@ -173,7 +213,7 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
         setHasta(valor.hasta);
         setEditando('nuevo');
         setSobre(null);
-        setMesVisible(Math.min(mesDe(valor.hasta), mesDeHoy));
+        setMesVisible(Math.min(mesDe(valor.hasta), topeDeMes));
         setBarrido(b => b + 1);
         setAbierto(true);
     };
@@ -229,7 +269,7 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
         setHasta(r.hasta);
         setEditando('nuevo');
         setSobre(null);
-        setMesVisible(Math.min(mesDe(r.hasta), mesDeHoy));
+        setMesVisible(Math.min(mesDe(r.hasta), topeDeMes));
         setBarrido(b => b + 1);
     };
 
@@ -260,8 +300,9 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
         let servicios = 0;
         serviciosPorDia.forEach((n, dia) => { if (dia >= desde && dia <= hasta) servicios += n; });
         const dias = diasEntre(desde, hasta) + 1;
-        return `${servicios} ${servicios === 1 ? 'servicio' : 'servicios'} en ${dias} ${dias === 1 ? 'día' : 'días'}`;
-    }, [desde, hasta, serviciosPorDia]);
+        const comoSeLlama = servicios === 1 ? nombreDelConteo.uno : nombreDelConteo.varios;
+        return `${servicios} ${comoSeLlama} en ${dias} ${dias === 1 ? 'día' : 'días'}`;
+    }, [desde, hasta, serviciosPorDia, nombreDelConteo.uno, nombreDelConteo.varios]);
 
     const atajoActivo = atajos.find(a => a.rango.desde === desde && a.rango.hasta === hasta);
 
@@ -297,8 +338,8 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
                     {ultimoVisible ? (
                         <button
                             type="button"
-                            onClick={() => setMesVisible(v => Math.min(v + 1, mesDeHoy))}
-                            disabled={mesVisible >= mesDeHoy}
+                            onClick={() => setMesVisible(v => Math.min(v + 1, topeDeMes))}
+                            disabled={mesVisible >= topeDeMes}
                             aria-label="Mes siguiente"
                             className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[#0a0a0a] transition-colors hover:bg-black/[.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] disabled:cursor-default disabled:text-black/20 disabled:hover:bg-transparent"
                         >
@@ -315,7 +356,7 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
                         if (dia === null) return <span key={`h${k}`} />;
                         const iso = `${y}-${dos(m + 1)}-${dos(dia)}`;
                         const columna = k % 7;
-                        const futuro = iso > hoy;
+                        const bloqueado = iso > hoy && !permitirFuturo;
                         const esHoy = iso === hoy;
                         const esIni = iso === puntaA;
                         const esFin = iso === puntaB;
@@ -334,7 +375,7 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
                             <div
                                 key={iso}
                                 className="relative flex h-[46px] items-center justify-center md:h-11"
-                                onMouseEnter={() => { if (!futuro) setSobre(iso); }}
+                                onMouseEnter={() => { if (!bloqueado) setSobre(iso); }}
                             >
                                 {conFranja && (
                                     <span
@@ -357,15 +398,15 @@ const SelectorDeRango: React.FC<Props> = ({ valor, onCambiar, serviciosPorDia, a
                                 )}
                                 <button
                                     type="button"
-                                    disabled={futuro}
+                                    disabled={bloqueado}
                                     onClick={() => elegirDia(iso)}
                                     onFocus={() => setSobre(iso)}
                                     aria-pressed={punta}
-                                    aria-label={`${DIAS_LARGOS[fecha.getDay()]} ${dia} de ${MESES[m].toLowerCase()} de ${y}${servicios ? `, ${servicios} ${servicios === 1 ? 'servicio' : 'servicios'}` : ''}`}
+                                    aria-label={`${DIAS_LARGOS[fecha.getDay()]} ${dia} de ${MESES[m].toLowerCase()} de ${y}${servicios ? `, ${servicios} ${servicios === 1 ? nombreDelConteo.uno : nombreDelConteo.varios}` : ''}`}
                                     className={[
                                         'relative z-[1] flex h-9 w-9 items-center justify-center text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1',
                                         esHoy && !punta ? 'rounded-[11px] ring-[1.5px] ring-inset ring-black/30' : 'rounded-full',
-                                        futuro ? 'cursor-default text-black/25' : punta ? 'text-white' : 'text-[#0a0a0a] hover:bg-black/[.06]',
+                                        bloqueado ? 'cursor-default text-black/25' : punta ? 'text-white' : 'text-[#0a0a0a] hover:bg-black/[.06]',
                                     ].join(' ')}
                                 >
                                     {punta && (

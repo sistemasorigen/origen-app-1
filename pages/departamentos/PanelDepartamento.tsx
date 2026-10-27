@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, LayoutGrid, Settings, Users, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, CalendarDays, LayoutGrid, Settings, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDepartamento, mensajeDeMotivo, type MotivoAgenda, type PanelDepartamento as Datos } from '../../services/agenda';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
@@ -14,6 +14,7 @@ import PestanaSubdepartamentos from './equipo/PestanaSubdepartamentos';
 import DetalleSubdepartamento from './equipo/DetalleSubdepartamento';
 import PestanaPersonal from './equipo/PestanaPersonal';
 import PestanaConfiguracion from './equipo/PestanaConfiguracion';
+import PestanaTareas from './tareas/PestanaTareas';
 
 /**
  * /departamentos/:id — el panel de un departamento de Agenda Origen
@@ -36,16 +37,18 @@ import PestanaConfiguracion from './equipo/PestanaConfiguracion';
  */
 
 /**
- * Las pestañas, en orden. Los prompts 4 y 5 suman "Tareas" (que pasa a ser
- * la primera y la inicial) y "Solicitudes" agregando una entrada acá y un
- * caso en `contenido`.
+ * Las pestañas, en orden. "Tareas" es la primera y la inicial: es lo que un
+ * encargado viene a ver. El prompt 5 suma "Solicitudes" agregando una
+ * entrada acá y un caso abajo.
  */
 const PESTANAS: { id: Pestana; etiqueta: string; Icono: LucideIcon }[] = [
+    { id: 'tareas', etiqueta: 'Tareas', Icono: CalendarDays },
     { id: 'subdepartamentos', etiqueta: 'Sub-departamentos', Icono: LayoutGrid },
     { id: 'personal', etiqueta: 'Personal', Icono: Users },
     { id: 'config', etiqueta: 'Configuración', Icono: Settings },
 ];
-const PESTANA_INICIAL: Pestana = 'subdepartamentos';
+/** Los links viejos sin ?tab caen acá. */
+const PESTANA_INICIAL: Pestana = 'tareas';
 
 type Carga = { estado: 'cargando' } | { estado: 'error'; motivo: MotivoAgenda } | { estado: 'listo'; datos: Datos };
 
@@ -198,6 +201,7 @@ const PanelDepartamento: React.FC = () => {
 
                 {contexto && (
                     <ProveedorDelPanel value={contexto}>
+                        {pestana === 'tareas' && <PestanaTareas />}
                         {pestana === 'subdepartamentos' && !subAbierto && <PestanaSubdepartamentos />}
                         {pestana === 'subdepartamentos' && subAbierto && (subElegido
                             ? <DetalleSubdepartamento key={subElegido.id} sub={subElegido} />

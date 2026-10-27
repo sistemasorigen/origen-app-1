@@ -30,12 +30,22 @@ export const ID_AGENDA = 'agenda-depto';
  */
 export const ESTILOS = `
 #${ID_AGENDA} { font-family: Manrope, system-ui, sans-serif; color: #0a0a0a; }
-#${ID_AGENDA} input, #${ID_AGENDA} textarea {
+#${ID_AGENDA} input, #${ID_AGENDA} textarea, #${ID_AGENDA} select {
   background: var(--ag-fondo, #f6f6f4) !important; color: #0a0a0a !important;
   border: 1.5px solid var(--ag-borde, transparent) !important; border-radius: 16px !important;
   box-shadow: none !important; outline: none !important;
 }
-#${ID_AGENDA} input:focus, #${ID_AGENDA} textarea:focus { --ag-fondo: #fff; --ag-borde: #0a0a0a; }
+#${ID_AGENDA} input:focus, #${ID_AGENDA} textarea:focus, #${ID_AGENDA} select:focus { --ag-fondo: #fff; --ag-borde: #0a0a0a; }
+/* El día y la hora en el iPhone: Safari les da un ancho mínimo propio y
+   centra el texto, así que se salían de la hoja. Sin apariencia nativa
+   respetan el ancho y se alinean a la izquierda; tocarlos sigue abriendo el
+   selector del sistema. */
+#${ID_AGENDA} input[type="date"], #${ID_AGENDA} input[type="time"] {
+  -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left;
+}
+#${ID_AGENDA} input[type="date"]::-webkit-date-and-time-value,
+#${ID_AGENDA} input[type="time"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+#${ID_AGENDA} select { appearance: none; -webkit-appearance: none; }
 #${ID_AGENDA} ::placeholder { color: rgba(0,0,0,.45) !important; }
 #${ID_AGENDA} .dep-pastilla input {
   background: transparent !important; border: 0 !important; border-radius: 0 !important; padding: 0 !important;
@@ -47,6 +57,8 @@ export const ESTILOS = `
 @keyframes depSube { from { transform: translateY(100%) } to { transform: none } }
 @keyframes depAparece { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
 @keyframes depBrillo { 0% { opacity: .55 } 50% { opacity: 1 } 100% { opacity: .55 } }
+@keyframes depCheck { 0% { transform: scale(.4); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
+@keyframes depCostado { from { opacity: 0; transform: translateX(24px) } to { opacity: 1; transform: none } }
 `;
 
 // ── Clases de botones (las del diseño) ───────────────────────────────────
@@ -61,7 +73,7 @@ export const TARJETA = 'rounded-[26px] bg-white shadow-[0_1px_2px_rgba(0,0,0,.04
 
 // ── Contexto del panel ───────────────────────────────────────────────────
 
-export type Pestana = 'subdepartamentos' | 'personal' | 'config';
+export type Pestana = 'tareas' | 'subdepartamentos' | 'personal' | 'config';
 
 export interface ContextoDelPanel {
     depId: string;
@@ -103,8 +115,13 @@ export const Hoja: React.FC<{
     ocupada?: boolean;
     pie?: React.ReactNode;
     ancho?: number;
+    /**
+     * Encima de otra hoja (la carpeta nueva sobre el formulario de la tarea).
+     * Queda abajo de la confirmación, que siempre es la última palabra.
+     */
+    encima?: boolean;
     children: React.ReactNode;
-}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, children }) => {
+}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, encima = false, children }) => {
     useBloqueoDeFondo(true);
     const panel = useRef<HTMLDivElement>(null);
     const { confirmacionAbierta } = usePanelOpcional() ?? { confirmacionAbierta: false };
@@ -119,7 +136,7 @@ export const Hoja: React.FC<{
 
     const idTitulo = useRef(`hoja-${Math.random().toString(36).slice(2, 8)}`).current;
     return (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center md:items-center md:p-10">
+        <div className={`fixed inset-0 flex items-end justify-center md:items-center md:p-10 ${encima ? 'z-[115]' : 'z-[110]'}`}>
             <div className="absolute inset-0 bg-[rgba(10,10,10,.36)] motion-safe:animate-[depFade_.18s_ease_both]" onClick={cerrar} />
             <div
                 ref={panel}
@@ -243,12 +260,25 @@ export const HojaElegir: React.FC<{
 
 // ── Estados y fechas ─────────────────────────────────────────────────────
 
-/** La pastilla del estado de una tarea, con los colores de agendaPaleta. */
-export const ChipEstado: React.FC<{ estado: EstadoTarea }> = ({ estado }) => {
+/**
+ * La pastilla del estado de una tarea, con los colores de agendaPaleta.
+ *
+ * `grande` es la del detalle; `conCheck` cambia el punto por un tilde que
+ * entra con una animación corta, para marcar lo que se acaba de completar
+ * (con "reducir movimiento" aparece sin animarse).
+ */
+export const ChipEstado: React.FC<{ estado: EstadoTarea; grande?: boolean; conCheck?: boolean }> = ({
+    estado, grande = false, conCheck = false,
+}) => {
     const e = ESTADOS[estado];
     return (
-        <span className="inline-flex h-6 flex-none items-center gap-1.5 whitespace-nowrap rounded-full pl-2 pr-2.5 text-[11.5px] font-bold" style={{ background: e.fondo, color: e.tinta }}>
-            <span className="h-[7px] w-[7px] rounded-full" style={{ background: e.punto }} aria-hidden="true" />
+        <span
+            className={`inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full font-bold ${grande ? 'h-[30px] pl-2.5 pr-3 text-[12.5px]' : 'h-6 pl-2 pr-2.5 text-[11.5px]'}`}
+            style={{ background: e.fondo, color: e.tinta }}
+        >
+            {conCheck
+                ? <Check size={13} strokeWidth={3} aria-hidden="true" className="motion-safe:animate-[depCheck_.45s_ease_both]" />
+                : <span className="h-[7px] w-[7px] rounded-full" style={{ background: e.punto }} aria-hidden="true" />}
             {e.etiqueta}
         </span>
     );
@@ -267,15 +297,12 @@ export const ChipColor: React.FC<{ color: string; children: React.ReactNode }> =
     </span>
 );
 
-const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-/** '2026-10-26' → 'Lun 26 oct', parseado a mano (instrucciones 7.10). */
-export const fechaCorta = (iso: string) => {
-    const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-    const f = new Date(y, m - 1, d);
-    const dia = DIAS[f.getDay()];
-    return `${dia[0].toUpperCase()}${dia.slice(1)} ${d} ${MESES[m - 1]}`;
-};
+/**
+ * '2026-10-26' → 'Lun 26 oct'. Vive en services/agenda.ts con el resto de
+ * los formatos de fecha del módulo; se re-exporta para no cambiar los
+ * imports de las pantallas que ya lo usaban.
+ */
+export { fechaCorta } from '../../../services/agenda';
 
 /** Un bloque blanco con un mensaje (vacío, error, no existe). */
 export const Mensaje: React.FC<{ titulo: string; texto?: string; children?: React.ReactNode; icono?: React.ReactNode }> = ({ titulo, texto, children, icono }) => (

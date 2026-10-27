@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Archive, ArrowLeft, ArrowLeftRight, Check, MoreHorizontal, Pencil, UserPlus } from 'lucide-react';
 import {
     agregarMiembros, archivarSubdepartamento, fechaDesdeIso, fechaIso, getTareasSubdepartamento,
@@ -6,6 +6,9 @@ import {
     type MotivoAgenda, type Subdepartamento, type Tarea,
 } from '../../../services/agenda';
 import { PALETA } from '../../../src/contenido/agendaPaleta';
+import { useAuth } from '../../../contexts/AuthContext';
+import DetalleTarea from '../../../components/agenda/DetalleTarea';
+import type { AccionesDeAgenda, DatosParaEditar } from '../../../components/agenda/contratos';
 import { Avatar, Cargando, ErrorDeCampo } from '../../admin/departamentos/piezas';
 import HojaPersonas from './HojaPersonas';
 import { useAccionesDeEquipo } from './accionesDeEquipo';
@@ -39,6 +42,7 @@ type CargaDeTareas = { estado: 'cargando' } | { estado: 'error'; motivo: MotivoA
 
 const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => {
     const { depId, datos, recargar, avisar, confirmar, ir } = usePanel();
+    const { user } = useAuth();
     const acciones = useAccionesDeEquipo();
     const [editando, setEditando] = useState(false);
     const [borrador, setBorrador] = useState({ nombre: sub.nombre, color: sub.color });
@@ -46,6 +50,7 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
     const [errorNombre, setErrorNombre] = useState<string | null>(null);
     const [agregando, setAgregando] = useState(false);
     const [reasignando, setReasignando] = useState<Tarea | null>(null);
+    const [tareaAbierta, setTareaAbierta] = useState<string | null>(null);
     const [carga, setCarga] = useState<CargaDeTareas>({ estado: 'cargando' });
     const campo = useRef<HTMLInputElement>(null);
 
@@ -121,6 +126,19 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
     });
 
     const tareas = carga.estado === 'listo' ? carga.tareas : [];
+
+    // Tocar una tarea abre el MISMO panel que en la pestaña Tareas: acá no
+    // hay una versión chica del detalle. Sin onPedirCarpeta, el formulario de
+    // edición no ofrece "Nueva carpeta…": las carpetas se arman allá.
+    const accionesDeTarea = useMemo<AccionesDeAgenda>(() => ({ confirmar, avisar }), [confirmar, avisar]);
+    const edicionDeTarea = useMemo<DatosParaEditar>(() => ({
+        departamentoId: depId,
+        subdepartamentos: datos.subdepartamentos,
+        carpetas: datos.carpetas,
+        prioridades: datos.prioridades,
+        miNombre: user?.name ?? null,
+        onIrAConfig: () => ir('config'),
+    }), [depId, datos, user?.name, ir]);
 
     return (
         <>
@@ -257,7 +275,12 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
                                             {fechaCorta(t.fecha)}<br />
                                             <span className="font-semibold text-black/[.55]">{t.todoElDia ? 'Todo el día' : `${t.horaDesde}–${t.horaHasta}`}</span>
                                         </span>
-                                        <span className="flex min-w-[160px] flex-1 flex-col gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setTareaAbierta(t.id)}
+                                            aria-label={`Ver ${t.nombre}`}
+                                            className="flex min-w-[160px] flex-1 flex-col items-start gap-1.5 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                        >
                                             <span className="text-[14.5px] font-bold">{t.nombre}</span>
                                             <span className="flex flex-wrap items-center gap-1.5">
                                                 <ChipEstado estado={t.estado} />
@@ -267,7 +290,7 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
                                                     </span>
                                                 )}
                                             </span>
-                                        </span>
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={() => setReasignando(t)}
@@ -318,6 +341,20 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
                         return true;
                     }}
                     onCerrar={() => setAgregando(false)}
+                />
+            )}
+
+            {tareaAbierta && (
+                <DetalleTarea
+                    key={tareaAbierta}
+                    tareaId={tareaAbierta}
+                    acciones={accionesDeTarea}
+                    edicion={edicionDeTarea}
+                    onCerrar={() => setTareaAbierta(null)}
+                    onCambio={async cambio => {
+                        if (cambio.tipo === 'eliminada') setTareaAbierta(null);
+                        await Promise.all([cargarTareas(), recargar()]);
+                    }}
                 />
             )}
 
