@@ -5,11 +5,11 @@ import {
     X,
     Menu,
     Home,
-    ClipboardList,
     BarChart,
     Info,
     Book,
     Settings,
+    Bell,
     Heart,
     HeartHandshake,
     ChevronUp,
@@ -515,16 +515,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             label: 'Agenda Origen',
             icon: CalendarDays,
             path: '/agenda',
-            roles: [],
-            requiresAuth: true,
-        },
-        {
-            // Pedirle una tarea a un departamento (Agenda Origen). La ruta es
-            // pública, pero el ítem aparece con la sesión puesta: sin cuenta
-            // no se puede mandar nada.
-            label: 'Solicitudes',
-            icon: ClipboardList,
-            path: '/solicitudes',
             roles: [],
             requiresAuth: true,
         },
@@ -1334,10 +1324,23 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     }`}
                                 style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
                             >
-                                {/* Notificaciones y el modo oscuro viven en Mi
-                                    cuenta (/perfil): acá queda sólo la puerta.
+                                {/* Notificaciones primero: es lo que se viene a
+                                    hacer acá cuando la foto tiene la marca roja,
+                                    y la pastilla de la fila es la misma cuenta
+                                    que esa marca — así se ve CUÁNTAS son antes
+                                    de entrar, y desaparece sola cuando se leen.
+                                    El modo oscuro sigue viviendo en Mi cuenta.
                                     handleNavigation ya cierra el panel de la
                                     cuenta y el menú. */}
+                                <FilaCuenta
+                                    icon={Bell}
+                                    label="Notificaciones"
+                                    insignia={sinLeer}
+                                    etiqueta={sinLeer > 0
+                                        ? `Notificaciones, ${sinLeer} sin leer`
+                                        : undefined}
+                                    onClick={() => handleNavigation('/notificaciones')}
+                                />
                                 <FilaCuenta
                                     icon={Settings}
                                     label="Configuración"
