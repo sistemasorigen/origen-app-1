@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Archive, ArrowLeft, ArrowLeftRight, Check, MoreHorizontal, Pencil, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Archive, ArrowLeft, ArrowLeftRight, Check, LayoutDashboard, MoreHorizontal, Pencil, UserPlus } from 'lucide-react';
 import {
     agregarMiembros, archivarSubdepartamento, fechaDesdeIso, fechaIso, getTareasSubdepartamento,
     guardarSubdepartamento, hoyIso, mensajeDeMotivo, reasignarTarea,
@@ -43,6 +44,7 @@ type CargaDeTareas = { estado: 'cargando' } | { estado: 'error'; motivo: MotivoA
 const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => {
     const { depId, datos, recargar, avisar, confirmar, ir } = usePanel();
     const { user } = useAuth();
+    const navegar = useNavigate();
     const acciones = useAccionesDeEquipo();
     const [editando, setEditando] = useState(false);
     const [borrador, setBorrador] = useState({ nombre: sub.nombre, color: sub.color });
@@ -142,10 +144,21 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
 
     return (
         <>
-            <button type="button" onClick={() => ir('subdepartamentos', null)} className={`${BOTON_CHICO} pl-3`}>
-                <ArrowLeft size={16} strokeWidth={2.2} aria-hidden="true" />
-                Sub-departamentos
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => ir('subdepartamentos', null)} className={`${BOTON_CHICO} pl-3`}>
+                    <ArrowLeft size={16} strokeWidth={2.2} aria-hidden="true" />
+                    Sub-departamentos
+                </button>
+                {/* El panel de quien lo dirige: lo mismo que ve su líder. */}
+                <button
+                    type="button"
+                    onClick={() => navegar(`/departamentos/${depId}/sub/${sub.id}`)}
+                    className={BOTON_CHICO}
+                >
+                    <LayoutDashboard size={15} strokeWidth={2} aria-hidden="true" />
+                    Ver panel del sub-departamento
+                </button>
+            </div>
 
             {/* Nombre */}
             <section aria-label="Nombre y color" className={`${TARJETA} mt-4 p-[22px]`}>

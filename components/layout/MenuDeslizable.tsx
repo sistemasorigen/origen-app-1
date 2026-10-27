@@ -551,7 +551,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const menuAdmin: MenuItem[] = [
         {
             // Agenda Origen. No va por roles: se ve según de qué departamento
-            // es encargado cada uno (agenda_mi_acceso). Ver puedeVer().
+            // es encargado cada uno y qué sub-departamento dirige
+            // (agenda_mi_acceso). Ver puedeVer().
             label: 'Departamentos',
             icon: LayoutGrid,
             path: '/departamentos',
@@ -732,13 +733,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // no está viendo.
     const puedeVer = (item: MenuItem): boolean => {
         if (item.path === '/departamentos') {
-            // Sólo SUPER_ADMIN y encargados: hoy /departamentos no tiene
-            // pantalla para quien sólo DIRIGE un sub-departamento (llega en el
-            // prompt 6 de Agenda Origen). Por eso no es puedeVerDepartamentos,
-            // que ya lo incluye. Mientras se pregunta, no aparece: que no
-            // parpadee apareciendo y desapareciendo.
+            // Lo ve quien tiene algo adentro: SUPER_ADMIN, los encargados de un
+            // departamento y quien dirige un sub-departamento. Mientras se
+            // pregunta no aparece, para que no parpadee.
             if (!currentUser || accesoAgenda.cargando) return false;
-            return accesoAgenda.acceso.superAdmin || accesoAgenda.acceso.encargado.length > 0;
+            return accesoAgenda.puedeVerDepartamentos;
         }
         if (item.label === 'Prode Mundial') {
             if (!prodeActivo) return false;

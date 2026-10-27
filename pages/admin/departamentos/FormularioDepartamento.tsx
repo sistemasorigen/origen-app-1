@@ -5,6 +5,7 @@ import {
     type DepartamentoAdmin, type MotivoAgenda, type Persona,
 } from '../../../services/agenda';
 import { ICONOS, PALETA } from '../../../src/contenido/agendaPaleta';
+import { motion, useDragControls, useReducedMotion } from 'framer-motion';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import SelectorDeEncargados from './SelectorDeEncargados';
 import { Cargando, ErrorDeCampo, IconoDeDepartamento, RotuloPaso } from './piezas';
@@ -75,6 +76,26 @@ const FormularioDepartamento: React.FC<{
     const panel = useRef<HTMLDivElement>(null);
     const campoNombre = useRef<HTMLInputElement>(null);
 
+    /**
+     * Cerrar deslizándola, como las hojas del módulo (equipo/piezas.tsx).
+     * Esta hoja tiene su propio marco —es de Sistemas, no del panel— así que
+     * el arrastre va copiado y no heredado: el patrón es el mismo, desde la
+     * manija y el encabezado, y pasa por intentarCerrar, que es el que
+     * pregunta "¿Descartar los cambios?".
+     */
+    const [esMovil, setEsMovil] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth < 768,
+    );
+    const sinMovimiento = useReducedMotion();
+    const arrastre = useDragControls();
+
+    useEffect(() => {
+        const medir = () => setEsMovil(window.innerWidth < 768);
+        medir();
+        window.addEventListener('resize', medir);
+        return () => window.removeEventListener('resize', medir);
+    }, []);
+
     const editando = modo.tipo === 'editar';
     const sinNombre = v.nombre.trim() === '';
     const sinEncargados = v.encargados.length === 0;
@@ -134,19 +155,39 @@ const FormularioDepartamento: React.FC<{
     return (
         <div className="fixed inset-0 z-[110] flex items-end justify-center md:items-center md:p-10">
             <div className="absolute inset-0 bg-[rgba(10,10,10,.36)] motion-safe:animate-[depFade_.18s_ease_both]" onClick={intentarCerrar} />
-            <div
+            <motion.div
                 id="dep-formulario"
                 ref={panel}
                 tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="dep-form-titulo"
-                className="relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-white shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none motion-safe:animate-[depSube_.26s_cubic-bezier(.2,.8,.2,1)_both] md:max-h-[calc(100dvh-64px)] md:max-w-[600px] md:rounded-[28px] md:shadow-[0_24px_60px_rgba(0,0,0,.22)] md:motion-safe:animate-[depAparece_.2s_ease_both]"
+                className="relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-white shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none md:max-h-[calc(100dvh-64px)] md:max-w-[600px] md:rounded-[28px] md:shadow-[0_24px_60px_rgba(0,0,0,.22)]"
+                initial={esMovil ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.98 }}
+                animate={esMovil ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
+                transition={sinMovimiento ? { duration: 0 } : { type: 'spring', damping: 34, stiffness: 340 }}
+                drag={esMovil ? 'y' : false}
+                dragListener={false}
+                dragControls={arrastre}
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
+                onDragEnd={(_, info) => { if (info.offset.y > 90) intentarCerrar(); }}
             >
-                <span aria-hidden="true" className="mx-auto mt-2.5 block h-[5px] w-11 flex-none rounded-full bg-black/[.16] md:hidden" />
+                <div
+                    onPointerDown={esMovil ? e => arrastre.start(e) : undefined}
+                    className="flex-none pb-1 pt-2.5 md:hidden"
+                    style={esMovil ? { touchAction: 'none', cursor: 'grab' } : undefined}
+                    data-manija="true"
+                >
+                    <span aria-hidden="true" className="mx-auto block h-[5px] w-11 rounded-full bg-black/[.16]" />
+                </div>
 
                 {/* La vista previa: así se va a ver en la lista y en la Agenda. */}
-                <div className="flex flex-none items-center gap-3 px-[22px] pb-2 pt-[18px]">
+                <div
+                    onPointerDown={esMovil ? e => arrastre.start(e) : undefined}
+                    style={esMovil ? { touchAction: 'none' } : undefined}
+                    className="flex flex-none items-center gap-3 px-[22px] pb-2 pt-[18px]"
+                >
                     <span
                         className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-white transition-colors duration-200"
                         style={{ background: v.color }}
@@ -291,7 +332,7 @@ const FormularioDepartamento: React.FC<{
                         </button>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

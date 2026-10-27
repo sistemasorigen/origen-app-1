@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, LayoutGrid } from 'lucide-react';
+import type { SubQueDirijo } from '../../services/agenda';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
 import { IconoDeDepartamento, nombreDePila, tinte } from '../admin/departamentos/piezas';
@@ -13,6 +14,10 @@ import { BOTON_NEGRO, ESTILOS, ID_AGENDA, Mensaje, ROTULO } from './equipo/pieza
  * SUPER_ADMIN los ve todos), en tarjetas grandes con lo que hay en proceso y
  * lo que espera asignación. Tocar una lleva a /departamentos/:id. Con uno
  * solo igual se muestra esta pantalla: es el lugar al que se vuelve.
+ *
+ * Abajo, los SUB-DEPARTAMENTOS QUE DIRIGE. Quien sólo dirige uno entra acá
+ * y ve nada más que el suyo: el bloque de departamentos no aparece, ni su
+ * vacío, porque no es algo que le falte.
  *
  * Al entrar se piden los números de nuevo (el acceso queda en memoria toda la
  * sesión, pero lo que hay en proceso cambia). La recarga no esconde lo que
@@ -37,6 +42,9 @@ const DepartamentosInicio: React.FC = () => {
     useEffect(() => { if (!cargando) recargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const deptos = acceso.encargado;
+    // agenda_mi_acceso ya deja afuera los archivados.
+    const subs: SubQueDirijo[] = acceso.dirijo;
+    const sinNada = deptos.length === 0 && subs.length === 0;
     const nombre = nombreDePila(user?.name ?? null);
 
     return (
@@ -45,9 +53,12 @@ const DepartamentosInicio: React.FC = () => {
             <div className="mx-auto max-w-[1080px] px-4 pb-12 pt-6 md:px-8 md:pt-8">
                 <p className={ROTULO}>Administración</p>
                 <h1 className="m-0 mt-1 text-[26px] font-bold tracking-[-0.025em] md:text-[32px]">Departamentos</h1>
-                {!cargando && !fallo && deptos.length > 0 && (
+                {!cargando && !fallo && !sinNada && (
                     <p className="m-0 mt-2 text-[14.5px] font-medium leading-[1.55] text-black/[.62]">
-                        Hola {nombre}. {acceso.superAdmin ? 'Estos son todos los departamentos de Agenda Origen.' : 'Estos son los equipos que tenés a cargo.'}
+                        Hola {nombre}. {acceso.superAdmin
+                            ? 'Estos son todos los departamentos de Agenda Origen.'
+                            : deptos.length > 0 ? 'Estos son los equipos que tenés a cargo.'
+                                : 'Esto es lo que dirigís.'}
                     </p>
                 )}
 
@@ -64,7 +75,7 @@ const DepartamentosInicio: React.FC = () => {
                     </Mensaje>
                 )}
 
-                {!cargando && !fallo && deptos.length === 0 && (
+                {!cargando && !fallo && sinNada && (
                     <Mensaje
                         icono={<LayoutGrid size={26} strokeWidth={1.75} />}
                         titulo="No tenés departamentos a cargo"
@@ -117,6 +128,37 @@ const DepartamentosInicio: React.FC = () => {
                                             <ChevronRight size={16} strokeWidth={2.4} className="flex-none text-[#a32218]" aria-hidden="true" />
                                         </button>
                                     )}
+                                </li>
+                            ))}
+                        </ul>
+                    </>
+                )}
+
+                {!cargando && !fallo && subs.length > 0 && (
+                    <>
+                        <h2 className={`${ROTULO} mx-1 mb-3 mt-7`}>Sub-departamentos que dirijo</h2>
+                        <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 md:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
+                            {subs.map(s => (
+                                <li key={s.id}>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(`/departamentos/${s.departamentoId}/sub/${s.id}`)}
+                                        className="flex w-full items-center gap-3.5 rounded-[26px] bg-white px-5 py-[18px] text-left shadow-[0_1px_2px_rgba(0,0,0,.04)] transition-shadow hover:shadow-[0_6px_20px_rgba(0,0,0,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className="w-1.5 flex-none self-stretch rounded-full"
+                                            style={{ background: s.color }}
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-[17px] font-bold tracking-[-0.01em] text-[#0a0a0a]">{s.nombre}</span>
+                                            <span className="mt-[3px] block truncate text-[13px] font-semibold text-black/[.58]">{s.departamentoNombre}</span>
+                                            <span className="mt-2 block text-[13.5px] font-semibold text-black/[.62]">
+                                                {plural(s.enProceso, 'tarea en proceso', 'tareas en proceso')}
+                                            </span>
+                                        </span>
+                                        <ChevronRight size={18} strokeWidth={2.2} className="flex-none text-black/[.38]" aria-hidden="true" />
+                                    </button>
                                 </li>
                             ))}
                         </ul>

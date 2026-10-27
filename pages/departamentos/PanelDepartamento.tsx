@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, Inbox, LayoutGrid, Settings, Users, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Inbox, LayoutGrid, Settings, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDepartamento, mensajeDeMotivo, type MotivoAgenda, type PanelDepartamento as Datos } from '../../services/agenda';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
@@ -14,6 +14,7 @@ import PestanaSubdepartamentos from './equipo/PestanaSubdepartamentos';
 import DetalleSubdepartamento from './equipo/DetalleSubdepartamento';
 import PestanaPersonal from './equipo/PestanaPersonal';
 import PestanaConfiguracion from './equipo/PestanaConfiguracion';
+import NavegacionDeSecciones, { type Seccion } from './NavegacionDeSecciones';
 import PestanaTareas from './tareas/PestanaTareas';
 import PestanaSolicitudes from './solicitudes/PestanaSolicitudes';
 
@@ -41,13 +42,16 @@ import PestanaSolicitudes from './solicitudes/PestanaSolicitudes';
  * Las pestañas, en orden. "Tareas" es la primera y la inicial: es lo que un
  * encargado viene a ver. "Solicitudes" va segunda, con una pastilla roja
  * cuando hay pedidos sin revisar.
+ *
+ * La descripción se ve en el desplegable del teléfono, donde una sola
+ * palabra no alcanza para saber qué hay adentro.
  */
-const PESTANAS: { id: Pestana; etiqueta: string; Icono: LucideIcon }[] = [
-    { id: 'tareas', etiqueta: 'Tareas', Icono: CalendarDays },
-    { id: 'solicitudes', etiqueta: 'Solicitudes', Icono: Inbox },
-    { id: 'subdepartamentos', etiqueta: 'Sub-departamentos', Icono: LayoutGrid },
-    { id: 'personal', etiqueta: 'Personal', Icono: Users },
-    { id: 'config', etiqueta: 'Configuración', Icono: Settings },
+const PESTANAS: Seccion<Pestana>[] = [
+    { id: 'tareas', etiqueta: 'Tareas', descripcion: 'Todo lo que tiene el departamento', Icono: CalendarDays },
+    { id: 'solicitudes', etiqueta: 'Solicitudes', descripcion: 'Pedidos que llegan de otras personas', Icono: Inbox },
+    { id: 'subdepartamentos', etiqueta: 'Sub-departamentos', descripcion: 'Los equipos que reciben las tareas', Icono: LayoutGrid },
+    { id: 'personal', etiqueta: 'Personal', descripcion: 'Encargados y quién tiene a cargo a quién', Icono: Users },
+    { id: 'config', etiqueta: 'Configuración', descripcion: 'Prioridades del departamento', Icono: Settings },
 ];
 /** Los links viejos sin ?tab caen acá. */
 const PESTANA_INICIAL: Pestana = 'tareas';
@@ -175,35 +179,16 @@ const PanelDepartamento: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Las pestañas: en el teléfono la fila se desliza sola, la página no. */}
-                    <div role="tablist" aria-label="Secciones del departamento" className="ag-fila-pestanas -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-4 md:mx-0 md:px-0">
-                        {PESTANAS.map(({ id: pid, etiqueta, Icono }) => {
-                            const activa = pestana === pid;
-                            return (
-                                <button
-                                    key={pid}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activa}
-                                    aria-controls="panel-departamento"
-                                    onClick={() => ir(pid, null)}
-                                    disabled={!dep}
-                                    className={`flex h-11 flex-none items-center gap-2 rounded-full px-4 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${activa ? 'bg-[#0a0a0a] text-white' : 'bg-[#f2f2f0] text-black/[.66] hover:text-[#0a0a0a]'}`}
-                                >
-                                    <Icono size={16} strokeWidth={1.9} aria-hidden="true" />
-                                    {etiqueta}
-                                    {pid === 'solicitudes' && solicitudesNuevas > 0 && (
-                                        <span
-                                            className={`flex h-5 min-w-[20px] flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold ${activa ? 'bg-white text-[#0a0a0a]' : 'bg-[#dc2626] text-white'}`}
-                                        >
-                                            {solicitudesNuevas}
-                                            <span className="sr-only"> nuevas</span>
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <NavegacionDeSecciones
+                        secciones={PESTANAS.map(s => (s.id === 'solicitudes'
+                            ? { ...s, insignia: solicitudesNuevas }
+                            : s))}
+                        actual={pestana}
+                        onIr={destino => ir(destino, null)}
+                        titulo="Secciones del departamento"
+                        idDelPanel="panel-departamento"
+                        deshabilitado={!dep}
+                    />
                 </div>
             </div>
 

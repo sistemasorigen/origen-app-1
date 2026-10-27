@@ -343,6 +343,12 @@ export const fechaYHora = (ts: string | null): string => {
     return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()} a las ${dos(d.getHours())}:${dos(d.getMinutes())}`;
 };
 
+/** '2026-10-20' → '20/10'. Para "Venció el 20/10", donde el año sobra. */
+export const diaYMes = (iso: string): string => {
+    const d = fechaDesdeIso(iso);
+    return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`;
+};
+
 /**
  * Cuánto hace que pasó algo, más la fecha corta:
  * 'hace 20 min · 26/10 14:12', 'ayer · 25/10 19:40', 'hace 4 días · 22/10 10:05'.

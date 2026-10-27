@@ -58,12 +58,16 @@ const ListaPorEstado: React.FC<{
     carpetasCerradas: Record<string, boolean>;
     onAlternarCarpeta: (clave: string) => void;
     onAbrirTarea: (id: string) => void;
-    onMenuDeCarpeta: (carpeta: Carpeta) => void;
+    /** Sin esto, las carpetas no ofrecen el ⋯ (el panel de quien dirige). */
+    onMenuDeCarpeta?: (carpeta: Carpeta) => void;
     /** La tarea que se acaba de guardar: entra marcándose. */
     reciente?: string | null;
+    /** Para que los ids no choquen cuando hay dos listas en la misma app. */
+    prefijoDeId?: string;
 }> = ({
     estado, tareas, carpetas, abierto, onAlternar,
     carpetasCerradas, onAlternarCarpeta, onAbrirTarea, onMenuDeCarpeta, reciente,
+    prefijoDeId = 'tareas',
 }) => {
     const hoy = hoyIso();
 
@@ -91,7 +95,7 @@ const ListaPorEstado: React.FC<{
             cuantas={tareas.length}
             abierto={abierto}
             onAlternar={onAlternar}
-            id={`tareas-${estado}`}
+            id={`${prefijoDeId}-${estado}`}
             marca={estado}
         >
             <div className="flex flex-col gap-[18px] pb-2 pt-4">
@@ -118,7 +122,7 @@ const ListaPorEstado: React.FC<{
                                     cuantas={adentro.length}
                                     abierta={abiertaLaCarpeta}
                                     onAlternar={() => onAlternarCarpeta(clave)}
-                                    onMenu={() => onMenuDeCarpeta(carpeta)}
+                                    onMenu={onMenuDeCarpeta ? () => onMenuDeCarpeta(carpeta) : undefined}
                                 >
                                     {adentro.map(t => (
                                         <TarjetaTarea
