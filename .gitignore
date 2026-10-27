@@ -52,3 +52,9 @@ sql/grant_superadmin.sql
 # Claude Design). El repo es público y `npm run deploy` hace `git add -A`:
 # una captura con datos reales se publicaría sin que nadie la mire.
 screenshots/
+
+# Copias de conflicto de OneDrive (el repo se sincroniza entre dos PCs):
+# nunca al repo público. Si aparece una junto a un archivo que se va a tocar,
+# frenar y avisar: puede traer cambios de la otra PC.
+*-IgnacioPC.*
+*-IgnacioPC

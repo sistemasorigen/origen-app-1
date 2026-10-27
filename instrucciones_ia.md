@@ -47,7 +47,8 @@ de escribir una sola línea de código. Su cumplimiento no es opcional.
 `react-router-dom`, `recharts`, `tailwind-merge`, `xlsx`
 
 ⚠️ **`matter-js` y `@types/matter-js` siguen instalados pero no se usan**
-(solo los importa el archivo huérfano `Home-IgnacioPC.tsx`). Pendiente:
+(ya no los importa ningún archivo: el único era la copia `Home-IgnacioPC.tsx`,
+eliminada el 2026-10-27). Pendiente:
 `npm uninstall matter-js @types/matter-js`. No usarlos en código nuevo.
 
 ---
@@ -124,6 +125,16 @@ origen-app/
 | `scrollRecordado.ts` | Recordar el scroll de una lista mientras dura la sesión |
 | `temporadaActiva.ts` | Si un grupo pertenece a la temporada abierta hoy |
 | `whatsapp.ts` | Armar el link de WhatsApp a partir de un teléfono cargado a mano |
+
+**Copias de conflicto de OneDrive (`*-IgnacioPC.*`):** el repo vive en una
+carpeta de OneDrive sincronizada entre dos PCs, y cuando hay un conflicto
+OneDrive deja una copia con el sufijo `-IgnacioPC`. Las 25 que había en el repo
+(más una sin trackear en `.claude/`) se eliminaron el **2026-10-27**: ninguna
+tenía trabajo que no estuviera en su original. Siguen en el historial de git, y
+`.gitignore` las excluye (`*-IgnacioPC.*` y `*-IgnacioPC`), así que una nueva
+ya no entra al repo público. **La regla sigue igual:** si aparece una junto a un
+archivo que se va a modificar, frenar y avisar, porque puede traer cambios de la
+otra PC. No borrarla ni integrarla sin preguntar.
 
 ---
 
@@ -1414,7 +1425,6 @@ están vivos:
 | `ModalSolicitantes.tsx` | **Vivo en `Grupos.tsx`** (reenvío masivo de emails); huérfano en `PanelAnfitrion.tsx` (sin `onClick` que lo dispare) |
 | `ModalCrearGrupo.tsx` | **Vivo**, doble uso: alta de grupo vía `?modal=createGroup` (link desde Tutoriales), y **reciclado con `isReopenRequest={true}`** como modal de re-apertura desde `Grupos.tsx`/`GestionDeGrupos.tsx` — no existe un `ModalReabrirGrupo.tsx` separado |
 | `ModalAsistencia.tsx`, `ModalSolicitudBaja.tsx`, `ModalTransferirGrupo.tsx` | **Huérfanos** — siguen importados y con estado (`useState`) en `PanelAnfitrion.tsx`, pero ningún botón visible los dispara ya (reemplazados por `PaginaAsistenciaGrupo`, `PaginaBajaGrupo`, `PaginaTransferirGrupo`). Código muerto pendiente de limpieza, no removido en la migración. `ModalTransferirGrupo.tsx` tampoco se usa desde `/admingcx/gestion-de-grupos`. |
-| `ModalCrearGrupo-IgnacioPC.tsx` | Archivo de desarrollo, no importado en ningún lado |
 
 ### Rutas agregadas
 | Ruta | Componente |
@@ -2050,9 +2060,10 @@ propia del Día del Niño y no se puede probar sin cámara).
 
 - **Dry run** de los reemplazos: confirmar que cada patrón matchea el conteo
   esperado antes de escribir, y abortar sin tocar nada si alguno falla.
-- **`tsc --noEmit`** contra el baseline: hoy **105 líneas**, incluidos los
-  errores de tipos de Deno de las Edge Functions. Lo que importa es que no haya
-  errores **nuevos**.
+- **`tsc --noEmit`** contra el baseline: **104 líneas** desde el 2026-10-27
+  (bajó de 137 al eliminar las copias `*-IgnacioPC`), incluidos los errores de
+  tipos de Deno de las Edge Functions. Lo que importa es que no haya errores
+  **nuevos**.
 - **`git diff` filtrado**: en un rediseño, solo deberían cambiar `className`.
 - **Verificar contra la base**, no contra lo que dice el prompt. Si un número no
   coincide, investigar antes de seguir.
@@ -2090,7 +2101,7 @@ propia del Día del Niño y no se puede probar sin cámara).
 ### Código
 - `npm uninstall matter-js @types/matter-js`
 - Archivos huérfanos: `pages/auth/IniciarSesion.tsx`,
-  `pages/punto-informacion/welcome/Bienvenida.tsx`, los `*-IgnacioPC.tsx`,
+  `pages/punto-informacion/welcome/Bienvenida.tsx`,
   `Pastores.tsx.backup_ui_*`, y los modales huérfanos de la sección 22
 - Conviven 4 versiones de `manage_group_registration`; **solo `v3`** tiene la
   corrección de seguridad, la derivación y el contador sin doble conteo
