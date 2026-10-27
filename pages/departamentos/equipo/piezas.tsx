@@ -44,8 +44,22 @@ export const ESTILOS = `
 #${ID_AGENDA} input[type="date"], #${ID_AGENDA} input[type="time"] {
   -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left;
 }
+/* Y el valor, al MEDIO. En el Safari del iPhone ::-webkit-date-and-time-value
+   es un bloque que se apoya arriba del área de contenido, así que en un campo
+   de 50px con una línea de 15px el día y las horas quedan una decena de
+   píxeles altos —el resto de los campos, no—. Chrome y el WebKit de
+   Playwright lo centran solos, o sea que esto no se ve en ninguna prueba: se
+   ve en el teléfono.
+   Van las dos formas porque no son excluyentes y no sé cuál respeta cada
+   versión de iOS: si el flex aplica, centra sin importar el alto; si no, la
+   altura de línea deja la única línea que hay en el medio. Los 47px son los
+   50 del campo (CAMPO_CLASE, en components/agenda/FormularioTarea.tsx) menos
+   1,5 de borde arriba y abajo: si cambia esa altura, cambia este número. */
 #${ID_AGENDA} input[type="date"]::-webkit-date-and-time-value,
-#${ID_AGENDA} input[type="time"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+#${ID_AGENDA} input[type="time"]::-webkit-date-and-time-value {
+  text-align: left; margin: 0;
+  display: flex; align-items: center; height: 100%; line-height: 47px;
+}
 #${ID_AGENDA} select { appearance: none; -webkit-appearance: none; }
 #${ID_AGENDA} ::placeholder { color: rgba(0,0,0,.45) !important; }
 #${ID_AGENDA} .dep-pastilla input {
