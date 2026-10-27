@@ -2251,7 +2251,7 @@ Pruebas en `sql/PROBAR_agenda_avisos.sql`, deshacer en
 | Tarea asignada | Quien dirige + los miembros del sub, **sin** los encargados del departamento | Sí | `AGENDA_TAREA_ASIGNADA` → `/agenda?tarea=<id>` |
 | Tarea completada | Los encargados, **menos** quien la completó | Sí | `AGENDA_TAREA_COMPLETADA` → `/agenda?tarea=<id>` |
 | Solicitud nueva | Los encargados (menos quien la pidió, si es uno de ellos) | No | `AGENDA_SOLICITUD_NUEVA` → `/departamentos/<dep>?tab=solicitudes` |
-| Solicitud revisada | Quien la pidió (aceptada o no) | **Nunca** | `AGENDA_SOLICITUD_REVISADA` → `/solicitudes` |
+| Solicitud revisada | Quien la pidió (aceptada o no) | **Nunca** | `AGENDA_SOLICITUD_REVISADA` → `/perfil/solicitudes` (Mi cuenta → Solicitudes; hasta el 2026-10-27 llevaba al formulario `/solicitudes`) |
 
 - **El circuito:** `trg_agenda_tareas_avisar` (AFTER INSERT/UPDATE) dispara
   "asignada" al crear con sub o cuando cambia `asignada_at` o el sub, y

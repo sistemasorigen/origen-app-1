@@ -294,7 +294,9 @@ BEGIN
                 ELSE 'Esta vez no la pueden tomar. Gracias por escribirles.'
             END,
             'AGENDA_SOLICITUD_REVISADA',
-            '/solicitudes'
+            -- Mi cuenta → Solicitudes: donde ve en qué quedó lo que pidió
+            -- (sql/agenda_avisos_link_mis_solicitudes.sql; antes /solicitudes).
+            '/perfil/solicitudes'
         );
     END IF;
     RETURN NULL;

@@ -334,11 +334,12 @@ BEGIN
     RESET ROLE;
     SELECT count(*) INTO n2 FROM public.app_notifications
      WHERE user_id = v_solic AND type = 'AGENDA_SOLICITUD_REVISADA'
-       AND title = 'Tu solicitud a Comunicación PRUEBA fue aceptada';
+       AND title = 'Tu solicitud a Comunicación PRUEBA fue aceptada'
+       AND action_url = '/perfil/solicitudes';
     IF n <> 0 OR x->>'estado' IS DISTINCT FROM 'aceptada' OR x->'tarea' <> 'null'::jsonb OR n2 <> 1 OR pg_temp.emails(v_solic) <> 0 THEN
         RAISE EXCEPTION 'FALLÓ R9: contador %, la ve %, aviso %, emails %', n, x, n2, pg_temp.emails(v_solic);
     END IF;
-    o := o || format(E'| R9 | El encargado la acepta | el contador de nuevas vuelve a 0; el solicitante la ve aceptada (sin tarea todavía) y recibe 1 aviso, ningún email | contador %s · suyas: %s · aviso %s · emails 0 | ✅ |\n',
+    o := o || format(E'| R9 | El encargado la acepta | el contador de nuevas vuelve a 0; el solicitante la ve aceptada (sin tarea todavía) y recibe 1 aviso que lleva a /perfil/solicitudes, ningún email | contador %s · suyas: %s · aviso %s (a /perfil/solicitudes) · emails 0 | ✅ |\n',
                      n, x->>'estado', n2);
 
     -- ════════════════════════════════════════════════════════════════════════
