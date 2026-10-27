@@ -68,6 +68,20 @@ DECLARE
                              'agenda_carpetas', 'agenda_prioridades',
                              'agenda_solicitudes', 'agenda_tareas'];
     o text := '';
+    -- Las RPC que authenticated puede ejecutar (caso 23).
+    v_rpc text[] := ARRAY[
+        'agenda_agregar_miembros', 'agenda_archivar_subdepartamento', 'agenda_buscar_usuarios',
+        'agenda_cambiar_encargados', 'agenda_cambiar_estado_tarea', 'agenda_cambiar_lider',
+        'agenda_crear_solicitud', 'agenda_crear_tarea', 'agenda_departamento',
+        'agenda_departamentos_admin', 'agenda_departamentos_para_solicitar', 'agenda_editar_tarea',
+        'agenda_eliminar_carpeta', 'agenda_eliminar_departamento', 'agenda_eliminar_prioridad',
+        'agenda_eliminar_tarea', 'agenda_guardar_carpeta', 'agenda_guardar_departamento',
+        'agenda_guardar_prioridad', 'agenda_guardar_subdepartamento', 'agenda_mi_acceso',
+        'agenda_mis_solicitudes', 'agenda_mis_tareas', 'agenda_mover_miembro',
+        'agenda_ordenar_prioridades', 'agenda_prioridades_sugeridas', 'agenda_quitar_miembro',
+        'agenda_reasignar_tarea', 'agenda_revisar_solicitud', 'agenda_solicitudes_departamento',
+        'agenda_subdepartamento', 'agenda_tarea', 'agenda_tareas_departamento',
+        'agenda_tareas_subdepartamento'];
 BEGIN
     -- ════════════════════════════════════════════════════════════════════════
     -- Preparación: usuarios de prueba
@@ -911,10 +925,23 @@ BEGIN
     -- ════════════════════════════════════════════════════════════════════════
     -- 23 · Los helpers no se llaman desde afuera; el CHECK de completada
     -- ════════════════════════════════════════════════════════════════════════
-    SELECT count(*) INTO v_n FROM pg_proc
+    -- La lista explícita de RPC (no un conteo): si se agrega una, el error dice
+    -- cuál sobra o cuál falta. agenda_mis_solicitudes es de
+    -- sql/agenda_mis_solicitudes.sql.
+    SELECT string_agg(proname, ', ' ORDER BY proname) FILTER (WHERE NOT proname = ANY (v_rpc)),
+           count(*)
+      INTO v_txt, v_n
+      FROM pg_proc
      WHERE pronamespace = 'public'::regnamespace AND proname LIKE 'agenda\_%'
        AND has_function_privilege('authenticated', oid, 'EXECUTE');
-    IF v_n <> 33 THEN RAISE EXCEPTION 'FALLÓ 23: authenticated ejecuta % funciones (esperaba las 33 RPC)', v_n; END IF;
+    SELECT string_agg(x, ', ') INTO v_txt2
+      FROM unnest(v_rpc) x
+     WHERE NOT EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = x
+                          AND has_function_privilege('authenticated', oid, 'EXECUTE'));
+    IF v_txt IS NOT NULL OR v_txt2 IS NOT NULL OR v_n <> cardinality(v_rpc) THEN
+        RAISE EXCEPTION 'FALLÓ 23: authenticated ejecuta % funciones (esperaba las % RPC). De más: %. Faltan: %',
+                        v_n, cardinality(v_rpc), COALESCE(v_txt, 'ninguna'), COALESCE(v_txt2, 'ninguna');
+    END IF;
     IF has_function_privilege('authenticated', 'public.agenda_es_encargado(uuid)', 'EXECUTE')
        OR has_function_privilege('authenticated', 'public.agenda_persona(uuid)', 'EXECUTE') THEN
         RAISE EXCEPTION 'FALLÓ 23: un helper es ejecutable por authenticated';
@@ -924,7 +951,7 @@ BEGIN
         RAISE EXCEPTION 'FALLÓ 23: una completada quedó sin sub';
     EXCEPTION WHEN check_violation THEN NULL;
     END;
-    o := o || format(E'| 23 | Permisos de funciones para authenticated; una completada sin sub (UPDATE directo como dueño) | 33 RPC, 0 helpers; check_violation | %s RPC · helpers no · check_violation | ✅ |\n', v_n);
+    o := o || format(E'| 23 | Permisos de funciones para authenticated; una completada sin sub (UPDATE directo como dueño) | %s RPC, 0 helpers; check_violation | %s RPC · helpers no · check_violation | ✅ |\n', cardinality(v_rpc), v_n);
 
     RAISE EXCEPTION E'RESULTADO ✅ todos los casos en verde\n%', o;
 END;

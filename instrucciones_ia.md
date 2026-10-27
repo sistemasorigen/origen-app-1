@@ -2129,6 +2129,10 @@ propia del Día del Niño y no se puede probar sin cámara).
 Calendario de tareas por **departamentos** y **sub-departamentos**, con
 solicitudes que manda cualquiera. Base: `sql/agenda_origen.sql` (pruebas en
 `sql/PROBAR_agenda_origen.sql`, deshacer en `sql/ROLLBACK_agenda_origen.sql`).
+`sql/PROBAR_agenda_recorrido.sql` encadena todo con las mismas personas
+(departamento → equipos → tareas → solicitudes → reasignar → cambiar quién
+dirige → archivar → borrar) y mira, después de cada paso, qué ve cada una:
+correrla después de cualquier cambio en la Agenda.
 Servicios: `services/agenda.ts`. Colores, íconos y estados:
 `src/contenido/agendaPaleta.ts` (única fuente). Diseños: `design-claude/`
 (Agenda Origen, Sistemas - Departamentos, Departamentos - Inicio, Departamento
@@ -2227,7 +2231,9 @@ ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce
   encargado suma todo su departamento), `agenda_tarea`,
   `agenda_cambiar_estado_tarea`.
 - **Solicitudes:** `agenda_departamentos_para_solicitar`,
-  `agenda_crear_solicitud` (10 por persona por día argentino).
+  `agenda_crear_solicitud` (10 por persona por día argentino),
+  `agenda_mis_solicitudes` (lo que pidió quien llama, para
+  `/perfil/solicitudes`; `sql/agenda_mis_solicitudes.sql`).
 - Helpers internos (nadie de afuera los ejecuta): `agenda_es_encargado`,
   `agenda_dirige`, `agenda_es_miembro`, `agenda_puede_ver_tarea`,
   `agenda_valida_del_departamento` (sub, carpeta y prioridad del mismo
