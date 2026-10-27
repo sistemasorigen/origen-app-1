@@ -18,8 +18,11 @@ import { BOTON_NEGRO, ESTILOS, ID_AGENDA, Mensaje, ROTULO } from './equipo/pieza
  * sesión, pero lo que hay en proceso cambia). La recarga no esconde lo que
  * ya se ve.
  *
- * Todavía no: las solicitudes nuevas (prompt 5) ni "Sub-departamentos que
- * dirijo" (prompt 6).
+ * Cada tarjeta avisa cuántas solicitudes nuevas tiene con una pastilla
+ * roja, y esa pastilla entra directo a ?tab=solicitudes: es lo único de esta
+ * pantalla que alguien está esperando que le contesten.
+ *
+ * Todavía no: "Sub-departamentos que dirijo" (prompt 6).
  */
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
@@ -98,6 +101,22 @@ const DepartamentosInicio: React.FC = () => {
                                             <ChevronRight size={18} strokeWidth={2.2} className="flex-none text-black/[.38]" aria-hidden="true" />
                                         </span>
                                     </button>
+                                    {d.solicitudesNuevas > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/departamentos/${d.id}?tab=solicitudes`)}
+                                            className="mt-1.5 flex w-full items-center gap-2 rounded-full px-3.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                            style={{ background: 'rgba(220,38,38,.1)' }}
+                                        >
+                                            <span className="flex h-[22px] min-w-[22px] flex-none items-center justify-center rounded-full bg-[#dc2626] px-1.5 text-[11.5px] font-extrabold text-white">
+                                                {d.solicitudesNuevas}
+                                            </span>
+                                            <span className="min-w-0 flex-1 text-[13.5px] font-bold text-[#a32218]">
+                                                {d.solicitudesNuevas === 1 ? 'solicitud nueva para revisar' : 'solicitudes nuevas para revisar'}
+                                            </span>
+                                            <ChevronRight size={16} strokeWidth={2.4} className="flex-none text-[#a32218]" aria-hidden="true" />
+                                        </button>
+                                    )}
                                 </li>
                             ))}
                         </ul>

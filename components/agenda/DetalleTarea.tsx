@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useDragControls, useReducedMotion } from 'framer-motion';
 import {
     ArrowLeftRight, CalendarDays, Check, Folder, Pencil, Signal, Trash2, X,
 } from 'lucide-react';
@@ -28,7 +29,15 @@ import type { AccionesDeAgenda, CambioDeTarea, DatosParaEditar } from './contrat
  * carpetas y las prioridades del departamento). La Agenda de un miembro no
  * los tiene, así que sin eso esas acciones no se ofrecen: no es un permiso,
  * es que no hay con qué.
+ *
+ * En el teléfono se cierra deslizándolo hacia abajo desde la manija, igual
+ * que las hojas del módulo. Desde la manija y no desde el cuerpo: el cuerpo
+ * tiene su propio scroll, que es largo. En escritorio es un panel al costado
+ * y no se arrastra.
  */
+
+/** Arrastrar el panel más que esto lo cierra. */
+const CIERRA_EN = 90;
 
 type Carga =
     | { estado: 'cargando' }
@@ -103,8 +112,22 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
     /** Se acabó de completar: el tilde entra con su animación. */
     const [reciencompletada, setRecienCompletada] = useState(false);
     const panel = useRef<HTMLDivElement>(null);
+    // Se mide en el primer render, como en Hoja: si arranca en false, en un
+    // teléfono el panel monta con la entrada de escritorio.
+    const [esMovil, setEsMovil] = useState(
+        () => typeof window !== 'undefined' && window.innerWidth < 768,
+    );
+    const sinMovimiento = useReducedMotion();
+    const arrastre = useDragControls();
 
     useBloqueoDeFondo(true);
+
+    useEffect(() => {
+        const medir = () => setEsMovil(window.innerWidth < 768);
+        medir();
+        window.addEventListener('resize', medir);
+        return () => window.removeEventListener('resize', medir);
+    }, []);
 
     const cargar = useCallback(async () => {
         setCarga({ estado: 'cargando' });
@@ -197,6 +220,9 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
 
     const completada = tarea?.estado === 'completada';
     const puedeTocar = !!tarea?.puedeEditar && !!edicion;
+    const transicion = sinMovimiento
+        ? { duration: 0 }
+        : { type: 'spring' as const, damping: 34, stiffness: 340 };
 
     return (
         <>
@@ -205,15 +231,31 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                     className="absolute inset-0 bg-[rgba(10,10,10,.36)] motion-safe:animate-[depFade_.18s_ease_both] md:bg-[rgba(10,10,10,.12)]"
                     onClick={() => { if (!ocupado) onCerrar(); }}
                 />
-                <div
+                <motion.div
                     ref={panel}
                     tabIndex={-1}
                     role="dialog"
                     aria-modal="true"
                     aria-label="Detalle de la tarea"
-                    className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none motion-safe:animate-[depSube_.26s_cubic-bezier(.2,.8,.2,1)_both] md:h-full md:max-h-none md:w-[420px] md:rounded-[28px] md:shadow-[0_20px_60px_rgba(0,0,0,.2)] md:motion-safe:animate-[depCostado_.22s_ease_both]"
+                    className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none md:h-full md:max-h-none md:w-[420px] md:rounded-[28px] md:shadow-[0_20px_60px_rgba(0,0,0,.2)]"
+                    initial={esMovil ? { y: '100%' } : { opacity: 0, x: 24 }}
+                    animate={esMovil ? { y: 0 } : { opacity: 1, x: 0 }}
+                    transition={transicion}
+                    drag={esMovil ? 'y' : false}
+                    dragListener={false}
+                    dragControls={arrastre}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragElastic={{ top: 0, bottom: 0.6 }}
+                    onDragEnd={(_, info) => { if (info.offset.y > CIERRA_EN && !ocupado) onCerrar(); }}
                 >
-                    <span aria-hidden="true" className="mx-auto mt-2.5 block h-[5px] w-11 flex-none rounded-full bg-black/[.16] md:hidden" />
+                    <div
+                        onPointerDown={esMovil ? e => arrastre.start(e) : undefined}
+                        className="flex-none pb-1 pt-2.5 md:hidden"
+                        style={esMovil ? { touchAction: 'none', cursor: 'grab' } : undefined}
+                        data-manija="true"
+                    >
+                        <span aria-hidden="true" className="mx-auto block h-[5px] w-11 rounded-full bg-black/[.16]" />
+                    </div>
                     <div className="flex flex-none justify-end px-3 pt-3 md:pt-3">
                         <button
                             type="button"
@@ -427,7 +469,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                             )}
                         </div>
                     )}
-                </div>
+                </motion.div>
             </div>
 
             {editando && tarea && edicion && (

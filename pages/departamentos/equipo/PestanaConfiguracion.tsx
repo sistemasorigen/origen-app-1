@@ -56,7 +56,12 @@ const HojaPrioridad: React.FC<{ prioridad: Prioridad | null; onCerrar: () => voi
             onCerrar={onCerrar}
             ocupada={guardando}
             ancho={480}
-            pie={<PieDeHoja onCancelar={onCerrar} onAceptar={guardar} etiqueta={prioridad ? 'Guardar' : 'Agregar'} guardando={guardando} apagado={!nombre.trim()} />}
+            pie={(
+                <PieDeHoja
+                    onCancelar={onCerrar} onAceptar={guardar} etiqueta={prioridad ? 'Guardar' : 'Agregar'}
+                    guardando={guardando} apagado={!nombre.trim()} falta="Falta el nombre de la prioridad."
+                />
+            )}
         >
             <label className="flex flex-col gap-2">
                 <RotuloPaso>Nombre</RotuloPaso>

@@ -92,7 +92,14 @@ const FormularioSubdepartamento: React.FC<{ onCerrar: () => void; onCreado: (id:
             onCerrar={intentarCerrar}
             ocupada={guardando}
             ancho={600}
-            pie={<PieDeHoja onCancelar={intentarCerrar} onAceptar={crear} etiqueta="Crear" guardando={guardando} apagado={sinNombre || sinLider} />}
+            pie={(
+                <PieDeHoja
+                    onCancelar={intentarCerrar} onAceptar={crear} etiqueta="Crear"
+                    guardando={guardando} apagado={sinNombre || sinLider}
+                    falta={sinNombre && sinLider ? 'Faltan el nombre y quién lo va a dirigir.'
+                        : sinNombre ? 'Falta el nombre.' : 'Falta elegir quién lo va a dirigir.'}
+                />
+            )}
         >
             <label className="flex flex-col gap-2">
                 <RotuloPaso>Nombre</RotuloPaso>

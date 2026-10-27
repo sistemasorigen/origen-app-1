@@ -5,6 +5,7 @@ import {
     X,
     Menu,
     Home,
+    ClipboardList,
     BarChart,
     Info,
     Book,
@@ -507,6 +508,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             path: '/eventos',
             exact: true,
             roles: []
+        },
+        {
+            // Pedirle una tarea a un departamento (Agenda Origen). La ruta es
+            // pública, pero el ítem aparece con la sesión puesta: sin cuenta
+            // no se puede mandar nada.
+            label: 'Solicitudes',
+            icon: ClipboardList,
+            path: '/solicitudes',
+            roles: [],
+            requiresAuth: true,
         },
         {
             label: 'Prode Mundial',

@@ -276,6 +276,10 @@ export const fechaDesdeIso = (iso: string): Date => {
 
 export const hoyIso = (): string => fechaIso(new Date());
 
+/** Cuántos días hay entre dos fechas 'YYYY-MM-DD' (b − a). */
+const diasEntre = (a: string, b: string): number =>
+    Math.round((fechaDesdeIso(b).getTime() - fechaDesdeIso(a).getTime()) / 86400000);
+
 /** Suma días a una fecha 'YYYY-MM-DD' sin pasar por UTC. */
 export const sumarDias = (iso: string, dias: number): string => {
     const d = fechaDesdeIso(iso);
@@ -337,6 +341,27 @@ export const fechaYHora = (ts: string | null): string => {
     const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T'));
     if (Number.isNaN(d.getTime())) return '';
     return `${dos(d.getDate())}/${dos(d.getMonth() + 1)}/${d.getFullYear()} a las ${dos(d.getHours())}:${dos(d.getMinutes())}`;
+};
+
+/**
+ * Cuánto hace que pasó algo, más la fecha corta:
+ * 'hace 20 min · 26/10 14:12', 'ayer · 25/10 19:40', 'hace 4 días · 22/10 10:05'.
+ *
+ * Lo relativo primero porque es lo que se mira ("¿es de ahora o de la semana
+ * pasada?"), y la fecha igual, porque "hace 4 días" no sirve para anotar nada.
+ */
+export const haceCuanto = (ts: string | null): string => {
+    if (!ts) return '';
+    const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return '';
+    const corta = `${dos(d.getDate())}/${dos(d.getMonth() + 1)} ${dos(d.getHours())}:${dos(d.getMinutes())}`;
+    const minutos = Math.max(0, Math.round((Date.now() - d.getTime()) / 60000));
+    if (minutos < 1) return `recín · ${corta}`;
+    if (minutos < 60) return `hace ${minutos} min · ${corta}`;
+    const dias = diasEntre(fechaIso(d), hoyIso());
+    if (dias <= 0) return `hace ${Math.floor(minutos / 60)} h · ${corta}`;
+    if (dias === 1) return `ayer · ${corta}`;
+    return `hace ${dias} días · ${corta}`;
 };
 
 /** 'lunes 26/10/2026 · 14:32': el sello al pie de los formularios. */

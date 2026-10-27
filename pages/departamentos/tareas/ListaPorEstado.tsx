@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { fechaDeDia, hoyIso, type Carpeta, type EstadoTarea, type Tarea } from '../../../services/agenda';
-import { ChipEstado } from '../equipo/piezas';
+import { ChipEstado, DivisorPlegable } from '../equipo/piezas';
 import FilaCarpeta from './FilaCarpeta';
 import TarjetaTarea from './TarjetaTarea';
 
@@ -86,81 +85,65 @@ const ListaPorEstado: React.FC<{
         });
     }, [tareas, carpetas, estado]);
 
-    const idPanel = `tareas-${estado}`;
-
     return (
-        <section className="flex flex-col" data-estado={estado}>
-            <button
-                type="button"
-                onClick={onAlternar}
-                aria-expanded={abierto}
-                aria-controls={idPanel}
-                className="flex min-h-[56px] items-center gap-3 rounded-[20px] bg-white pl-3.5 pr-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
-            >
-                <ChevronDown
-                    size={18}
-                    strokeWidth={2.4}
-                    aria-hidden="true"
-                    className="flex-none text-black/[.55] transition-transform"
-                    style={{ transform: abierto ? undefined : 'rotate(-90deg)' }}
-                />
-                <ChipEstado estado={estado} grande />
-                <span className="flex-1" />
-                <span className="flex-none text-[13.5px] font-bold text-black/[.62]">{tareas.length}</span>
-            </button>
+        <DivisorPlegable
+            rotulo={<ChipEstado estado={estado} grande />}
+            cuantas={tareas.length}
+            abierto={abierto}
+            onAlternar={onAlternar}
+            id={`tareas-${estado}`}
+            marca={estado}
+        >
+            <div className="flex flex-col gap-[18px] pb-2 pt-4">
+                {tareas.length === 0 && (
+                    <p className="m-0 px-1.5 text-[13.5px] font-semibold text-black/[.55]">{SIN_NADA[estado]}</p>
+                )}
 
-            {abierto && (
-                <div id={idPanel} className="flex flex-col gap-[18px] pb-2 pt-4">
-                    {tareas.length === 0 && (
-                        <p className="m-0 px-1.5 text-[13.5px] font-semibold text-black/[.55]">{SIN_NADA[estado]}</p>
-                    )}
+                {dias.map(dia => (
+                    <div key={dia.fecha} className="flex flex-col gap-2">
+                        <h3
+                            className="m-0 mb-0.5 px-1.5 text-[14px] font-bold"
+                            style={{ color: dia.fecha === hoy ? '#0a0a0a' : 'rgba(0,0,0,.62)' }}
+                        >
+                            {fechaDeDia(dia.fecha, hoy)}
+                        </h3>
 
-                    {dias.map(dia => (
-                        <div key={dia.fecha} className="flex flex-col gap-2">
-                            <h3
-                                className="m-0 mb-0.5 px-1.5 text-[14px] font-bold"
-                                style={{ color: dia.fecha === hoy ? '#0a0a0a' : 'rgba(0,0,0,.62)' }}
-                            >
-                                {fechaDeDia(dia.fecha, hoy)}
-                            </h3>
+                        {dia.carpetas.map(({ carpeta, tareas: adentro }) => {
+                            const clave = `${estado}|${dia.fecha}|${carpeta.id}`;
+                            const abiertaLaCarpeta = !carpetasCerradas[clave];
+                            return (
+                                <FilaCarpeta
+                                    key={carpeta.id}
+                                    carpeta={carpeta}
+                                    cuantas={adentro.length}
+                                    abierta={abiertaLaCarpeta}
+                                    onAlternar={() => onAlternarCarpeta(clave)}
+                                    onMenu={() => onMenuDeCarpeta(carpeta)}
+                                >
+                                    {adentro.map(t => (
+                                        <TarjetaTarea
+                                            key={t.id}
+                                            tarea={t}
+                                            reciente={reciente === t.id}
+                                            onAbrir={() => onAbrirTarea(t.id)}
+                                        />
+                                    ))}
+                                </FilaCarpeta>
+                            );
+                        })}
 
-                            {dia.carpetas.map(({ carpeta, tareas: adentro }) => {
-                                const clave = `${estado}|${dia.fecha}|${carpeta.id}`;
-                                const abierta = !carpetasCerradas[clave];
-                                return (
-                                    <FilaCarpeta
-                                        key={carpeta.id}
-                                        carpeta={carpeta}
-                                        cuantas={adentro.length}
-                                        abierta={abierta}
-                                        onAlternar={() => onAlternarCarpeta(clave)}
-                                        onMenu={() => onMenuDeCarpeta(carpeta)}
-                                    >
-                                        {adentro.map(t => (
-                                            <TarjetaTarea
-                                                key={t.id}
-                                                tarea={t}
-                                                reciente={reciente === t.id}
-                                                onAbrir={() => onAbrirTarea(t.id)}
-                                            />
-                                        ))}
-                                    </FilaCarpeta>
-                                );
-                            })}
-
-                            {dia.sueltas.map(t => (
-                                <TarjetaTarea
-                                    key={t.id}
-                                    tarea={t}
-                                    reciente={reciente === t.id}
-                                    onAbrir={() => onAbrirTarea(t.id)}
-                                />
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </section>
+                        {dia.sueltas.map(t => (
+                            <TarjetaTarea
+                                key={t.id}
+                                tarea={t}
+                                reciente={reciente === t.id}
+                                onAbrir={() => onAbrirTarea(t.id)}
+                            />
+                        ))}
+                    </div>
+                ))}
+            </div>
+        </DivisorPlegable>
     );
 };
 

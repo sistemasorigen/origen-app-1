@@ -69,6 +69,7 @@ import InscripcionDiaNino from './pages/eventos/dianino/InscripcionDiaNino';
 import InscripcionNocturna from './pages/eventos/nocturna/InscripcionNocturna';
 import ChequearEntrada from './pages/eventos/nocturna/ChequearEntrada';
 import CompraVoluntarios from './pages/voluntarios/CompraVoluntarios';
+import PaginaSolicitudes from './pages/solicitudes/PaginaSolicitudes';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
@@ -612,6 +613,27 @@ const AppContent: React.FC = () => {
                     sinNavegacion
                 >
                     <CompraVoluntarios />
+                </Layout>
+            } />
+
+            {/* Pedirle una tarea a un departamento (Agenda Origen).
+
+                Va acá arriba y no abajo, con las protegidas, porque es
+                PÚBLICA como /voluntarios: sin sesión no redirige, muestra la
+                tarjeta para entrar y vuelve acá después del login. Abajo,
+                dentro de path="*", un visitante sin sesión vería SinAcceso y
+                nunca ese cartel.
+
+                Con el menú puesto, al contrario de /voluntarios: no es un
+                trámite de principio a fin, es una pantalla más del menú. */}
+            <Route path="/solicitudes" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                >
+                    <PaginaSolicitudes />
                 </Layout>
             } />
             <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />

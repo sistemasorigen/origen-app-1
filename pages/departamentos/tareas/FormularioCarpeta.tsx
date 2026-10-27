@@ -103,6 +103,7 @@ const FormularioCarpeta: React.FC<{
                     etiqueta={editando ? 'Guardar' : 'Crear carpeta'}
                     guardando={guardando}
                     apagado={sinNombre}
+                    falta="Falta el nombre de la carpeta."
                 />
             )}
         >

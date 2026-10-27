@@ -151,6 +151,17 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         horarioAlReves ? 'La hora de “Hasta” tiene que ser después de “Desde”.'
             : tocado && horarioIncompleto ? 'Completá desde y hasta qué hora.' : null);
 
+    /**
+     * Lo primero que falta, para el pie de la hoja. Es un RESUMEN que apunta
+     * al campo: el detalle lo dice el error del campo, y repetir la misma
+     * frase dos veces en la misma hoja es ruido.
+     */
+    const queFalta = sinNombre ? 'Falta el nombre de la tarea.'
+        : !fecha ? 'Falta el día.'
+            : horarioIncompleto ? 'Falta completar el horario.'
+                : horarioAlReves ? 'Revisá el horario.'
+                    : null;
+
     const hayCambios = nombre !== inicial.nombre
         || sub !== inicial.subdepartamentoId
         || carpetaId !== inicial.carpetaId
@@ -230,6 +241,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                     etiqueta={etiquetaDeAccion ?? (modo === 'crear' ? 'Crear tarea' : 'Guardar cambios')}
                     guardando={guardando}
                     apagado={invalido}
+                    falta={queFalta}
                 />
             )}
         >

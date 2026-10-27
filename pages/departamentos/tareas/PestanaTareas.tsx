@@ -10,7 +10,9 @@ import FormularioTarea from '../../../components/agenda/FormularioTarea';
 import type { AccionesDeAgenda, CambioDeTarea, DatosParaEditar } from '../../../components/agenda/contratos';
 import SelectorDeRango, { atajosDeTareas, type Rango } from '../../audiencia/SelectorDeRango';
 import { plural } from '../../admin/departamentos/piezas';
-import { BOTON_CHICO, BOTON_NEGRO, Hoja, Mensaje, usePanel } from '../equipo/piezas';
+import {
+    BOTON_CHICO, BOTON_NEGRO, Hoja, Mensaje, guardarPlegadas, leerPlegadas, usePanel,
+} from '../equipo/piezas';
 import FormularioCarpeta from './FormularioCarpeta';
 import ListaPorEstado from './ListaPorEstado';
 
@@ -32,27 +34,6 @@ import ListaPorEstado from './ListaPorEstado';
  */
 
 const ESTADOS_EN_ORDEN: EstadoTarea[] = ['esperando', 'en_proceso', 'completada'];
-
-/** Lo que queda plegado si nunca se tocó nada: el historial. */
-const PLEGADAS_POR_DEFECTO: Partial<Record<EstadoTarea, boolean>> = { completada: true };
-
-const claveDePlegadas = (depId: string) => `origen_agenda_plegadas_${depId}`;
-
-const leerPlegadas = (depId: string): Partial<Record<EstadoTarea, boolean>> => {
-    try {
-        const guardado = window.localStorage.getItem(claveDePlegadas(depId));
-        if (!guardado) return PLEGADAS_POR_DEFECTO;
-        const leido = JSON.parse(guardado) as Partial<Record<EstadoTarea, boolean>>;
-        return leido && typeof leido === 'object' ? leido : PLEGADAS_POR_DEFECTO;
-    } catch {
-        // Modo privado, almacenamiento bloqueado: se abre todo y funciona igual.
-        return PLEGADAS_POR_DEFECTO;
-    }
-};
-
-const guardarPlegadas = (depId: string, valor: Partial<Record<EstadoTarea, boolean>>) => {
-    try { window.localStorage.setItem(claveDePlegadas(depId), JSON.stringify(valor)); } catch { /* da igual */ }
-};
 
 /** El mes en curso, entero: del 1 al último día. */
 const mesEntero = (iso: string): Rango => {

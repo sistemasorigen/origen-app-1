@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, LayoutGrid, Settings, Users, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Inbox, LayoutGrid, Settings, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDepartamento, mensajeDeMotivo, type MotivoAgenda, type PanelDepartamento as Datos } from '../../services/agenda';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
@@ -15,6 +15,7 @@ import DetalleSubdepartamento from './equipo/DetalleSubdepartamento';
 import PestanaPersonal from './equipo/PestanaPersonal';
 import PestanaConfiguracion from './equipo/PestanaConfiguracion';
 import PestanaTareas from './tareas/PestanaTareas';
+import PestanaSolicitudes from './solicitudes/PestanaSolicitudes';
 
 /**
  * /departamentos/:id — el panel de un departamento de Agenda Origen
@@ -38,11 +39,12 @@ import PestanaTareas from './tareas/PestanaTareas';
 
 /**
  * Las pestañas, en orden. "Tareas" es la primera y la inicial: es lo que un
- * encargado viene a ver. El prompt 5 suma "Solicitudes" agregando una
- * entrada acá y un caso abajo.
+ * encargado viene a ver. "Solicitudes" va segunda, con una pastilla roja
+ * cuando hay pedidos sin revisar.
  */
 const PESTANAS: { id: Pestana; etiqueta: string; Icono: LucideIcon }[] = [
     { id: 'tareas', etiqueta: 'Tareas', Icono: CalendarDays },
+    { id: 'solicitudes', etiqueta: 'Solicitudes', Icono: Inbox },
     { id: 'subdepartamentos', etiqueta: 'Sub-departamentos', Icono: LayoutGrid },
     { id: 'personal', etiqueta: 'Personal', Icono: Users },
     { id: 'config', etiqueta: 'Configuración', Icono: Settings },
@@ -68,6 +70,12 @@ const PanelDepartamento: React.FC = () => {
     const [carga, setCarga] = useState<Carga>({ estado: 'cargando' });
     const [aviso, setAviso] = useState<{ texto: string; tipo: 'ok' | 'error' } | null>(null);
     const [confirmacion, setConfirmacion] = useState<PedidoConfirmacion | null>(null);
+    /**
+     * Cuántas solicitudes nuevas hay. Arranca con lo que recuerda
+     * agenda_mi_acceso (que puede estar un paso atrás) y lo reemplaza la
+     * pestaña de Solicitudes cuando las trae de verdad.
+     */
+    const [nuevasReales, setNuevasReales] = useState<number | null>(null);
     const avisoT = useRef(0);
 
     const pedida = params.get('tab') as Pestana | null;
@@ -104,6 +112,8 @@ const PanelDepartamento: React.FC = () => {
     // Al cambiar de pestaña o de detalle se arranca desde arriba.
     useEffect(() => { window.scrollTo({ top: 0 }); }, [pestana, subAbierto]);
 
+    const avisarSolicitudesNuevas = useCallback((cuantas: number) => setNuevasReales(cuantas), []);
+
     const contexto: ContextoDelPanel | null = useMemo(() => carga.estado !== 'listo' ? null : ({
         depId: id,
         datos: carga.datos,
@@ -114,7 +124,12 @@ const PanelDepartamento: React.FC = () => {
         ir,
         miId: user?.id ?? null,
         soySuperAdmin: acceso.superAdmin,
-    }), [carga, id, recargar, avisar, confirmacion, ir, user?.id, acceso.superAdmin]);
+        avisarSolicitudesNuevas,
+    }), [carga, id, recargar, avisar, confirmacion, ir, user?.id, acceso.superAdmin, avisarSolicitudesNuevas]);
+
+    const solicitudesNuevas = nuevasReales
+        ?? acceso.encargado.find(d => d.id === id)?.solicitudesNuevas
+        ?? 0;
 
     if (carga.estado === 'error' && (carga.motivo === 'sin_permiso' || carga.motivo === 'sin_sesion')) {
         return <SinAcceso volverA={{ etiqueta: 'Volver a Departamentos', ruta: '/departamentos' }} />;
@@ -177,6 +192,14 @@ const PanelDepartamento: React.FC = () => {
                                 >
                                     <Icono size={16} strokeWidth={1.9} aria-hidden="true" />
                                     {etiqueta}
+                                    {pid === 'solicitudes' && solicitudesNuevas > 0 && (
+                                        <span
+                                            className={`flex h-5 min-w-[20px] flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold ${activa ? 'bg-white text-[#0a0a0a]' : 'bg-[#dc2626] text-white'}`}
+                                        >
+                                            {solicitudesNuevas}
+                                            <span className="sr-only"> nuevas</span>
+                                        </span>
+                                    )}
                                 </button>
                             );
                         })}
@@ -202,6 +225,7 @@ const PanelDepartamento: React.FC = () => {
                 {contexto && (
                     <ProveedorDelPanel value={contexto}>
                         {pestana === 'tareas' && <PestanaTareas />}
+                        {pestana === 'solicitudes' && <PestanaSolicitudes />}
                         {pestana === 'subdepartamentos' && !subAbierto && <PestanaSubdepartamentos />}
                         {pestana === 'subdepartamentos' && subAbierto && (subElegido
                             ? <DetalleSubdepartamento key={subElegido.id} sub={subElegido} />
