@@ -87,11 +87,22 @@ export interface PedidoConfirmacion {
     tipo: 'destructivo' | 'control';
     titulo: string;
     texto: string;
-    detalleTitulo: string;
-    detalle: string;
+    /** La caja gris de abajo. Sin las dos, no se dibuja. */
+    detalleTitulo?: string;
+    detalle?: string;
     etiquetaBoton: string;
     onConfirmar: () => void;
+    /** Reemplaza el rótulo de arriba ("Acción destructiva" / "Control total"). */
+    rotulo?: string;
+    /**
+     * Para lo que no tiene vuelta (borrar un departamento con todo adentro):
+     * el botón se habilita recién cuando se escribe este texto. Sin
+     * mayúsculas ni acentos, para que "Producción" y "produccion" valgan igual.
+     */
+    escribirParaConfirmar?: string;
 }
+
+const sinAcentos = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export const ModalConfirmacion: React.FC<{
     pedido: PedidoConfirmacion | null;
@@ -99,6 +110,9 @@ export const ModalConfirmacion: React.FC<{
     onCerrar: () => void;
 }> = ({ pedido, onCerrar }) => {
     useBloqueoDeFondo(!!pedido);
+    const [escrito, setEscrito] = useState('');
+    // Cada pedido arranca con el campo vacío.
+    useEffect(() => { setEscrito(''); }, [pedido]);
 
     useEffect(() => {
         if (!pedido) return;
@@ -109,6 +123,8 @@ export const ModalConfirmacion: React.FC<{
 
     if (!pedido) return null;
     const destructivo = pedido.tipo === 'destructivo';
+    const falta = !!pedido.escribirParaConfirmar
+        && sinAcentos(escrito) !== sinAcentos(pedido.escribirParaConfirmar);
 
     return (
         <div
@@ -123,17 +139,35 @@ export const ModalConfirmacion: React.FC<{
                 className="w-full rounded-t-[24px] bg-white px-6 pb-[22px] pt-6 md:max-w-[520px] md:rounded-[24px]"
             >
                 <Rotulo className={destructivo ? 'text-[#a32218]' : 'text-black/[.52]'}>
-                    {destructivo ? 'Acción destructiva' : 'Control total'}
+                    {pedido.rotulo ?? (destructivo ? 'Acción destructiva' : 'Control total')}
                 </Rotulo>
                 <p className="mt-3 text-[20px] font-semibold leading-[1.35] tracking-[-0.018em] text-[#0a0a0a]">
                     {pedido.titulo}
                 </p>
                 <p className="mt-3 text-[13.5px] font-medium leading-[1.65] text-black/[.66]">{pedido.texto}</p>
 
-                <div className="mt-4 rounded-[16px] bg-[#f7f7f5] px-4 py-3.5">
-                    <p className="text-[12.5px] font-semibold text-[#0a0a0a]">{pedido.detalleTitulo}</p>
-                    <p className="mt-1.5 text-[12.5px] font-medium leading-[1.55] text-black/[.64]">{pedido.detalle}</p>
-                </div>
+                {pedido.detalleTitulo && pedido.detalle && (
+                    <div className="mt-4 rounded-[16px] bg-[#f7f7f5] px-4 py-3.5">
+                        <p className="text-[12.5px] font-semibold text-[#0a0a0a]">{pedido.detalleTitulo}</p>
+                        <p className="mt-1.5 text-[12.5px] font-medium leading-[1.55] text-black/[.64]">{pedido.detalle}</p>
+                    </div>
+                )}
+
+                {pedido.escribirParaConfirmar && (
+                    <label className="mt-4 block">
+                        <span className="mb-1.5 block text-[13px] font-medium text-black/[.66]">
+                            Para confirmar, escribí <strong className="font-semibold text-[#0a0a0a]">{pedido.escribirParaConfirmar}</strong>
+                        </span>
+                        <input
+                            value={escrito}
+                            onChange={e => setEscrito(e.target.value)}
+                            autoFocus
+                            autoComplete="off"
+                            aria-label={`Escribí ${pedido.escribirParaConfirmar} para confirmar`}
+                            className="h-[48px] w-full px-3.5"
+                        />
+                    </label>
+                )}
 
                 <div className="mt-5 flex flex-col gap-2.5">
                     <button
@@ -143,9 +177,10 @@ export const ModalConfirmacion: React.FC<{
                         // los tres de roles no, así que al quitar un rol el
                         // modal quedaba abierto tapando el aviso de "1 cambio
                         // sin guardar" que ya estaba detrás.
-                        onClick={() => { onCerrar(); pedido.onConfirmar(); }}
-                        autoFocus
-                        className={`h-[52px] w-full rounded-full text-[14.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${destructivo ? 'bg-[#a32218]' : 'bg-[#0a0a0a]'}`}
+                        onClick={() => { if (falta) return; onCerrar(); pedido.onConfirmar(); }}
+                        autoFocus={!pedido.escribirParaConfirmar}
+                        disabled={falta}
+                        className={`h-[52px] w-full rounded-full text-[14.5px] font-semibold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 disabled:opacity-[.32] ${destructivo ? 'bg-[#a32218]' : 'bg-[#0a0a0a]'}`}
                     >
                         {pedido.etiquetaBoton}
                     </button>

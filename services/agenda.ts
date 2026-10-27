@@ -60,7 +60,12 @@ export type Falla = {
     estado?: string;
 };
 
-export type Resultado<T> = ({ ok: true } & T) | Falla;
+/**
+ * `motivo?: undefined` en la rama buena no es decorativo: el proyecto compila
+ * sin strictNullChecks, y ahí TypeScript no angosta la unión con `!r.ok`.
+ * Así `r.motivo` se puede leer siempre (y vale undefined si salió bien).
+ */
+export type Resultado<T> = ({ ok: true; motivo?: undefined } & T) | Falla;
 
 export interface Persona {
     id: string;

@@ -21,13 +21,15 @@ import DirectorioAdmin from './DirectorioAdmin';
 import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
 import BandejaDeDatos from './BandejaDeDatos';
 import ReportesSistemas from './ReportesSistemas';
+import DepartamentosAdmin from './DepartamentosAdmin';
 import { reportesSistemas } from '../../services/miCuenta';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
  * Administración general (design-claude/Admin General).
  *
- * La cabecera separa dos mundos: las personas —usuarios y directorio— y el
+ * La cabecera separa dos mundos: las personas —usuarios, directorio, reportes
+ * y los departamentos de Agenda Origen— y el
  * sistema —configuración pública y registro de cambios—. Los dos ajustes de
  * sistema se entran poco y se salen, así que viven detrás del engranaje en
  * vez de ocupar una pestaña permanente.
@@ -37,7 +39,7 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
  * solo cambia por dónde se llega a ellas.
  */
 
-type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes';
+type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes' | 'departamentos';
 
 const safeUUID = () => {
     // Respaldo para contextos no seguros (http://IP), donde crypto.randomUUID
@@ -138,6 +140,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             config: 'config',
             logs: 'auditoria', auditoria: 'auditoria',
             datos: 'datos',
+            departamentos: 'departamentos',
         };
         if (enRutaDeReportes) setSeccion('reportes');
         else if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
@@ -364,29 +367,31 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     };
 
     // ── Cabecera ──────────────────────
-    const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes';
+    const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes' || seccion === 'departamentos';
     const enSistema = seccion === 'config' || seccion === 'auditoria';
     // En el teléfono "Sistema" junta las tres: configuración, registro y datos.
     const enSistemaMovil = enSistema || seccion === 'datos';
 
     const NOMBRE: Record<Seccion, string> = {
-        usuarios: 'Usuarios', directorio: 'Directorio', reportes: 'Reportes',
+        usuarios: 'Usuarios', directorio: 'Directorio', reportes: 'Reportes', departamentos: 'Departamentos',
         config: 'Configuración', auditoria: 'Registro de cambios', datos: 'Solicitudes de datos',
     };
     const DETALLE: Partial<Record<Seccion, string>> = {
         usuarios: 'Cuentas, roles y permisos.',
         directorio: 'Quién es responsable de cada área.',
         reportes: 'Los problemas que reporta la gente.',
+        departamentos: 'Las áreas que usan Agenda Origen.',
         config: 'Identidad, banners, música y pies. Lo ve toda la iglesia.',
         auditoria: 'Quién tocó qué y cuándo.',
         datos: 'Pedidos de acceso, corrección o baja (Ley 25.326).',
     };
     const GRUPO: Record<'personas' | 'sistema', Seccion[]> = {
-        personas: ['usuarios', 'directorio', 'reportes'],
+        personas: ['usuarios', 'directorio', 'reportes', 'departamentos'],
         sistema: ['config', 'auditoria', 'datos'],
     };
 
     const titulo = seccion === 'reportes' ? 'Reportes de problemas'
+        : seccion === 'departamentos' ? 'Departamentos'
         : seccion === 'usuarios'
         ? (creando ? 'Nueva cuenta' : abierto ? `Roles de ${(abierto.name || '').split(' ')[0] || 'la cuenta'}` : 'Usuarios y permisos')
         : seccion === 'directorio' ? 'Directorio de responsables'
@@ -550,6 +555,14 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         </span>
                                     )}
                                 </button>
+                                {/* design-claude/Sistemas - Departamentos: la grilla
+                                    de cuatro cuadrados, el ícono del diseño. */}
+                                <button onClick={() => irA('departamentos')} className={botonNav(seccion === 'departamentos')}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z" />
+                                    </svg>
+                                    Departamentos
+                                </button>
                             </>
                         ) : (
                             <>
@@ -639,6 +652,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                         miNombre={(currentUser?.name || '').trim().split(/\s+/)[0] || 'Sistemas'}
                         onResumen={(n, t) => { setReportesNuevos(n); setReportesTotal(t); }}
                     />
+                )}
+
+                {seccion === 'departamentos' && (
+                    <DepartamentosAdmin miId={currentUser?.id} avisar={avisar} />
                 )}
 
                 {seccion === 'usuarios' && !abierto && !creando && (
