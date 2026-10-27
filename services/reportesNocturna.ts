@@ -213,6 +213,97 @@ export const kpis = (base: BaseNocturna): KpisNocturna => {
     };
 };
 
+// ── Las entradas y la plata ─────────────────────────────────────────────
+
+export interface FilaDePrecio {
+    /** El precio con el que se cobró esta tanda de entradas. */
+    precio: number;
+    entradas: number;
+    /** precio × entradas. */
+    pesos: number;
+}
+
+export interface EntradasVendidas {
+    /** Una fila por precio distinto, de menor a mayor. */
+    filas: FilaDePrecio[];
+    /** Una entrada por adolescente inscripto. */
+    entradas: number;
+    /** La suma de todas las filas. */
+    total: number;
+    /**
+     * Entradas sin precio propio, contadas con el de su inscripción. No es un
+     * error —ver `precioDelJoven`—, pero la nota al pie lo dice para que el
+     * número no parezca salido de la nada.
+     */
+    heredadas: number;
+    /** Inscripciones sin comprobante cargado: plata que nadie vio entrar. */
+    sinComprobante: number;
+}
+
+/**
+ * Lo que se cobró por UN adolescente.
+ *
+ * El precio vive en el chico y no en la inscripción porque la promo de los 12
+ * años es por chico: una familia puede tener un hijo de 12 a $40.000 y otro de
+ * 14 a $50.000 en la misma inscripción. Hoy hay una así.
+ *
+ * El `??` no es decorativo. `nocturna_agregar_jovenes` —el formulario de "me
+ * olvidé de anotar a un hijo"— inserta al chico SIN precio y le cobra a la
+ * familia el `precio_unitario` de su inscripción: el comprobante se guarda por
+ * `v_i.precio_unitario * v_n` (sql/nocturna_agregar_jovenes.sql). Ese es
+ * entonces el precio de ese chico, y sin esta línea su entrada se contaría
+ * en $0 sin que nada avise.
+ */
+const precioDelJoven = (j: NocturnaJoven, i: NocturnaInscripcion): number =>
+    j.precio ?? i.precioUnitario;
+
+/**
+ * Cuántas entradas se vendieron a cada precio y cuánta plata es cada tanda.
+ *
+ * Son los precios con los que se cobró, no el precio de hoy: el del chico es
+ * una foto del momento de inscribirse y no sigue a los cambios de
+ * `nocturna_config`. Por eso el tablero muestra varios precios a la vez.
+ *
+ * Cuenta todas las inscripciones de la edición, igual que los KPI de arriba:
+ * `entradas` da siempre lo mismo que "Adolescentes inscriptos".
+ */
+export const entradasVendidas = (base: BaseNocturna): EntradasVendidas => {
+    const porPrecio = new Map<number, FilaDePrecio>();
+    let entradas = 0;
+    let total = 0;
+    let heredadas = 0;
+    let sinComprobante = 0;
+
+    for (const i of base.inscripciones) {
+        if (!i.comprobantePath) sinComprobante++;
+        for (const j of i.jovenes || []) {
+            const precio = precioDelJoven(j, i);
+            if (j.precio == null) heredadas++;
+            entradas++;
+            total += precio;
+            const fila = porPrecio.get(precio);
+            if (fila) {
+                fila.entradas++;
+                fila.pesos += precio;
+            } else {
+                porPrecio.set(precio, { precio, entradas: 1, pesos: precio });
+            }
+        }
+    }
+
+    return {
+        filas: [...porPrecio.values()].sort((a, b) => a.precio - b.precio),
+        entradas,
+        total,
+        heredadas,
+        sinComprobante,
+    };
+};
+
+/** "$ 2.560.000", como se escribe la plata en los reportes de todas las áreas. */
+const PESOS_AR = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+export const pesos = (n: number): string => `$ ${PESOS_AR.format(Math.round(n || 0))}`;
+
 // Los tres colores de la torta, que son los mismos que usa el resto del
 // tablero: el azul de PiezasTablero, el ámbar con el que la app marca lo que
 // pide atención y el gris de "todo lo demás".

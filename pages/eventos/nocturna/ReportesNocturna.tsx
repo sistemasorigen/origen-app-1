@@ -10,8 +10,9 @@
 // Los números salen SIEMPRE de services/reportesNocturna.ts. Esta pantalla
 // no cuenta nada: pide la base una vez y dibuja.
 //
-// Dos piezas son propias porque la librería no las tiene: el medidor de
-// anillo y el gráfico por minuto. Las dos están abajo, comentadas.
+// Las piezas que la librería no tiene están abajo, numeradas y comentadas:
+// el medidor de anillo, el gráfico por minuto, las barras de conteo, las
+// tablas y la fila de una tanda de entradas.
 // ════════════════════════════════════════════════════════════════════════
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -24,11 +25,11 @@ import {
     C, FUENTE, Tarjeta, TituloTarjeta, NotaCobertura, Esqueleto, Kpi, Torta, FilaLeyenda,
 } from '../../../components/Reportes/PiezasTablero';
 import {
-    getBaseNocturna, kpis, tortaAsistencia, porcentajeAsistencia, porMinuto,
+    getBaseNocturna, kpis, entradasVendidas, pesos, tortaAsistencia, porcentajeAsistencia, porMinuto,
     quienRetira, inscripcionesMultiples, asistenciaEnMultiples, listasDeRetiro,
     horarios, ordenarHorarios, horaDelMinuto, horaCorta, horaExacta,
     AZUL_SERIE, AMBAR_SERIE, GRIS_SERIE,
-    BaseNocturna, PuntoPorMinuto, FilaDeRetiro, FilaDeHorario, OrdenDeHorarios,
+    BaseNocturna, PuntoPorMinuto, FilaDePrecio, FilaDeRetiro, FilaDeHorario, OrdenDeHorarios,
 } from '../../../services/reportesNocturna';
 import { haciaLaFicha, SeccionDeReportes } from './compartido/volver';
 import { User } from '../../../types';
@@ -477,6 +478,35 @@ const BotonDeOrden: React.FC<{ activo: boolean; onClick: () => void; children: R
     </button>
 );
 
+// ── Pieza propia 5: la fila de una tanda de entradas ────────────────────
+
+/**
+ * "$ 40.000 · 37 entradas · $ 1.480.000".
+ *
+ * Tres columnas y no la `FilaLeyenda` de la librería, que tiene dos: acá la
+ * del medio es la cantidad y la de la derecha la plata, y poner las dos del
+ * mismo lado deja "37 entradas · $ 1.480.000" apretado en el teléfono.
+ *
+ * Sin punto de color al lado del precio, a propósito: no hay ningún gráfico
+ * al lado al que estas filas le estén poniendo nombre.
+ */
+const FilaDeVenta: React.FC<{ fila: FilaDePrecio; primera: boolean }> = ({ fila, primera }) => (
+    <div
+        className="flex items-baseline gap-3 py-[9px]"
+        style={primera ? undefined : { borderTop: `1px solid ${C.bordeSuave}` }}
+    >
+        <span className="w-[86px] shrink-0 text-[13.5px] font-semibold tabular-nums" style={{ color: C.tinta }}>
+            {pesos(fila.precio)}
+        </span>
+        <span className="flex-1 text-[13px] font-medium" style={{ color: C.apagado }}>
+            {fila.entradas} {plural(fila.entradas, 'entrada', 'entradas')}
+        </span>
+        <span className="text-[13.5px] font-semibold tabular-nums" style={{ color: C.tinta }}>
+            {pesos(fila.pesos)}
+        </span>
+    </div>
+);
+
 // ── Esqueletos ──────────────────────────────────────────────────────────
 
 const EsqueletoDelTablero: React.FC = () => (
@@ -491,6 +521,11 @@ const EsqueletoDelTablero: React.FC = () => (
                 </Tarjeta>
             ))}
         </div>
+        <Tarjeta className="p-5 mt-3">
+            <Esqueleto alto={15} ancho="34%" />
+            <Esqueleto alto={12} ancho="58%" className="mt-2" />
+            <Esqueleto alto={34} ancho="30%" className="mt-[22px]" />
+        </Tarjeta>
         <div className="grid lg:grid-cols-2 gap-3 mt-3">
             {[0, 1].map(i => (
                 <Tarjeta key={i} className="p-5">
@@ -557,6 +592,7 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
     useEffect(() => { void pedir(); }, [pedir]);
 
     const k = useMemo(() => (base ? kpis(base) : null), [base]);
+    const venta = useMemo(() => (base ? entradasVendidas(base) : null), [base]);
     const tramos = useMemo(() => (base ? tortaAsistencia(base) : []), [base]);
     const serie = useMemo(() => (base ? porMinuto(base) : null), [base]);
     const pct = useMemo(() => (base ? porcentajeAsistencia(base) : 0), [base]);
@@ -630,7 +666,7 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
                 <div className="mt-6 md:mt-7">
                     {cargando ? (
                         <EsqueletoDelTablero />
-                    ) : error || !k || !serie ? (
+                    ) : error || !k || !venta || !serie ? (
                         <Tarjeta className="px-6 py-11 flex flex-col items-center text-center">
                             <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: '#fdecea' }}>
                                 <AlertCircle className="w-[22px] h-[22px]" style={{ color: '#b42318' }} />
@@ -678,6 +714,56 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
                                     valor={k.adultosResponsables}
                                 />
                             </div>
+
+                            {/* Nivel 1 y medio — la plata. Va acá y no en
+                                ESPECÍFICOS porque "cuánto se juntó" se mira
+                                tanto como "cuántos se anotaron". */}
+                            <Tarjeta className="p-5 mt-3">
+                                <TituloTarjeta
+                                    titulo="Entradas vendidas"
+                                    detalle="Cuántas se vendieron a cada precio y cuánta plata es cada tanda"
+                                />
+                                <div className="mt-5 flex flex-col sm:flex-row sm:items-start gap-5 sm:gap-8">
+                                    <div className="sm:w-[208px] shrink-0">
+                                        <p className="m-0 text-[12.5px] font-medium" style={{ color: C.apagado }}>
+                                            Total
+                                        </p>
+                                        <p
+                                            className="mt-1.5 m-0 text-[34px] leading-none font-semibold tracking-[-.03em] tabular-nums"
+                                            style={{ color: C.tinta }}
+                                        >
+                                            {pesos(venta.total)}
+                                        </p>
+                                        <p className="mt-2.5 m-0 text-[12.5px] leading-[1.5] font-medium" style={{ color: C.apagado }}>
+                                            {venta.entradas} {plural(venta.entradas, 'entrada', 'entradas')} en{' '}
+                                            {k.adultosResponsables} {plural(k.adultosResponsables, 'inscripción', 'inscripciones')}
+                                        </p>
+                                    </div>
+                                    {/* Con tope de ancho: estirada a los 1100
+                                        px de la tarjeta, entre "4 entradas" y
+                                        su plata hay medio metro de blanco y
+                                        hay que seguir la fila con el dedo. */}
+                                    <div className="w-full sm:flex-1 sm:max-w-[460px]">
+                                        {venta.filas.length === 0 ? (
+                                            <p className="m-0 text-[13px] font-medium" style={{ color: C.apagado }}>
+                                                Todavía no se vendió ninguna entrada.
+                                            </p>
+                                        ) : venta.filas.map((f, i) => (
+                                            <FilaDeVenta key={f.precio} fila={f} primera={i === 0} />
+                                        ))}
+                                    </div>
+                                </div>
+                                <NotaCobertura>
+                                    Es el precio con el que se cobró cada entrada, no el de hoy: la promo de los 12 años
+                                    y los aumentos quedan en la foto de cada inscripción.
+                                    {venta.heredadas > 0 && (
+                                        ` ${venta.heredadas} ${plural(venta.heredadas, 'entrada se contó', 'entradas se contaron')} con el precio de su inscripción, que es lo que se le cobró a la familia al sumar un hermano.`
+                                    )}
+                                    {venta.sinComprobante > 0 && (
+                                        ` ${venta.sinComprobante} ${plural(venta.sinComprobante, 'inscripción no tiene', 'inscripciones no tienen')} comprobante cargado.`
+                                    )}
+                                </NotaCobertura>
+                            </Tarjeta>
 
                             {/* Nivel 2 — el reparto y el porcentaje. */}
                             <div className="grid lg:grid-cols-2 gap-3 mt-3">
