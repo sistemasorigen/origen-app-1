@@ -3,12 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSinLeer } from '../../contexts/NotificationContext';
 import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
-import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
-import { versiculoDelDia } from '../../src/config/versiculos';
 import {
     misCompras, misGrupos, misInscripciones,
     type CompraPropia, type GrupoPropio, type InscripcionPropia,
 } from '../../services/miCuenta';
+import { getMisSolicitudes } from '../../services/agenda';
 import {
     BotonPrimario, BotonRojo, BotonSecundario, EncabezadoSubpagina, ESTILOS_MI_CUENTA,
     EsqueletoDeSeccion, Panel, TituloDePanel, useAvisoFlotante,
@@ -30,6 +29,7 @@ import {
     DetalleCompra, DetalleInscripcion, DondeSirvo, Historial, MisCompras,
     MisGrupos, MisInscripciones,
 } from './miCuenta/MiVida';
+import { MisSolicitudes } from './miCuenta/MisSolicitudes';
 
 declare const __BUILD_VERSION__: string;
 
@@ -55,6 +55,7 @@ const TITULOS: Record<SeccionDeMiCuenta, string> = {
     compras: 'Mis compras',
     inscripciones: 'Mis inscripciones',
     servicio: 'Dónde sirvo',
+    solicitudes: 'Solicitudes',
     seguridad: 'Cuenta y seguridad',
     privacidad: 'Privacidad y mis datos',
     terminos: 'Términos y privacidad',
@@ -130,7 +131,6 @@ const MiCuenta: React.FC = () => {
     const { user, signOut } = useAuth();
     const sinLeer = useSinLeer();
     const { inscripciones: deGrupos } = useInscripcionesDelUsuario(user);
-    const { config } = useBannersDeInicio();
     const { avisar, Aviso } = useAvisoFlotante();
     const { permission, isSupported, requestPermission } = usePushNotifications();
     const { oscuro, alternar } = useTema();
@@ -142,6 +142,8 @@ const MiCuenta: React.FC = () => {
     const [compras, setCompras] = useState<CompraPropia[]>([]);
     const [gruposPropios, setGruposPropios] = useState<GrupoPropio[]>([]);
     const [eventos, setEventos] = useState<InscripcionPropia[]>([]);
+    /** Sólo para el número de la fila: la lista la trae la sección. */
+    const [solicitudes, setSolicitudes] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [cerradas, setCerradas] = useState<string[]>(leerCerradas);
     const [panel, setPanel] = useState<null | 'salir'>(null);
@@ -166,6 +168,11 @@ const MiCuenta: React.FC = () => {
         Promise.all([misCompras(), misInscripciones(), user?.id ? misGrupos(user.id) : Promise.resolve([])])
             .then(([c, e, g]) => { if (vigente) { setCompras(c); setEventos(e); setGruposPropios(g); } })
             .finally(() => { if (vigente) setCargando(false); });
+        // Aparte del Promise.all: es el número de una fila sola, y si la
+        // Agenda no contesta el resto del índice no tiene por qué esperarla.
+        getMisSolicitudes().then(r => {
+            if (vigente && r.ok) setSolicitudes(r.solicitudes.length);
+        });
         return () => { vigente = false; };
     }, [user?.id]);
 
@@ -273,6 +280,7 @@ const MiCuenta: React.FC = () => {
         grupos: dirigidos.length,
         compras: compras.length,
         inscripciones: eventos.length,
+        solicitudes,
         // Por ahora, las áreas de voluntariado más el rol de anfitrión. La
         // pantalla de "Dónde sirvo" (prompt 3) es la que arma la lista de
         // verdad; este número tiene que coincidir con ella.
@@ -280,7 +288,7 @@ const MiCuenta: React.FC = () => {
         // texto: tipar el array no significa que la base lo respete.
         servicio: (user?.volunteerRoles?.length || 0)
             + (esAnfitrion(user) ? 1 : 0),
-    }), [dirigidos, compras, eventos, user]);
+    }), [dirigidos, compras, eventos, solicitudes, user]);
 
     const faltantes = useMemo(() => {
         if (!user) return [];
@@ -295,8 +303,8 @@ const MiCuenta: React.FC = () => {
 
     // ── La destacada ────────────────────────────────────────────────────
     //
-    // La PRIMERA que aplique, en este orden. El versículo es el reposo: si no
-    // hay nada que avisar, al menos hay algo que leer.
+    // La PRIMERA que aplique, en este orden. Si no aplica ninguna no hay
+    // tarjeta: el índice arranca directo con las filas.
     const destacado: Destacado | null = useMemo(() => {
         const candidatos: Destacado[] = [];
 
@@ -348,17 +356,8 @@ const MiCuenta: React.FC = () => {
             });
         }
 
-        const elegida = candidatos.find(c => !cerradas.includes(c.caso));
-        if (elegida) return elegida;
-
-        // El versículo del día: el de la configuración si hay, y si no el de
-        // respaldo. `app_config.verses` está vacía —y no hay pantalla para
-        // cargarla—, así que sin respaldo la tarjeta desaparecía entera y
-        // quedaba un hueco donde la persona espera encontrar algo.
-        const v = versiculoDelDia(config?.verses);
-        if (v) return { caso: 'verso', titulo: '', sub: '', cita: { texto: v.text, ref: v.ref } };
-        return null;
-    }, [eventos, compras, faltantes, deGrupos, cerradas, config, salirDelIndice, irA]);
+        return candidatos.find(c => !cerradas.includes(c.caso)) ?? null;
+    }, [eventos, compras, faltantes, deGrupos, cerradas, salirDelIndice, irA]);
 
     // El estado de los avisos se recalcula con el permiso: pedirlo cambia
     // `permission` y la fila se actualiza sola.
@@ -375,7 +374,7 @@ const MiCuenta: React.FC = () => {
     };
 
     const cerrarDestacada = () => {
-        if (!destacado || destacado.caso === 'verso') return;
+        if (!destacado) return;
         const nuevas = [...cerradas, destacado.caso];
         setCerradas(nuevas);
         guardarCerradas(nuevas);
@@ -416,6 +415,7 @@ const MiCuenta: React.FC = () => {
         if (seccion === 'grupos') return <MisGrupos onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'historial') return <Historial onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'servicio') return <DondeSirvo onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'solicitudes') return <MisSolicitudes onVolver={esAncha ? undefined : volver} />;
 
         if (seccion === 'compras') {
             return id
