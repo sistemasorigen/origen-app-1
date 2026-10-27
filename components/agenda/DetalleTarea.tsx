@@ -52,6 +52,10 @@ export interface PropsDetalleTarea {
     onCerrar: () => void;
     /** Cada cambio, para que la lista de atrás se actualice. */
     onCambio?: (cambio: CambioDeTarea) => void;
+    /** Lo que va al final del cuerpo, con la tarea ya cargada (la Agenda pone "Abrir en el departamento"). */
+    pie?: (tarea: TareaDetalle) => React.ReactNode;
+    /** Cuando termina de cargar, bien o mal: la Agenda lleva el calendario a la fecha de la tarea. */
+    onCargada?: (r: { ok: true; tarea: TareaDetalle } | { ok: false; motivo: MotivoAgenda }) => void;
 }
 
 /** El patrón de un link dentro de los detalles. */
@@ -104,7 +108,7 @@ const Dato: React.FC<{ icono: React.ReactNode; children: React.ReactNode }> = ({
     </div>
 );
 
-const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion, onCerrar, onCambio }) => {
+const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion, onCerrar, onCambio, pie, onCargada }) => {
     const [carga, setCarga] = useState<Carga>({ estado: 'cargando' });
     const [editando, setEditando] = useState(false);
     const [reasignando, setReasignando] = useState(false);
@@ -129,10 +133,16 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
         return () => window.removeEventListener('resize', medir);
     }, []);
 
+    // En una ref: quien abre el panel puede pasar una función nueva en cada
+    // render, y eso no tiene que volver a pedir la tarea.
+    const avisarCarga = useRef(onCargada);
+    avisarCarga.current = onCargada;
+
     const cargar = useCallback(async () => {
         setCarga({ estado: 'cargando' });
         const r = await getTarea(tareaId);
         setCarga(r.ok ? { estado: 'listo', tarea: r.tarea } : { estado: 'error', motivo: r.motivo });
+        avisarCarga.current?.(r.ok ? { ok: true, tarea: r.tarea } : { ok: false, motivo: r.motivo });
     }, [tareaId]);
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -397,6 +407,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                         </p>
                                     )}
                                 </div>
+                                {pie?.(tarea)}
                             </>
                         )}
                     </div>

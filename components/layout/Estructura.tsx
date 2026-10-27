@@ -48,7 +48,7 @@ interface LayoutProps {
 const RUTAS_CON_HERO = ['/', '/gcx', '/ninez'];
 
 /** Las que manejan su propio ancho, sin el marco de 7xl con padding. */
-const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion', '/nocturna-entrada', '/voluntarios', '/notificaciones', '/eventos'];
+const RUTAS_A_TODO_ANCHO = ['/', '/store', '/gcx', '/ninez', '/alabanza', '/prode', '/nocturna-inscripcion', '/nocturna-entrada', '/voluntarios', '/notificaciones', '/eventos', '/agenda'];
 
 /**
  * Lo mismo, pero para familias enteras de rutas.

@@ -510,6 +510,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: []
         },
         {
+            // El calendario de cada uno (Agenda Origen): las tareas de sus
+            // equipos. Con sesión; sin departamentos, la pantalla lo explica.
+            label: 'Agenda Origen',
+            icon: CalendarDays,
+            path: '/agenda',
+            roles: [],
+            requiresAuth: true,
+        },
+        {
             // Pedirle una tarea a un departamento (Agenda Origen). La ruta es
             // pública, pero el ítem aparece con la sesión puesta: sin cuenta
             // no se puede mandar nada.

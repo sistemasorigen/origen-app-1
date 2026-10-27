@@ -14,6 +14,7 @@ import PaginaReportarStock from './pages/punto-informacion/PaginaReportarStock';
 import Groups from './pages/groups/Grupos';
 import Admin from './pages/admin/Administrador';
 import DepartamentosInicio from './pages/departamentos/DepartamentosInicio';
+import PaginaAgenda from './pages/agenda/PaginaAgenda';
 import PanelDepartamento from './pages/departamentos/PanelDepartamento';
 import PanelSubdepartamento from './pages/departamentos/sub/PanelSubdepartamento';
 import AuthScreen from './pages/auth/PantallaAutenticacion';
@@ -788,6 +789,7 @@ const AppContent: React.FC = () => {
                                     pertenencia y lo decide la base (agenda_mi_acceso /
                                     agenda_departamento / agenda_subdepartamento), cada
                                     pantalla con su estado de "no tenés acceso". */}
+                                <Route path="/agenda" element={<PaginaAgenda />} />
                                 <Route path="/departamentos" element={<DepartamentosInicio />} />
                                 <Route path="/departamentos/:id" element={<PanelDepartamento />} />
                                 <Route path="/departamentos/:id/sub/:subId" element={<PanelSubdepartamento />} />

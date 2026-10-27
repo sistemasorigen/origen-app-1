@@ -151,6 +151,11 @@ const FormularioDepartamento: React.FC<{
     const errorEncargados = errorDe('encargados') ?? (tocado && sinEncargados ? 'Elegí al menos un encargado.' : null);
     const quedan = MAXIMO_NOMBRE - v.nombre.length;
     const titulo = editando ? 'Editar departamento' : 'Crear departamento';
+    /** Qué falta, en palabras: se lee arriba de los botones y lo anuncia el lector (como PieDeHoja). */
+    const falta = !invalido || guardando ? ''
+        : sinNombre && sinEncargados ? 'Falta el nombre y al menos un encargado.'
+            : sinNombre ? 'Falta el nombre del departamento.'
+                : 'Falta elegir al menos un encargado.';
 
     return (
         <div className="fixed inset-0 z-[110] flex items-end justify-center md:items-center md:p-10">
@@ -309,6 +314,11 @@ const FormularioDepartamento: React.FC<{
                     {errorDe('general') && (
                         <p role="alert" className="m-0 mb-3 text-[13px] font-bold text-[#b42318]">{errorDe('general')}</p>
                     )}
+                    {/* Siempre montada, aunque esté vacía: una región viva que nace
+                        junto con su texto no siempre se anuncia. Vacía no ocupa. */}
+                    <p id="dep-falta" role="status" className="m-0 mb-2.5 text-[12.5px] font-semibold leading-[1.45] text-black/[.62] empty:hidden">
+                        {falta}
+                    </p>
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -322,9 +332,9 @@ const FormularioDepartamento: React.FC<{
                             type="button"
                             onClick={guardar}
                             // Se ve apagado, pero responde: al tocarlo marca lo
-                            // que falta (instrucciones, 7.15).
-                            aria-disabled={invalido || guardando}
-                            aria-describedby={invalido && tocado ? (sinNombre ? 'dep-error-nombre' : 'dep-error-encargados') : undefined}
+                            // que falta (instrucciones, 7.15). Por eso no lleva
+                            // aria-disabled: anunciaría un botón que no hace nada.
+                            aria-describedby={falta ? 'dep-falta' : undefined}
                             className={`flex h-[50px] flex-[1.4] items-center justify-center gap-2 rounded-full bg-[#0a0a0a] text-[14.5px] font-bold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${invalido ? 'opacity-[.32]' : ''}`}
                         >
                             {guardando && <Cargando />}

@@ -379,6 +379,31 @@ export const sello = (cuando: Date = new Date()): string =>
 export const horarioDeTarea = (t: Pick<Tarea, 'todoElDia' | 'horaDesde' | 'horaHasta'>): string =>
     t.todoElDia || !t.horaDesde ? 'Todo el día' : `${t.horaDesde} – ${t.horaHasta || t.horaDesde}`;
 
+/** '2026-10-26' → 'Octubre 2026'. El período de la vista Mes de la Agenda. */
+export const mesYAnio = (iso: string): string => {
+    const d = fechaDesdeIso(iso);
+    return `${conMayuscula(MESES[d.getMonth()])} ${d.getFullYear()}`;
+};
+
+/** '2026-10-26' → 'Lunes 26 de octubre'. El período de la vista Día. */
+export const diaCompleto = (iso: string): string => conMayuscula(fechaLarga(iso));
+
+/**
+ * Un rango de días, corto: '26 oct – 1 nov 2026', '5 – 11 oct 2026' o
+ * '29 dic 2026 – 4 ene 2027'. El período de la vista Semana.
+ */
+export const rangoDeDias = (desde: string, hasta: string): string => {
+    const a = fechaDesdeIso(desde);
+    const b = fechaDesdeIso(hasta);
+    const fin = `${b.getDate()} ${MESES_CORTOS[b.getMonth()]} ${b.getFullYear()}`;
+    if (a.getFullYear() !== b.getFullYear()) return `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} ${a.getFullYear()} – ${fin}`;
+    if (a.getMonth() !== b.getMonth()) return `${a.getDate()} ${MESES_CORTOS[a.getMonth()]} – ${fin}`;
+    return `${a.getDate()} – ${fin}`;
+};
+
+/** '2026-10-26' → 'LUN'. La cabecera de las columnas del calendario. */
+export const diaDeLaSemana = (iso: string): string => DIAS_CORTOS[fechaDesdeIso(iso).getDay()].toUpperCase();
+
 /** El id de algo nuevo. Generarlo UNA vez por envío y reusarlo si se reintenta. */
 export const nuevoId = (): string => safeUUID();
 
