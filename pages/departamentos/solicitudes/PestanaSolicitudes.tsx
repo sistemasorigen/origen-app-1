@@ -120,8 +120,8 @@ const PestanaSolicitudes: React.FC = () => {
             tipo: 'destructivo',
             rotulo: 'Rechazar solicitud',
             titulo: `¿Rechazar la solicitud de ${quien}?`,
-            // TODO prompt 8: cuando estén los emails, decir que le avisamos.
-            texto: 'No se va a crear ninguna tarea. La solicitud sale de esta lista.',
+            // Sin email: a quien pidió le llega sólo la notificación en la app.
+            texto: 'No se va a crear ninguna tarea. La solicitud sale de esta lista y le avisamos en sus notificaciones.',
             etiquetaBoton: 'Rechazar',
             onConfirmar: async () => {
                 setOcupada(s.id);

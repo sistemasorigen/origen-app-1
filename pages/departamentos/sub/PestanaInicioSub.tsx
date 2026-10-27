@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Folder } from 'lucide-react';
 import {
-    cambiarEstadoTarea, diaYMes, fechaDeDia, getTarea, getTareasSubdepartamento, horarioDeTarea,
+    emailsAgendaActivos, cambiarEstadoTarea, diaYMes, fechaDeDia, getTarea, getTareasSubdepartamento, horarioDeTarea,
     mensajeDeMotivo, sumarDias,
     type MotivoAgenda, type PanelSubdepartamento, type Tarea,
 } from '../../../services/agenda';
@@ -94,8 +94,9 @@ const PestanaInicioSub: React.FC<{
         tipo: 'control',
         rotulo: 'Completar',
         titulo: `¿Marcar “${t.nombre}” como completada?`,
-        // TODO prompt 8: cuando estén los emails, decir que les avisamos a los encargados.
-        texto: 'Sale de esta lista y pasa a Completadas. Se puede volver a En proceso en cualquier momento.',
+        texto: emailsAgendaActivos()
+            ? 'Sale de esta lista, pasa a Completadas y se les avisa por email a los encargados del departamento. Se puede volver a En proceso en cualquier momento.'
+            : 'Sale de esta lista y pasa a Completadas. Se puede volver a En proceso en cualquier momento.',
         etiquetaBoton: 'Sí, completada',
         onConfirmar: async () => {
             const r = await cambiarEstadoTarea(t.id, 'completada');

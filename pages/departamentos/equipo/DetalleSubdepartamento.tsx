@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Archive, ArrowLeft, ArrowLeftRight, Check, LayoutDashboard, MoreHorizontal, Pencil, UserPlus } from 'lucide-react';
 import {
-    agregarMiembros, archivarSubdepartamento, fechaDesdeIso, fechaIso, getTareasSubdepartamento,
+    emailsAgendaActivos, agregarMiembros, archivarSubdepartamento, fechaDesdeIso, fechaIso, getTareasSubdepartamento,
     guardarSubdepartamento, hoyIso, mensajeDeMotivo, reasignarTarea,
     type MotivoAgenda, type Subdepartamento, type Tarea,
 } from '../../../services/agenda';
@@ -95,8 +95,9 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
             tipo: 'control',
             rotulo: 'Reasignar tarea',
             titulo: `¿Pasar “${t.nombre}” a ${destino.nombre}?`,
-            // TODO prompt 8: cuando estén los emails, decir que les llega un aviso.
-            texto: `Los integrantes de ${destino.nombre} la van a ver en su Agenda, y deja de estar en la de ${sub.nombre}.`,
+            texto: emailsAgendaActivos()
+                ? `Los integrantes de ${destino.nombre} la van a ver en su Agenda y van a recibir un email. Deja de estar en la de ${sub.nombre}.`
+                : `Los integrantes de ${destino.nombre} la van a ver en su Agenda, y deja de estar en la de ${sub.nombre}.`,
             etiquetaBoton: `Pasar a ${destino.nombre}`,
             onConfirmar: async () => {
                 const r = await reasignarTarea(t.id, destino.id);

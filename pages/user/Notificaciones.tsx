@@ -5,11 +5,14 @@ import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'fram
 import {
     AlertTriangle,
     Bell,
+    CalendarCheck,
     Check,
     CheckCircle2,
     ChevronRight,
     ClipboardCheck,
+    Inbox,
     Info,
+    MessageSquareReply,
     MoreHorizontal,
     Pin,
     ShieldCheck,
@@ -62,7 +65,7 @@ const ROTULO = `text-[12px] font-semibold uppercase tracking-[0.07em] ${M38}`;
  * El ícono de cada tipo, en un solo lugar.
  *
  * Los tipos salen de quien crea la notificación (REGISTRATION, ATTENDANCE,
- * ADMIN, success, warning, info). Cualquier otro —uno nuevo que todavía no
+ * ADMIN, success, warning, info, y los cuatro AGENDA_* de Agenda Origen). Cualquier otro —uno nuevo que todavía no
  * tenga dibujo— cae en la campana genérica en vez de romper la fila.
  */
 const ICONOS: Record<string, React.ElementType> = {
@@ -72,6 +75,11 @@ const ICONOS: Record<string, React.ElementType> = {
     success: CheckCircle2,
     warning: AlertTriangle,
     info: Info,
+    // Agenda Origen (sql/agenda_avisos.sql)
+    AGENDA_TAREA_ASIGNADA: CalendarCheck,
+    AGENDA_TAREA_COMPLETADA: CheckCircle2,
+    AGENDA_SOLICITUD_NUEVA: Inbox,
+    AGENDA_SOLICITUD_REVISADA: MessageSquareReply,
 };
 
 const iconoDe = (tipo: string): React.ElementType => ICONOS[tipo] || Bell;

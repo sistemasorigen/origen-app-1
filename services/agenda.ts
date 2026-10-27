@@ -404,6 +404,18 @@ export const rangoDeDias = (desde: string, hasta: string): string => {
 /** '2026-10-26' → 'LUN'. La cabecera de las columnas del calendario. */
 export const diaDeLaSemana = (iso: string): string => DIAS_CORTOS[fechaDesdeIso(iso).getDay()].toUpperCase();
 
+/**
+ * Desde cuándo salen los emails de la Agenda: lunes 2/11/2026 a las 00:00,
+ * hora argentina (decisión de Ignacio: después de Nocturna). El MISMO
+ * instante que agenda_emails_desde() en sql/agenda_avisos.sql. Antes de esa
+ * fecha la base deja los emails 'pausado' y la pantalla no los promete.
+ */
+export const EMAILS_AGENDA_DESDE = new Date('2026-11-02T00:00:00-03:00');
+
+/** Si los emails de la Agenda ya están saliendo. */
+export const emailsAgendaActivos = (ahora: Date = new Date()): boolean =>
+    ahora.getTime() >= EMAILS_AGENDA_DESDE.getTime();
+
 /** El id de algo nuevo. Generarlo UNA vez por envío y reusarlo si se reintenta. */
 export const nuevoId = (): string => safeUUID();
 

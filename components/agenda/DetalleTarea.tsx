@@ -4,7 +4,7 @@ import {
     ArrowLeftRight, CalendarDays, Check, Folder, Pencil, Signal, Trash2, X,
 } from 'lucide-react';
 import {
-    cambiarEstadoTarea, eliminarTarea, fechaDeDia, fechaYHora, getTarea, horarioDeTarea,
+    emailsAgendaActivos, cambiarEstadoTarea, eliminarTarea, fechaDeDia, fechaYHora, getTarea, horarioDeTarea,
     mensajeDeMotivo, reasignarTarea,
     type MotivoAgenda, type TareaDetalle,
 } from '../../services/agenda';
@@ -178,8 +178,9 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
         tipo: 'control',
         rotulo: 'Completar',
         titulo: `¿Marcar “${tarea.nombre}” como completada?`,
-        // TODO prompt 8: cuando estén los emails, decir que les avisamos a los encargados.
-        texto: 'Pasa a Completadas. Se puede volver a En proceso en cualquier momento.',
+        texto: emailsAgendaActivos()
+            ? 'Pasa a Completadas y se les avisa por email a los encargados del departamento. Se puede volver a En proceso en cualquier momento.'
+            : 'Pasa a Completadas. Se puede volver a En proceso en cualquier momento.',
         etiquetaBoton: 'Sí, completada',
         onConfirmar: () => { cambiarEstado('completada'); },
     });
@@ -212,10 +213,13 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
             tipo: 'control',
             rotulo: tarea.subdepartamento ? 'Reasignar tarea' : 'Asignar tarea',
             titulo: `¿${tarea.subdepartamento ? 'Pasar' : 'Asignar'} “${tarea.nombre}” a ${destino.nombre}?`,
-            // TODO prompt 8: cuando estén los emails, decir que les llega un aviso.
-            texto: tarea.subdepartamento
-                ? `Los integrantes de ${destino.nombre} la van a ver en su Agenda, y deja de estar en la de ${tarea.subdepartamento.nombre}.`
-                : `Los integrantes de ${destino.nombre} la van a ver en su Agenda y la tarea pasa a En proceso.`,
+            texto: emailsAgendaActivos()
+                ? (tarea.subdepartamento
+                    ? `Los integrantes de ${destino.nombre} la van a ver en su Agenda y van a recibir un email. Deja de estar en la de ${tarea.subdepartamento.nombre}.`
+                    : `Los integrantes de ${destino.nombre} la van a ver en su Agenda y van a recibir un email. La tarea pasa a En proceso.`)
+                : (tarea.subdepartamento
+                    ? `Los integrantes de ${destino.nombre} la van a ver en su Agenda, y deja de estar en la de ${tarea.subdepartamento.nombre}.`
+                    : `Los integrantes de ${destino.nombre} la van a ver en su Agenda y la tarea pasa a En proceso.`),
             etiquetaBoton: tarea.subdepartamento ? `Pasar a ${destino.nombre}` : `Asignar a ${destino.nombre}`,
             onConfirmar: async () => {
                 const r = await reasignarTarea(tareaId, destino.id);

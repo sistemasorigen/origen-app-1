@@ -220,9 +220,9 @@ const PaginaSolicitudes: React.FC = () => {
                         <h1 className="m-0 mt-[22px] text-[23px] font-bold leading-[1.25] tracking-[-0.015em]">
                             ¡Listo! Tu solicitud llegó a {enviadaA}
                         </h1>
-                        {/* TODO prompt 8: cuando estén los emails, decir que les avisamos. */}
+                        {/* Sin promesas de email: a quien pide le llega sólo la notificación en la app. */}
                         <p className="m-0 mt-2.5 max-w-[380px] text-[14.5px] font-medium leading-[1.6] text-black/[.62]">
-                            Los encargados la van a revisar y aceptarla o rechazarla. Mientras tanto, podés pedir otra cosa.
+                            Los encargados la van a revisar y te avisamos en tus notificaciones cuando lo hagan. Mientras tanto, podés pedir otra cosa.
                         </p>
                         <div className="mt-6 flex w-full max-w-[320px] flex-col gap-2">
                             <button type="button" onClick={otraSolicitud} className={BOTON_NEGRO}>Hacer otra solicitud</button>

@@ -624,6 +624,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
 | `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
 | `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
+| `send-agenda-aviso` | Emails de Agenda Origen: "Tarea asignada" y "Tarea completada". La dispara `trg_agenda_tareas_avisar` con `{tarea_id, tipo}`; lee los avisos `'pendiente'` de `agenda_avisos`. Acepta **sólo** la clave de servicio. Modo `{modo:'prueba', tipo}`: datos inventados, sólo a Sistemas. |
 
 > ⚠️ **El límite de Resend es de 100 emails por día.** No es teórico: un día de
 > muchas inscripciones se alcanza. Cualquier función que mande emails en lote
@@ -1998,6 +1999,12 @@ propia del Día del Niño y no se puede probar sin cámara).
 
 - **Resend: 100 emails por día**, compartidos por todas las funciones.
   Registrar qué salió y qué no, y dejar reenviar.
+- **Topes propios por día (hora argentina)**, para que nadie se coma la
+  cuota de las entradas: reportes de problemas **30**
+  (`send-reporte-problema`, en `reportes_problemas.email_error`); Agenda
+  Origen **40** (`send-agenda-aviso`, cuenta los `'enviado'` de
+  `agenda_avisos`). Pasado el tope el email no sale, queda anotado
+  (`'tope_diario'`) y la notificación en la app igual llega.
 - **HTML de email, no de web:** maquetado con tablas, estilos en línea, ancho
   máximo 600 px, sin JavaScript, fuentes del sistema, botones hechos con tablas.
 - **Modo oscuro de Gmail:** poner el fondo en el atributo `bgcolor` **y** en el
@@ -2216,11 +2223,45 @@ ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce
   departamento: una sola validación para crear, editar, reasignar y el
   reemplazo de prioridad), `agenda_valida_campos_tarea`, entre otros.
 
-### Emails
-Se agregan en el **prompt 8** (tarea asignada → a todo el equipo, incluido
-quien lo dirige; tarea completada → sólo a los encargados). Las columnas ya
-están: `agenda_tareas.asignada_at`, `email_asignada_at`,
-`email_completada_at`, `email_error`. Hoy no se manda nada.
+### Avisos: emails y notificaciones (`sql/agenda_avisos.sql`)
+Pruebas en `sql/PROBAR_agenda_avisos.sql`, deshacer en
+`sql/ROLLBACK_agenda_avisos.sql`. Función: `supabase/functions/send-agenda-aviso/`
+(`armado.ts` arma el HTML de los diseños "Email - Tarea asignada" y
+"Email - Tarea completada", con el logo de Origen centrado arriba).
+
+| Aviso | A quién | Email | App (`type`) |
+|---|---|---|---|
+| Tarea asignada | Quien dirige + los miembros del sub, **sin** los encargados del departamento | Sí | `AGENDA_TAREA_ASIGNADA` → `/agenda?tarea=<id>` |
+| Tarea completada | Los encargados, **menos** quien la completó | Sí | `AGENDA_TAREA_COMPLETADA` → `/agenda?tarea=<id>` |
+| Solicitud nueva | Los encargados (menos quien la pidió, si es uno de ellos) | No | `AGENDA_SOLICITUD_NUEVA` → `/departamentos/<dep>?tab=solicitudes` |
+| Solicitud revisada | Quien la pidió (aceptada o no) | **Nunca** | `AGENDA_SOLICITUD_REVISADA` → `/solicitudes` |
+
+- **El circuito:** `trg_agenda_tareas_avisar` (AFTER INSERT/UPDATE) dispara
+  "asignada" al crear con sub o cuando cambia `asignada_at` o el sub, y
+  "completada" cuando el estado pasa a `'completada'`. Para cada persona
+  registra en `agenda_avisos` un aviso `'app'` (y crea la notificación) y uno
+  `'email'`. Si quedó algún email `'pendiente'`, hace UN `net.http_post` a
+  `send-agenda-aviso` con **sólo** `{tarea_id, tipo}` (clave de Vault,
+  timeout 20000, en su propio `BEGIN … EXCEPTION`: si falla, la tarea se
+  guarda igual y el aviso queda `'pendiente'` con el error).
+- **No repetir:** `agenda_avisos` tiene `UNIQUE (tarea_id, user_id, tipo,
+  canal)`. Reasignar y volver, o reabrir y completar de nuevo, no le vuelve a
+  avisar a nadie que ya tuvo ese aviso.
+- **Fecha de activación:** los emails salen desde el **lunes 2/11/2026 a las
+  00:00 (hora argentina)**: `agenda_emails_desde()` en SQL y
+  `EMAILS_AGENDA_DESDE` / `emailsAgendaActivos()` en `services/agenda.ts`
+  (el mismo instante; si se cambia uno, se cambian los dos). Lo de antes
+  queda `'pausado'` y **no** se manda después. Las notificaciones en la app
+  van desde que se aplicó el SQL. Los textos que prometen email sólo
+  aparecen con `emailsAgendaActivos()`; el solicitante nunca ve promesas de
+  email.
+- **Estados del email:** `'pendiente'` → `'enviado'` (la función lo toma
+  antes de mandarlo: un segundo llamado no repite) | `'error'` (con el
+  motivo legible) | `'tope_diario'` | `'pausado'` | `'sin_email'`. En la
+  tarea quedan `email_asignada_at`, `email_completada_at` y `email_error`.
+- `agenda_avisos` tiene RLS y ningún privilegio para `anon` ni
+  `authenticated`; las funciones del circuito no se pueden ejecutar desde
+  afuera.
 
 ---
 
