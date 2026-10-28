@@ -46,10 +46,12 @@ de escribir una sola línea de código. Su cumplimiento no es opcional.
 `lucide-react`, `qrcode.react`, `react-easy-crop`, `react-joyride`,
 `react-router-dom`, `recharts`, `tailwind-merge`, `xlsx`
 
-⚠️ **`matter-js` y `@types/matter-js` siguen instalados pero no se usan**
-(ya no los importa ningún archivo: el único era la copia `Home-IgnacioPC.tsx`,
-eliminada el 2026-10-27). Pendiente:
-`npm uninstall matter-js @types/matter-js`. No usarlos en código nuevo.
+**`npm install` necesita `--legacy-peer-deps`:** `react-joyride` (vía
+`react-floater`) pide React ≤ 18 y la app usa React 19, así que sin la bandera
+npm se niega a instalar o desinstalar nada (ERESOLVE). Con la bandera, revisar
+el `package-lock.json` después: sólo tiene que cambiar lo que se tocó.
+(`matter-js` y `@types/matter-js` se desinstalaron el 2026-10-28: el único que
+los usaba era la copia `Home-IgnacioPC.tsx`.)
 
 ---
 
@@ -2099,7 +2101,8 @@ propia del Día del Niño y no se puede probar sin cámara).
 | `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
 
 ### Código
-- `npm uninstall matter-js @types/matter-js`
+- `react-joyride` 2.9 no declara soporte para React 19 (por eso hace falta
+  `--legacy-peer-deps`); funciona, pero conviene buscar una versión que sí
 - Archivos huérfanos: `pages/auth/IniciarSesion.tsx`,
   `pages/punto-informacion/welcome/Bienvenida.tsx`,
   `Pastores.tsx.backup_ui_*`, y los modales huérfanos de la sección 22
