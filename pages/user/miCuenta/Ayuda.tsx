@@ -618,7 +618,17 @@ export const SobreLaApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) =>
 
             <div className="flex flex-col items-center text-center pt-7">
                 <span className={`${TARJETA} w-24 h-24 flex items-center justify-center`} style={ESTILO_TARJETA}>
-                    <img src="/nocturna/origen-arbol.png" alt="" className="w-[62px] h-auto" />
+                    {/* El isotipo de Origen, el mismo que usa el menú. favicon.png
+                        viene negro sobre transparente: en claro va tal cual sobre el
+                        blanco de la tarjeta, y en oscuro `dark:invert` lo pasa a
+                        blanco, que si no desaparecería contra el #1b1b1a. Antes acá
+                        había un árbol que es un dibujo de Nocturna, no la marca. */}
+                    <img
+                        src="/favicon.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="w-[60px] h-auto object-contain dark:invert"
+                    />
                 </span>
                 <p className="mt-[18px] mb-0 text-[22px] font-semibold tracking-[-.02em]">Origen App</p>
                 <p className="mt-1 mb-0 text-[14.5px] font-medium" style={{ color: 'var(--mc-m50)' }}>
