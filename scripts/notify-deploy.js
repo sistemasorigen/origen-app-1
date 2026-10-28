@@ -60,6 +60,42 @@ if (error) {
 
 console.log(`[notify-deploy] app_version actualizada a ${newVersion} — los clientes conectados van a ver el aviso de actualización.`);
 
+// ── El push a quien tiene la app instalada ──────────────────────────────
+// app_version sólo alcanza a quien tiene la app ABIERTA en ese momento: el
+// aviso llega por Realtime. Quien la tiene cerrada no se entera hasta la
+// próxima vez que entra. Esto manda, además, una notificación al teléfono.
+//
+// La RPC crea un aviso en app_notifications por cada persona con la app
+// instalada y las notificaciones activadas, y el trigger
+// trg_app_notifications_push lo empuja al teléfono (sql/avisar_actualizacion.sql).
+//
+// Dos perillas, las dos opcionales:
+//   SIN_AVISO=1    → este deploy no manda ningún push (un arreglo chico,
+//                    una prueba, un deploy a las 3 de la mañana).
+//   AVISO_HORAS=n  → no repetirle a la misma persona dentro de n horas.
+//                    Por defecto 6, para que tres deploys seguidos
+//                    arreglando una coma no sean tres pushes. Con 0 sale
+//                    siempre, en todos los deploys.
+//
+// Si esto falla, el deploy NO falla: a esta altura ya está todo publicado y
+// verificado. Se avisa y se sigue.
+if (process.env.SIN_AVISO === '1') {
+    console.log('[notify-deploy] SIN_AVISO=1 — este deploy no manda push a los teléfonos.');
+} else {
+    const horas = Number.parseInt(process.env.AVISO_HORAS ?? '6', 10);
+    const { data: avisados, error: errorAviso } = await supabase.rpc('avisar_actualizacion', {
+        p_horas: Number.isFinite(horas) ? horas : 6,
+    });
+
+    if (errorAviso) {
+        console.warn('[notify-deploy] No se pudo mandar el push de actualización (el deploy está bien igual):', errorAviso.message);
+    } else if (avisados > 0) {
+        console.log(`[notify-deploy] Push de "hay una versión nueva" mandado a ${avisados} persona(s) con la app instalada.`);
+    } else {
+        console.log('[notify-deploy] Sin push: o nadie tiene la app instalada con notificaciones, o ya se les avisó hace poco.');
+    }
+}
+
 // Archivo de trabajo intermedio: no debe quedar colgado entre deploys (el
 // próximo build lo regenera desde cero de todos modos, pero dejarlo viejo
 // tirado en el repo confundiría a cualquiera que lo mire).

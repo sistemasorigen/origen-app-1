@@ -1810,7 +1810,7 @@ npm run deploy =
   → git add -f dist && git add -A && git commit -m "chore: deploy"
   → git push upstream main
   → node scripts/publish-dist.js   (sube dist/ por FTPS y confirma)
-  → node scripts/notify-deploy.js  (avisa a la app que hay versión nueva)
+  → node scripts/notify-deploy.js  (app_version + push a los teléfonos)
 ```
 - **`dist/` se commitea** (con `-f`, porque está en el `.gitignore`).
   Todo cambio de frontend necesita build antes de publicarse.
@@ -1834,6 +1834,34 @@ npm run deploy =
 - `index.html` tiene un listener que detecta el error de MIME y reintenta con
   cache-busting **antes** de que monte React.
 - `public/.htaccess` define `Cache-Control` reales (vía `mod_headers`).
+
+### El push de "hay una versión nueva"
+
+`app_version` sólo alcanza a quien tiene la app **abierta**: el aviso llega por
+Realtime. Quien la tiene cerrada no se entera hasta que entra. Por eso, desde
+el 2026-10-28, `notify-deploy.js` manda además una notificación al teléfono en
+**cada deploy**.
+
+- Llama a la RPC `avisar_actualizacion(titulo, mensaje, horas)`
+  (`sql/avisar_actualizacion.sql`), que crea un aviso en `app_notifications`
+  por cada persona con la app instalada y las notificaciones activadas. De ahí
+  en adelante es el camino de siempre: `trg_app_notifications_push` →
+  `send-push` → el teléfono.
+- **Sólo `service_role` puede ejecutarla.** Ni `anon` ni `authenticated`: si
+  cualquiera con sesión pudiera, tendría cómo mandarle una notificación al
+  teléfono de todos los demás.
+- **Freno de 6 horas por persona y por título.** Tres deploys seguidos
+  arreglando una coma serían tres pushes, y la gente sólo necesita enterarse
+  una vez: la última versión es la que queda.
+- Dos perillas, en el entorno:
+  - `SIN_AVISO=1 npm run deploy` → ese deploy no manda ningún push.
+  - `AVISO_HORAS=0 npm run deploy` → sale siempre, sin freno.
+- **Si falla, el deploy no falla.** A esa altura ya está todo publicado y
+  verificado: se avisa por consola y se sigue.
+- **Llega a quien tiene la app en la pantalla de inicio.** En iPhone no hay
+  otra forma (sección 12 y el skill de PWA). Al 2026-10-28 son 2 personas: el
+  push existe desde esta semana. Para que sirva como anuncio de verdad, la
+  gente tiene que instalar la app y aceptar las notificaciones.
 
 **Ya no hay recarga automática por inactividad:** `useAutoRefresh` se eliminó
 porque el aviso por Realtime lo hace innecesario. La config de la Home se
