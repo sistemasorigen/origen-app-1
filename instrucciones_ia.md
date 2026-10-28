@@ -1813,10 +1813,12 @@ sigue cacheando en `localStorage`, como respaldo ante fallas de red.
   vieja para siempre.
 - `src/utils/instalacion.ts`: `estaInstalada()`, `plataforma()` y el aviso
   `beforeinstallprompt` de Chrome (se escucha desde `index.tsx`, antes de
-  montar). La tarjeta del inicio (`components/inicio/TarjetaInstalar.tsx`) sale
-  en iPhone/iPad sin instalar y en Android si Chrome ofrece instalarla;
-  "Ahora no" la oculta 30 días. Los pasos también están en Mi cuenta →
-  Instalar la app.
+  montar). El cartel del inicio (`components/inicio/TarjetaInstalar.tsx`)
+  cuenta qué se gana (notificaciones en el celular, entrar de un toque) y
+  lleva a **Mi cuenta → Instalar la app** (`/perfil/instalar`), que es donde
+  están los pasos. Sale **sólo con sesión** (por decisión de Ignacio; sin
+  sesión `/perfil` cae en el login), en un teléfono (iPhone, iPad o Android)
+  y sin la app instalada. "Ahora no" lo oculta 30 días.
 - "Recargar app" sólo aparece instalada: en el menú de la cuenta y en Mi
   cuenta (Sobre la app e Instalar la app).
 

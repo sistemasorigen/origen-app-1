@@ -504,9 +504,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         estirados. Fila 2: grupos. Mobile apila en el orden del DOM. */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
 
-                        {/* === INSTALAR LA APP — sólo en iPhone/iPad sin instalar,
-                            o en Android si Chrome ofrece instalarla === */}
-                        <TarjetaInstalar />
+                        {/* === INSTALAR LA APP — con sesión, en un teléfono, sin
+                            instalar: lleva a Mi cuenta → Instalar la app === */}
+                        <TarjetaInstalar conSesion={!!currentUser} />
 
                         {/* === PRÓXIMOS EVENTOS — portada + contador + CTA, en carrusel === */}
                         {upcomingEventos.length > 0 && (
