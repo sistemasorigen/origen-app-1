@@ -1,0 +1,6 @@
+# Los íconos de la app instalable no cambian: un año de caché.
+# Si algún día cambian, que vayan con otro nombre (y se actualizan los
+# links en index.html y en manifest.webmanifest), como los de /assets.
+<IfModule mod_headers.c>
+  Header always set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>
