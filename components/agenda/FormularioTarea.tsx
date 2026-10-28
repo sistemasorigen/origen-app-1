@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Clock } from 'lucide-react';
 import {
-    emailsAgendaActivos, crearTarea, editarTarea, fechaYHora, hoyIso, mensajeDeMotivo, nuevoId, sello,
+    crearTarea, editarTarea, fechaYHora, hoyIso, mensajeDeMotivo, nuevoId, sello,
     type Carpeta, type DatosDeTarea, type MotivoAgenda, type Tarea, type TareaDetalle,
 } from '../../services/agenda';
 import { Avatar, ErrorDeCampo, RotuloPaso, tinte } from '../../pages/admin/departamentos/piezas';
@@ -464,7 +464,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                             ))}
                         </div>
                         <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
-                            {emailsAgendaActivos() ? 'Les llega a la Agenda y por email.' : 'Les aparece en su Agenda.'}
+                            Les aparece en su Agenda y les llega una notificación.
                         </p>
                     </>
                 ) : (

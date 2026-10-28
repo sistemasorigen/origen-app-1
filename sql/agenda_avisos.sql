@@ -2,6 +2,15 @@
 -- Agenda Origen · los avisos (prompt 8)
 -- 2026-10-27 · ✅ APLICADO el 2026-10-27 (PROBAR_ en verde antes y después; send-agenda-aviso desplegada antes)
 --
+-- ⚠ VIEJO EN PARTE. El 28/10/2026 los emails se sacaron: ver
+--   sql/agenda_avisos_sin_email.sql, que reemplaza agenda_registrar_avisos
+--   y agenda_tareas_avisar, borra agenda_pedir_emails y agenda_emails_desde,
+--   y deja agenda_avisos con un solo canal ('app'). Las tareas avisan por la
+--   notificación de la app y nada más. Lo de abajo queda como está porque
+--   es lo que se aplicó ese día, y porque es el camino de vuelta si algún
+--   día los emails vuelven. Su prueba (PROBAR_agenda_avisos.sql) se borró:
+--   la que vale es PROBAR_agenda_avisos_sin_email.sql.
+--
 -- Emails (Resend, con send-agenda-aviso) y notificaciones en la app:
 --
 --   Tarea asignada   → quien dirige + los integrantes del sub-departamento,
