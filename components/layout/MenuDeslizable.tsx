@@ -573,38 +573,29 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
         },
         {
+            // Un solo click, sin desplegable: entra directo a "Gestión de
+            // grupos" (pedido de Ignacio, 28-oct-2026). Lo demás —anfitriones,
+            // coordinadores, temporadas, categorías, etiquetas, página
+            // pública— está en el menú propio del panel (AdminGCXLayout), y
+            // crear grupo, agregar y bajas, en la pantalla de grupos.
             label: 'Panel GCX',
             icon: LayoutDashboard,
-            path: '/admingcx',
-            // Reportes cuelga de acá pero vive bajo otro prefijo. Sin esto,
-            // estar en el tablero de GCX dejaba el menú entero apagado y el
-            // desplegable cerrado: el sub-ítem se enciende bien, pero no hay
-            // forma de verlo. Mismo caso que "Panel de eventos" más abajo.
-            activePaths: ['/reportes/gcx'],
+            path: '/admingcx/gestion-de-grupos',
+            // Encendido en cualquier pantalla del panel, no sólo en grupos.
+            activePaths: ['/admingcx'],
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
-            subGroups: [
-                {
-                    label: 'Gestión de grupos',
-                    path: '/admingcx/gestion-de-grupos',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
-                    subItems: [
-                        { label: 'Ver todos los grupos', path: '/admingcx/gestion-de-grupos' },
-                        { label: 'Crear grupo', path: '/admingcx/gestion-de-grupos/crear-grupo' },
-                        { label: 'Agregar grupo', path: '/admingcx/gestion-de-grupos/agregar-grupo' },
-                        { label: 'Solicitudes de baja', path: '/admingcx/gestion-de-grupos/bajas' },
-                    ]
-                },
-                { label: 'Gestión de anfitriones', path: '/admingcx/gestion-de-anfitriones', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
-                { label: 'Gestión de coordinadores', path: '/admingcx/gestion-de-coordinadores', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Categorías', path: '/admingcx/categorias', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Etiquetas', path: '/admingcx/etiquetas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Configuración', path: '/admingcx/configuracion', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                { label: 'Temporadas', path: '/admingcx/temporadas', roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS] },
-                // El tablero de GCX, no /reportes (que es Pastores.tsx y sigue
-                // colgando de Punto de información). El prefijo lo mantiene
-                // encendido en el detalle de un grupo y en la comparación.
-                { label: 'Reportes', path: '/reportes/gcx', roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.REPORTES, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS] },
-            ]
+        },
+        {
+            // El tablero de GCX colgaba del desplegable de "Panel GCX" y era
+            // la única entrada que tenía: el panel no lo enlaza. Al dejar
+            // "Panel GCX" de un click, pasa a ser un ítem propio, con la
+            // misma visibilidad que tenía ahí (el desplegable entero era de
+            // estos tres roles). No es /reportes (Pastores.tsx), que sigue
+            // en Punto de información.
+            label: 'Reportes GCX',
+            icon: BarChart,
+            path: '/reportes/gcx',
+            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
         },
         {
             // Los grupos que lleva el anfitrión. Va suelto y no colgado de
@@ -716,16 +707,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
         },
         {
+            // Un solo click, sin desplegable: entra directo a "Usuarios"
+            // (pedido de Ignacio, 28-oct-2026). Configuración, Departamentos
+            // y los logs están en el menú propio del panel.
             label: 'Sistemas',
             icon: Settings,
-            path: '/panel-admin',
+            path: '/panel-admin?tab=users',
+            // El ?tab= es para navegar; para encenderse alcanza el pathname,
+            // en cualquier sección del panel. Mismo caso que Coordinadores.
+            activePaths: ['/panel-admin'],
             roles: [UserRole.SUPER_ADMIN],
-            subItems: [
-                { label: 'Usuarios', path: '/panel-admin?tab=users' },
-                { label: 'Configuración', path: '/panel-admin?tab=config' },
-                { label: 'Departamentos', path: '/panel-admin?tab=departamentos' },
-                { label: 'Logs', path: '/panel-admin?tab=logs' }
-            ]
         },
     ];
 
