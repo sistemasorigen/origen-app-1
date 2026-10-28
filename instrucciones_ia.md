@@ -637,6 +637,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
 | `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
 | `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
+| `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). La dispara `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo de `app_notifications`, sólo si esa persona tiene alguna suscripción. Acepta **sólo** la clave de servicio. Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. |
 | `send-agenda-aviso` | Emails de Agenda Origen: "Tarea asignada" y "Tarea completada". La dispara `trg_agenda_tareas_avisar` con `{tarea_id, tipo}`; lee los avisos `'pendiente'` de `agenda_avisos`. Acepta **sólo** la clave de servicio. Modo `{modo:'prueba', tipo}`: datos inventados, sólo a Sistemas. |
 
 > ⚠️ **El límite de Resend es de 100 emails por día.** No es teórico: un día de
@@ -657,6 +658,10 @@ adentro de la función, como hace `send-nocturna-entrada`.
 - `GOOGLE_IMAGEN_KEY` — API Key de Google para generación de imágenes
 - `WC2026_API_EMAIL` — Credencial API worldcup26.ir
 - `WC2026_API_PASSWORD` — Credencial API worldcup26.ir
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — Claves de las
+  notificaciones push (`send-push`). La pública también está en
+  `src/utils/push.ts`; la privada **sólo** acá. Si se cambian, cambiar las dos
+  y todas las suscripciones dejan de servir.
 
 **Nunca hardcodear estas keys. Siempre usar `Deno.env.get('...')`.**
 
@@ -1822,6 +1827,38 @@ sigue cacheando en `localStorage`, como respaldo ante fallas de red.
 - "Recargar app" sólo aparece instalada: en el menú de la cuenta y en Mi
   cuenta (Sobre la app e Instalar la app).
 
+### Notificaciones push (desde el 2026-10-28)
+Cada aviso de `app_notifications` llega también como notificación del
+sistema, con la app abierta o cerrada: Android, compu, y iPhone **con la app
+instalada** (iOS 16.4+; Safari sin instalar no tiene push).
+- **`public/sw.js` NO CACHEA NADA.** Sólo escucha `push`, `notificationclick`
+  y `pushsubscriptionchange`. Prohibido agregarle un listener de `fetch`, la
+  Cache API, precache, workbox o `vite-plugin-pwa`: con caché, una app
+  instalada se queda con una versión vieja. Se registra en `index.tsx` con
+  `updateViaCache: 'none'` y el `.htaccess` le pone `no-cache`.
+- `src/utils/push.ts`: suscribir, guardar (`push_guardar_suscripcion`),
+  desuscribir, `resincronizar()` al abrir con sesión (re-guarda la
+  suscripción: cubre la renovación del navegador y los celulares
+  compartidos), `olvidarEsteDispositivo()` al cerrar sesión, y el número del
+  ícono (`setAppBadge`, desde `NotificationContext`).
+- **El permiso se pide sólo con un toque** (`activar()`, sin ningún `await`
+  antes): iOS lo exige. Lugares: Mi cuenta → "Notificaciones en este
+  dispositivo" (interruptor que prende y apaga de verdad, y la pantalla
+  `/perfil/dispositivos` con la lista y "Enviar notificación de prueba") y la
+  tarjeta de arriba de `/notificaciones`. El banner global de permiso que
+  había en `Estructura.tsx` se sacó.
+- Base: `sql/push_notificaciones.sql` (tabla `push_suscripciones` sin
+  policies, RPC `push_*`, trigger que manda **sólo el id** a `send-push`).
+  Pruebas: `sql/PROBAR_push_notificaciones.sql`.
+- Sólo se aceptan endpoints de servicios de push conocidos (FCM, Mozilla,
+  Windows, Apple): `send-push` hace un POST ahí, y sin ese filtro se lo podría
+  hacer llamar a cualquier URL.
+- Los íconos del push son `/iconos/icon-192.png` y `/iconos/badge-96.png` (el
+  chico, blanco sobre transparente, para la barra de Android).
+- Para excluir un tipo de aviso del push: `TIPOS_SIN_PUSH` en
+  `supabase/functions/send-push/armado.ts` y volver a desplegar la función
+  (`npx supabase functions deploy send-push --project-ref oqtumgalnozppqnnjjdb --use-api`).
+
 ### Márgenes seguros: SIN `viewport-fit=cover`
 Sin `cover`, el iPhone deja la página dentro de la zona segura (la barra de
 estado está en `default`), y `env(safe-area-inset-*)` vale 0 en todos lados.
@@ -2173,6 +2210,7 @@ propia del Día del Niño y no se puede probar sin cámara).
 | Protección de contraseñas filtradas | Toggle manual en el dashboard de Supabase |
 | `pg_net` y `pg_trgm` en el schema `public` | Moverlos se prueba primero en una rama |
 | `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
+| `app_notifications`: la policy de INSERT es `WITH CHECK (true)` para `authenticated` | Cualquiera con sesión puede crear un aviso para cualquier otra persona, y desde octubre de 2026 eso llega como **push a su teléfono**. Varias pantallas crean avisos para otros desde el frontend (`createAppNotification`), así que cerrarla requiere pasarlas a RPC primero (fase 2b de la auditoría) |
 
 ### Código
 - `react-joyride` 2.9 no declara soporte para React 19 (por eso hace falta

@@ -1,64 +1,60 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { estadoDeAvisos, type EstadoDeAvisos } from '../components/miCuenta/avisos';
+import { activar, desactivar, permisoActual, soportaPush, suscripcionActual, type ResultadoActivar } from '../src/utils/push';
 
-const DISMISSED_KEY = 'origen_push_banner_dismissed';
-
-interface UsePushNotificationsReturn {
-    permission: NotificationPermission;
-    isSupported: boolean;
-    requestPermission: () => Promise<NotificationPermission>;
-    sendPush: (title: string, message: string, url?: string | null) => void;
-    dismissBanner: () => void;
-    shouldShowBanner: boolean;
+/**
+ * Las notificaciones push de ESTE dispositivo, para la pantalla.
+ *
+ * Antes este hook era la API Notification del navegador (`new
+ * Notification()`), que sólo mostraba algo con la pestaña abierta. Ahora los
+ * avisos llegan como push del sistema por el service worker
+ * (src/utils/push.ts), con la app abierta o cerrada; la notificación local se
+ * sacó porque con push activo el aviso salía dos veces.
+ *
+ * `estado` es null mientras se averigua si hay suscripción (es asíncrono).
+ */
+export interface UsePushNotifications {
+    estado: EstadoDeAvisos | null;
+    ocupado: boolean;
+    activar: () => Promise<ResultadoActivar>;
+    desactivar: () => Promise<boolean>;
+    refrescar: () => Promise<void>;
 }
 
-export function usePushNotifications(): UsePushNotificationsReturn {
-    const isSupported = typeof window !== 'undefined' && 'Notification' in window;
+export function usePushNotifications(): UsePushNotifications {
+    const [estado, setEstado] = useState<EstadoDeAvisos | null>(null);
+    const [ocupado, setOcupado] = useState(false);
 
-    const [permission, setPermission] = useState<NotificationPermission>(
-        isSupported ? Notification.permission : 'denied'
-    );
+    const refrescar = useCallback(async () => {
+        const suscripto = !!(await suscripcionActual());
+        setEstado(estadoDeAvisos(soportaPush(), permisoActual(), suscripto));
+    }, []);
 
-    const [dismissed, setDismissed] = useState(
-        () => localStorage.getItem(DISMISSED_KEY) === 'true'
-    );
+    useEffect(() => {
+        refrescar();
+        // Si la persona cambia el permiso en los ajustes y vuelve, que se vea.
+        const alVolver = () => { if (document.visibilityState === 'visible') refrescar(); };
+        document.addEventListener('visibilitychange', alVolver);
+        return () => document.removeEventListener('visibilitychange', alVolver);
+    }, [refrescar]);
 
-    const shouldShowBanner = isSupported && permission === 'default' && !dismissed;
+    // Sin await antes de activar(): el pedido de permiso tiene que salir
+    // directo del toque.
+    const prender = useCallback(async () => {
+        setOcupado(true);
+        const r = await activar();
+        await refrescar();
+        setOcupado(false);
+        return r;
+    }, [refrescar]);
 
-    const requestPermission = async (): Promise<NotificationPermission> => {
-        if (!isSupported) return 'denied';
-        try {
-            const result = await Notification.requestPermission();
-            setPermission(result);
-            return result;
-        } catch {
-            return 'denied';
-        }
-    };
+    const apagar = useCallback(async () => {
+        setOcupado(true);
+        const r = await desactivar();
+        await refrescar();
+        setOcupado(false);
+        return r;
+    }, [refrescar]);
 
-    const sendPush = (title: string, message: string, url?: string | null) => {
-        if (!isSupported || permission !== 'granted') return;
-        if (!document.hidden) return;
-
-        const notif = new Notification(title, {
-            body: message,
-            icon: '/favicon.png',
-            badge: '/favicon.png',
-            tag: 'origen-notification',
-        });
-
-        if (url) {
-            notif.onclick = () => {
-                window.focus();
-                window.location.hash = url;
-                notif.close();
-            };
-        }
-    };
-
-    const dismissBanner = () => {
-        localStorage.setItem(DISMISSED_KEY, 'true');
-        setDismissed(true);
-    };
-
-    return { permission, isSupported, requestPermission, sendPush, dismissBanner, shouldShowBanner };
+    return { estado, ocupado, activar: prender, desactivar: apagar, refrescar };
 }

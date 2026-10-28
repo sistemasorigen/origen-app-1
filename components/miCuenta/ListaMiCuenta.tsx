@@ -16,7 +16,7 @@ export type SeccionDeMiCuenta =
     | 'editar' | 'grupos' | 'historial' | 'compras' | 'inscripciones' | 'servicio'
     | 'solicitudes'
     | 'seguridad' | 'privacidad' | 'terminos' | 'tutoriales' | 'contacto'
-    | 'reportar' | 'instalar' | 'app';
+    | 'reportar' | 'instalar' | 'dispositivos' | 'app';
 
 export interface ConteosDeMiCuenta {
     grupos: number;
@@ -36,7 +36,7 @@ export interface ListaMiCuentaProps {
     faltaTexto?: string;
     conteos: ConteosDeMiCuenta;
     sinLeer: number;
-    /** Los avisos de este celular: su estado, su detalle y su ayuda. */
+    /** Las notificaciones push de este dispositivo: su estado, su detalle y su ayuda. */
     avisos: {
         prendido: boolean;
         sePuedePrender: boolean;
@@ -200,12 +200,13 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                     <GrupoDeFilas titulo="PREFERENCIAS">
                         <Fila primera icono={ICONOS.campana} nombre="Notificaciones" marca={sinLeer}
                             onClick={() => onIrAfuera('/notificaciones')} />
-                        {/* El interruptor se deja tocar SÓLO cuando prenderlo
-                            es posible. Una vez dado el permiso, la página no
-                            puede quitárselo —sólo el navegador—, así que queda
-                            prendido y con su línea de ayuda en vez de fingir
-                            que se apaga. */}
-                        <Fila icono={ICONOS.celular} nombre="Avisos en este celular"
+                        {/* Notificaciones push de este dispositivo: el
+                            interruptor las prende (pide el permiso con este
+                            toque) y las apaga (borra la suscripción). Queda
+                            quieto cuando no se puede: iPhone sin instalar,
+                            permiso bloqueado o navegador sin soporte, y la
+                            línea de abajo dice qué hacer. */}
+                        <Fila icono={ICONOS.celular} nombre="Notificaciones en este dispositivo"
                             detalle={avisos.detalle}
                             interruptor={{
                                 prendido: avisos.prendido,

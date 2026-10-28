@@ -1,5 +1,6 @@
 ﻿import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { olvidarEsteDispositivo } from '../src/utils/push';
 import { supabaseService, probarConexionBase } from '../services/supabaseService';
 import { User, UserRole, CoordinatorVariant } from '../types';
 
@@ -477,6 +478,12 @@ const fullUser: User = {
     };
 
     const signOut = async () => {
+        // Primero, con la sesión todavía viva: que este dispositivo deje de
+        // recibir los avisos de esta cuenta. En un celular compartido, al
+        // que entra después no le tienen que llegar los del anterior. Tiene
+        // tope de 3 s: cerrar sesión no puede quedar colgado por esto.
+        await olvidarEsteDispositivo();
+
         setUser(null);
         sessionStorage.removeItem(STORAGE_KEY); // Clear cache
         setIsLoadingSession(false);

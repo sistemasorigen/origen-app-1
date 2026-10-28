@@ -35,7 +35,8 @@ export type TipoDeEvento =
     | 'volvio'        // la app volvió del segundo plano después de un rato
     | 'error'         // window.onerror
     | 'promesa'       // unhandledrejection
-    | 'mime';         // el bundle no cargó (lo anota index.html)
+    | 'mime'          // el bundle no cargó (lo anota index.html)
+    | 'push';         // notificaciones push: permiso, suscripción, errores
 
 export interface EventoDiagnostico {
     t: number;
@@ -184,6 +185,7 @@ export const NOMBRE_DEL_TIPO: Record<TipoDeEvento, string> = {
     error: 'Error',
     promesa: 'Error',
     mime: 'No cargó',
+    push: 'Push',
 };
 
 /** Todo junto, en texto plano, para pegar en WhatsApp. */

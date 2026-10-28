@@ -15,9 +15,8 @@ import {
 import { ESTILOS_DESTACADA, type Destacado } from '../../components/miCuenta/Destacada';
 import ListaMiCuenta, { type SeccionDeMiCuenta } from '../../components/miCuenta/ListaMiCuenta';
 import {
-    ayudaDeAvisos, detalleDeAvisos, estadoDeAvisos,
-    PASOS_ANDROID, PASOS_APAGAR, PASOS_INSTALAR, PASOS_IPHONE_AJUSTES,
-    type EstadoDeAvisos,
+    ayudaDeAvisos, detalleDeAvisos, esIOS,
+    PASOS_ANDROID, PASOS_IPHONE_AJUSTES,
 } from '../../components/miCuenta/avisos';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useTema } from '../../contexts/TemaContext';
@@ -30,6 +29,7 @@ import {
     MisGrupos, MisInscripciones,
 } from './miCuenta/MiVida';
 import { MisSolicitudes } from './miCuenta/MisSolicitudes';
+import { DispositivosPush } from './miCuenta/DispositivosPush';
 
 declare const __BUILD_VERSION__: string;
 
@@ -63,6 +63,7 @@ const TITULOS: Record<SeccionDeMiCuenta, string> = {
     contacto: 'Escribile a la iglesia',
     reportar: 'Reportar un problema',
     instalar: 'Instalar la app',
+    dispositivos: 'Notificaciones en este dispositivo',
     app: 'Sobre la app',
 };
 
@@ -133,11 +134,11 @@ const MiCuenta: React.FC = () => {
     const sinLeer = useSinLeer();
     const { inscripciones: deGrupos } = useInscripcionesDelUsuario(user);
     const { avisar, Aviso } = useAvisoFlotante();
-    const { permission, isSupported, requestPermission } = usePushNotifications();
+    const push = usePushNotifications();
     const { oscuro, alternar } = useTema();
 
-    // Qué panel de ayuda de avisos está abierto, si hay alguno.
-    const [ayudaAvisos, setAyudaAvisos] = useState<null | EstadoDeAvisos>(null);
+    // El panel de "cómo activarlas" cuando el permiso quedó bloqueado.
+    const [ayudaAvisos, setAyudaAvisos] = useState(false);
     const [pestañaAyuda, setPestañaAyuda] = useState<'android' | 'iphone'>('android');
 
     const [compras, setCompras] = useState<CompraPropia[]>([]);
@@ -360,18 +361,23 @@ const MiCuenta: React.FC = () => {
         return candidatos.find(c => !cerradas.includes(c.caso)) ?? null;
     }, [eventos, compras, faltantes, deGrupos, cerradas, salirDelIndice, irA]);
 
-    // El estado de los avisos se recalcula con el permiso: pedirlo cambia
-    // `permission` y la fila se actualiza sola.
-    const estadoAvisos = useMemo(
-        () => estadoDeAvisos(isSupported, permission),
-        [isSupported, permission],
-    );
+    // null mientras se averigua si este navegador está suscripto.
+    const estadoAvisos = push.estado;
 
-    const prenderAvisos = async () => {
+    // El interruptor prende y apaga de verdad: prender pide el permiso (con
+    // este mismo toque, como exige iOS) y guarda la suscripción; apagar la
+    // borra de la base y del navegador.
+    const alternarAvisos = async () => {
+        if (estadoAvisos === 'prendido') {
+            const ok = await push.desactivar();
+            avisar(ok ? 'Notificaciones apagadas en este dispositivo' : 'Las apagamos acá; probá de nuevo con conexión');
+            return;
+        }
         if (estadoAvisos !== 'apagado') return;
-        const resultado = await requestPermission();
-        if (resultado === 'granted') avisar('Te vamos a avisar en este celular');
-        else if (resultado === 'denied') avisar('No diste permiso para los avisos');
+        const r = await push.activar();
+        if (r === 'ok') avisar('Listo: te van a llegar a este dispositivo');
+        else if (r === 'denegado') avisar('No diste permiso para las notificaciones');
+        else if (r === 'error') avisar('No pudimos activarlas. Probá de nuevo');
     };
 
     const cerrarDestacada = () => {
@@ -437,6 +443,7 @@ const MiCuenta: React.FC = () => {
         if (seccion === 'contacto') return <Contacto onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'reportar') return <Reportar onVolver={esAncha ? undefined : volver} avisar={avisar} />;
         if (seccion === 'instalar') return <InstalarApp onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'dispositivos') return <DispositivosPush onVolver={esAncha ? undefined : volver} onCambio={push.refrescar} />;
         if (seccion === 'app') return <SobreLaApp onVolver={esAncha ? undefined : volver} />;
 
         // Las cinco de "Mi vida en Origen" todavía no están. La ruta existe
@@ -469,13 +476,20 @@ const MiCuenta: React.FC = () => {
             sinLeer={sinLeer}
             avisos={{
                 prendido: estadoAvisos === 'prendido',
-                sePuedePrender: estadoAvisos === 'apagado',
-                detalle: detalleDeAvisos(estadoAvisos),
-                ayuda: ayudaDeAvisos(estadoAvisos),
-                onPrender: prenderAvisos,
+                sePuedePrender: (estadoAvisos === 'apagado' || estadoAvisos === 'prendido') && !push.ocupado,
+                detalle: estadoAvisos ? detalleDeAvisos(estadoAvisos) : '',
+                ayuda: estadoAvisos ? ayudaDeAvisos(estadoAvisos) : '',
+                onPrender: alternarAvisos,
                 onAyuda: () => {
-                    setPestañaAyuda(estadoAvisos === 'iphone' ? 'iphone' : 'android');
-                    setAyudaAvisos(estadoAvisos);
+                    // iPhone sin instalar → los pasos para instalarla;
+                    // prendidas → sus dispositivos y la prueba;
+                    // bloqueadas → cómo destrabar el permiso.
+                    if (estadoAvisos === 'iphone') irA('instalar');
+                    else if (estadoAvisos === 'prendido') irA('dispositivos');
+                    else {
+                        setPestañaAyuda(esIOS() ? 'iphone' : 'android');
+                        setAyudaAvisos(true);
+                    }
                 },
             }}
             temaOscuro={oscuro}
@@ -542,10 +556,10 @@ const MiCuenta: React.FC = () => {
             </Panel>
 
             <PanelDeAyuda
-                estado={ayudaAvisos}
+                abierto={ayudaAvisos}
                 pestaña={pestañaAyuda}
                 onPestaña={setPestañaAyuda}
-                onCerrar={() => setAyudaAvisos(null)}
+                onCerrar={() => setAyudaAvisos(false)}
             />
 
             <Aviso />
@@ -554,39 +568,26 @@ const MiCuenta: React.FC = () => {
 };
 
 /**
- * Los pasos para prender, apagar o instalar, según el caso.
+ * Cómo destrabar el permiso cuando quedó bloqueado.
  *
- * El de "bloqueado" va con dos pestañas porque los pasos son distintos en
- * Android y en iPhone, y no hay forma confiable de saber cuál mira quien
- * está del otro lado: un iPad se presenta como Mac, y una persona puede
- * estar viendo esto en la compu para arreglarlo en el teléfono.
+ * Va con dos pestañas porque los pasos son distintos en Android y en iPhone,
+ * y no hay forma confiable de saber cuál mira quien está del otro lado: un
+ * iPad se presenta como Mac, y una persona puede estar viendo esto en la
+ * compu para arreglarlo en el teléfono. Instalar la app y ver los
+ * dispositivos ya no van acá: tienen su pantalla en Mi cuenta.
  */
 const PanelDeAyuda: React.FC<{
-    estado: EstadoDeAvisos | null;
+    abierto: boolean;
     pestaña: 'android' | 'iphone';
     onPestaña: (p: 'android' | 'iphone') => void;
     onCerrar: () => void;
-}> = ({ estado, pestaña, onPestaña, onCerrar }) => {
-    if (!estado) return null;
+}> = ({ abierto, pestaña, onPestaña, onCerrar }) => {
+    if (!abierto) return null;
 
-    const esInstalar = estado === 'iphone';
-    const esApagar = estado === 'prendido';
-
-    const titulo = esInstalar ? 'Agregá Origen a tu inicio'
-        : esApagar ? 'Cómo apagar los avisos'
-            : 'Cómo activar los avisos';
-
-    const detalle = esInstalar
-        ? 'En iPhone, los avisos funcionan sólo si abrís Origen desde su ícono.'
-        : esApagar
-            ? 'Los diste permiso en este navegador, así que apagarlos se hace ahí.'
-            : 'Los bloqueaste en el navegador. Para volver a prenderlos:';
-
-    const pasos = esInstalar ? PASOS_INSTALAR
-        : esApagar ? PASOS_APAGAR
-            : (pestaña === 'android' ? PASOS_ANDROID : PASOS_IPHONE_AJUSTES);
-
-    const conPestañas = !esInstalar && !esApagar;
+    const titulo = 'Cómo activar las notificaciones';
+    const detalle = 'Las bloqueaste en este dispositivo. Para volver a prenderlas:';
+    const pasos = pestaña === 'android' ? PASOS_ANDROID : PASOS_IPHONE_AJUSTES;
+    const conPestañas = true;
 
     const pestañaSt = (activa: boolean): React.CSSProperties => ({
         minHeight: 44,

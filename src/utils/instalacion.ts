@@ -48,6 +48,28 @@ export const plataforma = (): Plataforma => {
     return 'compu';
 };
 
+/**
+ * El navegador que traen adentro WhatsApp, Instagram, Facebook o TikTok, o
+ * null si es un navegador común.
+ *
+ * Desde ahí no se puede instalar nada: no tienen "Agregar a inicio" ni el
+ * aviso de instalación de Chrome. Hay que abrir el link afuera.
+ *
+ * Límite conocido: en iPhone, WhatsApp abre los links en una vista de Safari
+ * que se presenta igual que Safari, así que ese caso no se distingue (y ahí
+ * sí aparece el botón de compartir, así que los pasos comunes sirven).
+ */
+export const navegadorInterno = (): 'WhatsApp' | 'Instagram' | 'Facebook' | 'TikTok' | null => {
+    try {
+        const ua = navigator.userAgent || '';
+        if (/Instagram/i.test(ua)) return 'Instagram';
+        if (/FBAN|FBAV|FB_IAB|FBIOS/.test(ua)) return 'Facebook';
+        if (/musical_ly|BytedanceWebview|TikTok/i.test(ua)) return 'TikTok';
+        if (/WhatsApp/i.test(ua)) return 'WhatsApp';
+    } catch { /* sin navigator */ }
+    return null;
+};
+
 export const NOMBRE_PLATAFORMA: Record<Plataforma, string> = {
     iphone: 'iPhone',
     ipad: 'iPad',

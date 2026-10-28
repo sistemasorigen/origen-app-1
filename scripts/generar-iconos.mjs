@@ -23,6 +23,8 @@
 //     en cualquier recorte, con un 20 % de margen de cada lado como mínimo.
 //   · apple-touch-icon.png (180)  → SIN transparencia: el iPhone pinta de
 //     negro lo transparente y redondea las esquinas él solo.
+//   · badge-96.png                → el ícono chico de los push en Android:
+//     isotipo blanco sobre transparente (Android usa sólo la forma).
 //
 // Fondo negro puro y marca blanca: el negro es el color primario de la app
 // (los botones píldora del login), y en una pantalla de inicio llena de
@@ -43,6 +45,10 @@ const ICONOS = [
     { archivo: 'icon-512.png', lado: 512, marca: 0.62 },
     { archivo: 'icon-512-maskable.png', lado: 512, marca: 0.48 },
     { archivo: 'apple-touch-icon.png', lado: 180, marca: 0.62 },
+    // El ícono chico de las notificaciones push (public/sw.js): Android lo
+    // pinta en la barra de estado usando sólo su forma, así que va el
+    // isotipo blanco sobre transparente, casi a tamaño completo.
+    { archivo: 'badge-96.png', lado: 96, marca: 0.84, transparente: true },
 ];
 
 mkdirSync(SALIDA, { recursive: true });
@@ -50,7 +56,7 @@ mkdirSync(SALIDA, { recursive: true });
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage();
 
-for (const { archivo, lado, marca } of ICONOS) {
+for (const { archivo, lado, marca, transparente = false } of ICONOS) {
     const dataUrl = await pagina.evaluate(async ({ logo, lado, marca, fondo }) => {
         const img = new Image();
         img.src = `data:image/png;base64,${logo}`;
@@ -96,14 +102,16 @@ for (const { archivo, lado, marca } of ICONOS) {
         const c = document.createElement('canvas');
         c.width = lado; c.height = lado;
         const x = c.getContext('2d');
-        x.fillStyle = fondo;
-        x.fillRect(0, 0, lado, lado);
+        if (fondo) {
+            x.fillStyle = fondo;
+            x.fillRect(0, 0, lado, lado);
+        }
         const escala = (lado * marca) / Math.max(w, h);
         const dw = w * escala, dh = h * escala;
         x.imageSmoothingQuality = 'high';
         x.drawImage(cm, (lado - dw) / 2, (lado - dh) / 2, dw, dh);
         return c.toDataURL('image/png');
-    }, { logo: LOGO, lado, marca, fondo: FONDO });
+    }, { logo: LOGO, lado, marca, fondo: transparente ? null : FONDO });
 
     writeFileSync(join(SALIDA, archivo), Buffer.from(dataUrl.split(',')[1], 'base64'));
     console.log(`[generar-iconos] ${archivo} (${lado}×${lado})`);

@@ -13,7 +13,7 @@ import {
     COMO_LLEGAR, RESPONSABLE, TERMINOS, ULTIMA_ACTUALIZACION, WHATSAPP,
 } from '../../../src/legal/terminosYPrivacidad';
 import { NOTA_REINSTALAR, PasosDeInstalacion } from '../../../components/instalacion/PasosDeInstalacion';
-import { pedirInstalacion, useInstalacion } from '../../../src/utils/instalacion';
+import { navegadorInterno, pedirInstalacion, useInstalacion } from '../../../src/utils/instalacion';
 import { recargarApp } from '../../../hooks/useVersionCheck';
 import { DiagnosticoDeLaApp } from './DiagnosticoDeLaApp';
 
@@ -525,6 +525,8 @@ export const InstalarApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) =
 
     // Primero los pasos del aparato que se está usando.
     const sistemas: Array<'iphone' | 'android'> = plataforma === 'android' ? ['android', 'iphone'] : ['iphone', 'android'];
+    // Adentro de WhatsApp, Instagram, Facebook o TikTok no se puede instalar.
+    const interno = navegadorInterno();
 
     return (
         <>
@@ -545,6 +547,17 @@ export const InstalarApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) =
                 <p className="mt-2.5 mb-0 text-[14.5px] leading-[1.5] font-medium text-pretty" style={{ color: 'var(--mc-m66)' }}>
                     Origen queda en tu pantalla de inicio y se abre a pantalla completa, como cualquier app.
                 </p>
+            )}
+
+            {!instalada && interno && (
+                <div role="note" className={`${TARJETA} mt-[18px] p-[18px]`} style={ESTILO_TARJETA}>
+                    <p className="m-0 text-[15px] font-semibold text-pretty">
+                        Estás adentro de {interno}: desde acá no se puede instalar.
+                    </p>
+                    <p className="mt-1.5 mb-0 text-[14px] leading-[1.5] font-medium text-pretty" style={{ color: 'var(--mc-m66)' }}>
+                        Tocá los tres puntos o Compartir y elegí «Abrir en el navegador». Después seguí los pasos de abajo en Safari (iPhone) o en Chrome (Android).
+                    </p>
+                </div>
             )}
 
             {!instalada && puedeInstalar && (

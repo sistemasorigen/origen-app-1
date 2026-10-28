@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useDragControls, useReducedMotion } from 'fram
 import {
     AlertTriangle,
     Bell,
+    BellRing,
     CalendarCheck,
     Check,
     CheckCircle2,
@@ -23,6 +24,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import type { AppNotification } from '../../hooks/useNotifications';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { volverOA } from '../../src/utils/volver';
+import TarjetaActivarPush from '../../components/notifications/TarjetaActivarPush';
 
 /**
  * El centro de notificaciones (design-claude/Notificaciones.dc).
@@ -80,6 +82,8 @@ const ICONOS: Record<string, React.ElementType> = {
     AGENDA_TAREA_COMPLETADA: CheckCircle2,
     AGENDA_SOLICITUD_NUEVA: Inbox,
     AGENDA_SOLICITUD_REVISADA: MessageSquareReply,
+    // La de prueba de Mi cuenta → Notificaciones en este dispositivo.
+    PUSH_PRUEBA: BellRing,
 };
 
 const iconoDe = (tipo: string): React.ElementType => ICONOS[tipo] || Bell;
@@ -673,6 +677,9 @@ const Notifications: React.FC = () => {
                         Marcar todas como leídas
                     </button>
                 )}
+
+                {/* ── Activar las push, si todavía no ───────────────── */}
+                <TarjetaActivarPush />
 
                 {/* ── Todas · No leídas ──────────────────────────────── */}
                 <div

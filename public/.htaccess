@@ -34,6 +34,13 @@
   <FilesMatch "\.webmanifest$">
     Header always set Cache-Control "no-cache"
   </FilesMatch>
+  # El service worker de las notificaciones push se revalida SIEMPRE: si se
+  # cachea, el navegador tarda en tomar una versión nueva (y el hosting le
+  # pone 120 días a todo lo estático por su cuenta). Va además registrado
+  # con updateViaCache: 'none'. Ver public/sw.js: no cachea nada.
+  <FilesMatch "^sw\.js$">
+    Header always set Cache-Control "no-cache"
+  </FilesMatch>
   # La caché larga de /iconos/ está en public/iconos/.htaccess: acá haría
   # falta un <If>, y en un Apache anterior a 2.4 eso tira 500 en todo el
   # sitio.

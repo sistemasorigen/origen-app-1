@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../services/supabaseClient';
-import { usePushNotifications } from '../hooks/usePushNotifications';
+import { ponerNumeroEnElIcono, resincronizar } from '../src/utils/push';
 
 export interface AppNotification {
     id: string;
@@ -34,7 +34,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
-    const { sendPush } = usePushNotifications();
 
     const fetchNotifications = useCallback(async () => {
         if (!user?.id) return;
@@ -82,22 +81,31 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 },
                 (payload) => {
                     console.log('[NotificationContext] Realtime update:', payload);
+                    // Antes acá salía también una notificación local
+                    // (new Notification) con la pestaña oculta. Ahora cada
+                    // aviso llega como push del sistema (send-push, con la
+                    // app abierta o cerrada) y la local lo duplicaba.
                     fetchNotifications();
-
-                    // Push nativo solo en INSERT de nuevas notificaciones
-                    if (payload.eventType === 'INSERT' && payload.new) {
-                        const n = payload.new as AppNotification;
-                        sendPush(n.title, n.message, n.action_url);
-                    }
                 }
             )
             .subscribe();
+
+        // Si este dispositivo tiene notificaciones push, se vuelve a guardar
+        // la suscripción con la sesión de ahora: cubre que el navegador la
+        // haya renovado solo y que en este celular haya otra persona.
+        resincronizar().catch(() => { /* queda en el diagnóstico */ });
 
         return () => {
             console.log(`[NotificationContext] Cleaning up channel ${channelName}`);
             supabase.removeChannel(channel);
         };
     }, [user?.id, fetchNotifications]);
+
+    // El número en el ícono de la app (iPhone instalada, Android, compu): el
+    // mismo que la marca roja del menú. Sin sesión, se limpia.
+    useEffect(() => {
+        ponerNumeroEnElIcono(user?.id ? unreadCount : 0);
+    }, [unreadCount, user?.id]);
 
     const markAsRead = async (id: string) => {
         const { error } = await supabase
