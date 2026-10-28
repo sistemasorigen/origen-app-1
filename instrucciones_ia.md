@@ -637,7 +637,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
 | `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
 | `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
-| `notify-host` | Avisos y emails a anfitriones: "Nueva solicitud de ingreso" (la dispara `notify_host_new_registration` en cada inscripción), recordatorio de asistencia y un modo `test_all`. **Su código no está en el repo y no exige ninguna clave** (ver sección 38). |
+| `notify-host` | Avisos a anfitriones. `{registration_id}` (lo manda `notify_host_new_registration` en cada inscripción PENDING): aviso "Nueva solicitud de ingreso 👤" + email al anfitrión y al co-anfitrión. `{grupo_aprobado_id}` (lo manda `notify_host_group_approved` en el paso a 'approved'): aviso "¡Tu grupo fue aprobado! 🎉", sin email. `{modo:'prueba'}`: un email de muestra sólo a sistemas@. **Acepta sólo la clave de servicio.** Idempotente (`notify_host_hechos`), tope de 30 emails por día. `sql/notify_host_seguro.sql`. |
 | `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). La dispara `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo de `app_notifications`, sólo si esa persona tiene alguna suscripción. Acepta **sólo** la clave de servicio. Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. |
 | `send-agenda-aviso` | Emails de Agenda Origen: "Tarea asignada" y "Tarea completada". La dispara `trg_agenda_tareas_avisar` con `{tarea_id, tipo}`; lee los avisos `'pendiente'` de `agenda_avisos`. Acepta **sólo** la clave de servicio. Modo `{modo:'prueba', tipo}`: datos inventados, sólo a Sistemas. |
 
@@ -665,6 +665,14 @@ adentro de la función, como hace `send-nocturna-entrada`.
   y todas las suscripciones dejan de servir.
 
 **Nunca hardcodear estas keys. Siempre usar `Deno.env.get('...')`.**
+
+**Ninguna Edge Function se despliega sin estar en el repo**, y lo desplegado
+tiene que ser igual a lo que hay en `supabase/functions/`. `notify-host`
+estuvo meses en producción sin código en el repo y sin pedir ninguna clave; el
+2026-10-28, 9 de las 14 funciones desplegadas no coincidían con su versión del
+repo (ver sección 38). Para desplegar:
+`npx supabase functions deploy <nombre> --project-ref oqtumgalnozppqnnjjdb --use-api`
+(con `--no-verify-jwt` si la función controla la clave adentro).
 
 **Reglas que salieron de construir `send-nocturna-entrada` (aplicar a toda
 función nueva):**
@@ -2134,7 +2142,8 @@ propia del Día del Niño y no se puede probar sin cámara).
   cuota de las entradas: reportes de problemas **30**
   (`send-reporte-problema`, en `reportes_problemas.email_error`); Agenda
   Origen **40** (`send-agenda-aviso`, cuenta los `'enviado'` de
-  `agenda_avisos`). Pasado el tope el email no sale, queda anotado
+  `agenda_avisos`); solicitudes de ingreso a un grupo **30** (`notify-host`,
+  cuenta las claves `reg:%:email:%` de `notify_host_hechos`). Pasado el tope el email no sale, queda anotado
   (`'tope_diario'`) y la notificación en la app igual llega.
 - **HTML de email, no de web:** maquetado con tablas, estilos en línea, ancho
   máximo 600 px, sin JavaScript, fuentes del sistema, botones hechos con tablas.
@@ -2218,7 +2227,31 @@ propia del Día del Niño y no se puede probar sin cámara).
 | Protección de contraseñas filtradas | Toggle manual en el dashboard de Supabase |
 | `pg_net` y `pg_trgm` en el schema `public` | Moverlos se prueba primero en una rama |
 | `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
-| **`notify-host` (Edge Function) sin autenticación** | Desplegada con `verify_jwt = false` y sin chequear la clave, inserta avisos con la clave de servicio (se saltea RLS) y manda emails. Cualquiera, sin sesión, puede pedirle `{type:'test_all', user_id}` (3 avisos + 3 emails a esa persona) o una "inscripción" inventada (aviso + email con cualquier texto al anfitrión de cualquier grupo). Con push, eso llega al teléfono. Además el trigger `notify_host_new_registration` le manda la fila entera de la inscripción (`to_jsonb(NEW)`: datos personales en la cola de pg_net). Su código **no está en el repo**. Arreglo: chequear la clave de servicio, que el trigger mande sólo el id con la clave de Vault, y versionarla. Detectado el 2026-10-28 |
+| **`email-notifier` sin autenticación** 🔴 | `verify_jwt = false` y ningún chequeo. Cualquiera, sin sesión, le hace mandar "🎉 ¡Bienvenido como Anfitrión de Origen!" **a cualquier dirección** con el nombre que quiera (sin escapar en la plantilla), o emails a los admins, a Bienvenida y a cualquier anfitrión. Gasta la cuota compartida de Resend (100/día) y sirve para phishing desde el dominio de Origen. La llama `send_webhook_event` (5 triggers: `groups`, `users`, `leader_applications`, `welcome_visitors`) con la fila entera y sin clave. Detectado el 2026-10-28 |
+
+### Edge Functions (inventario del 2026-10-28)
+| función | en el repo | desplegada = repo | verify_jwt | chequea la clave | la llama | sin sesión, un tercero puede… | riesgo |
+|---|---|---|---|---|---|---|---|
+| `email-notifier` | sí | no (plantillas) | false | no | `send_webhook_event` (5 triggers) | mandar emails de Origen a cualquier dirección, a admins y a anfitriones, con texto propio sin escapar | 🔴 alto |
+| `send-dianino-tickets` | sí | sí | false | no | `notify_dianino_tickets` | mandar los emails con QR de Día del Niño (a las familias de la base) y gastar la cuota | alto |
+| `send-gcx-welcome` | sí | no | false | no | `notify_gcx_welcome` (con clave, que no mira) y el frontend | mandar en masa la bienvenida a inscriptos aprobados (ids en el pedido) y gastar la cuota | alto |
+| `send-group-confirmation` | sí | no | false | no | nadie (ni frontend ni triggers) | lo mismo que `send-gcx-welcome` | alto (y sin uso: borrarla) |
+| `welcome-reminder` | sí | no | false | no | cron semanal (`jobid 1`) | disparar el recordatorio a bienvenida@ y subir `form_reminder_count` | medio |
+| `prode-sync-results` | sí | no | false | no | cron cada 5 min y `AdminProde.tsx` | forzar la sincronización y el recálculo de puntos del Prode | medio |
+| `generate-image` | sí | no | true | no (sin rol) | el frontend | con la clave anon (pública), generar imágenes con la cuenta de Google de la iglesia | medio (costo) |
+| `send-whatsapp` | sí | no | false | no | nadie | nada (es un esqueleto que sólo escribe en el log el teléfono y el texto) | bajo (borrarla) |
+| `admin-manage-user` | sí | no | true | sí (sesión + SUPER_ADMIN) | el frontend | nada | bajo |
+| `notify-host` | sí | sí | false | **sí** | 2 triggers | nada | resuelto (2026-10-28) |
+| `send-nocturna-entrada` | sí | sí | true | sí | trigger y RPC | nada | bajo |
+| `send-nocturna-datos-faltantes` | sí | sí | true | sí | — | nada | bajo |
+| `send-reporte-problema` | sí | no (plantilla) | true | sí | trigger | nada | bajo |
+| `send-push` | sí | sí | true | sí | trigger | nada | bajo |
+
+Arreglo recomendado, en orden: `email-notifier` (bearer contra la clave de
+servicio + `send_webhook_event` con sólo el id y la clave de Vault + escapar
+las plantillas), `send-dianino-tickets`, `send-gcx-welcome` (aceptar la clave
+o una sesión de anfitrión del grupo), borrar `send-group-confirmation` y
+`send-whatsapp`, y después igualar repo y producción en las que difieren.
 
 ### Código
 - `react-joyride` 2.9 no declara soporte para React 19 (por eso hace falta
