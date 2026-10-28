@@ -24,7 +24,7 @@ import { useTema } from '../../contexts/TemaContext';
 import EditarPerfil, { CAMPOS_REQUERIDOS } from './miCuenta/EditarPerfil';
 import CuentaYSeguridad from './miCuenta/CuentaYSeguridad';
 import Privacidad from './miCuenta/Privacidad';
-import { Contacto, Reportar, SobreLaApp, Terminos, Tutoriales } from './miCuenta/Ayuda';
+import { Contacto, InstalarApp, Reportar, SobreLaApp, Terminos, Tutoriales } from './miCuenta/Ayuda';
 import {
     DetalleCompra, DetalleInscripcion, DondeSirvo, Historial, MisCompras,
     MisGrupos, MisInscripciones,
@@ -62,6 +62,7 @@ const TITULOS: Record<SeccionDeMiCuenta, string> = {
     tutoriales: 'Tutoriales',
     contacto: 'Escribile a la iglesia',
     reportar: 'Reportar un problema',
+    instalar: 'Instalar la app',
     app: 'Sobre la app',
 };
 
@@ -435,6 +436,7 @@ const MiCuenta: React.FC = () => {
         if (seccion === 'tutoriales') return <Tutoriales onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'contacto') return <Contacto onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'reportar') return <Reportar onVolver={esAncha ? undefined : volver} avisar={avisar} />;
+        if (seccion === 'instalar') return <InstalarApp onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'app') return <SobreLaApp onVolver={esAncha ? undefined : volver} />;
 
         // Las cinco de "Mi vida en Origen" todavía no están. La ruta existe

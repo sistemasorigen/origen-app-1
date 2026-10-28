@@ -34,21 +34,42 @@
   <script>
     (function () {
       var RETRY_KEY = 'origen_module_load_retry';
+      // Lo anota en el diagnóstico del aparato (Mi cuenta → Sobre la app),
+      // con la misma clave y la misma forma que src/utils/diagnostico.ts:
+      // esto corre antes de que ese módulo exista. Sin datos personales.
+      var anotar = function (detalle) {
+        try {
+          var k = 'origen_diagnostico';
+          var lista = JSON.parse(localStorage.getItem(k) || '[]');
+          if (!(lista instanceof Array)) lista = [];
+          lista.push({ t: Date.now(), tipo: 'mime', detalle: detalle });
+          while (lista.length > 30) lista.shift();
+          localStorage.setItem(k, JSON.stringify(lista));
+        } catch (e) { /* sin storage: no se anota */ }
+      };
       window.addEventListener('error', function (event) {
         var target = event.target;
         if (!target || target.tagName !== 'SCRIPT' || target.type !== 'module') return;
-        if (sessionStorage.getItem(RETRY_KEY)) return;
+        var yaSeIntento = false;
         try {
-          sessionStorage.setItem(RETRY_KEY, '1');
+          yaSeIntento = !!sessionStorage.getItem(RETRY_KEY);
+          if (!yaSeIntento) sessionStorage.setItem(RETRY_KEY, '1');
         } catch (e) {
           // sessionStorage no disponible (modo privado estricto, etc.) —
           // sin poder marcar el intento, mejor no reintentar que arriesgar
           // un loop.
+          anotar('el bundle no cargó y no se puede reintentar (sin sessionStorage)');
           return;
         }
+        if (yaSeIntento) {
+          anotar('el bundle tampoco cargó en el reintento; no se insiste');
+          return;
+        }
+        anotar('el bundle no cargó (MIME); se reintenta con _cb');
         var url = new URL(window.location.href);
         url.searchParams.set('_cb', Date.now().toString());
-        window.location.href = url.toString();
+        // replace y no href: el intento fallido no queda en el historial.
+        window.location.replace(url.toString());
       }, true);
     })();
   </script>
@@ -62,6 +83,33 @@
              font-src 'self' data: https://fonts.gstatic.com;">
   <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- SIN viewport-fit=cover, a propósito. Sin cover, el iPhone deja la
+       página adentro de la zona segura: con la app instalada y la barra de
+       estado en "default" (más abajo), la página arranca debajo de la hora y
+       termina arriba de la barra de gestos, y env(safe-area-inset-*) vale
+       cero en todos lados — en el navegador, en Android y en la compu queda
+       todo igual que antes. Con cover la página pasaría por debajo de las
+       dos, y habría que correr a mano el encabezado, el menú y las más de
+       veinte hojas y botoneras fijas de abajo (la lista está en la sección
+       27 de instrucciones_ia.md). -->
+
+  <!-- ═══ Instalable: pantalla de inicio en iPhone y Android ═══
+       Sin service worker, a propósito: no hay caché propia que pueda
+       quedarse con una versión vieja. El manifiesto y los íconos son del
+       mismo origen, así que la CSP (default-src 'self', img-src 'self') ya
+       los deja cargar; manifest-src cae en default-src.
+       theme-color es el blanco del encabezado: la barra de estado de Android
+       y la del navegador continúan la barra de la app en vez de cortarla. -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Origen" />
+  <!-- default: la barra de la hora va en su propia franja, con texto oscuro,
+       y la página empieza debajo. Con black-translucent la página pasaría por
+       debajo de la hora, y cada pantalla con algo arriba tendría que correrse. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Origen | App</title>
 
   <!-- ═══ La tarjeta que se arma cuando alguien comparte el link ═══

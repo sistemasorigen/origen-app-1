@@ -1502,6 +1502,7 @@ const App: React.FC = () => {
     const { updateAvailable, actualizacionFallida, forceHardReset, posponer } = useVersionCheck();
 
     return (
+        <>
         <ErrorBoundary>
             <ProveedorDeTema>
             <AudioProvider>
@@ -1511,19 +1512,27 @@ const App: React.FC = () => {
                             <HashRouter>
                                 <AppContent />
                             </HashRouter>
-                            {updateAvailable && (
-                                <ModalActualizacion
-                                    onConfirm={forceHardReset}
-                                    onPosponer={posponer}
-                                    fallido={actualizacionFallida}
-                                />
-                            )}
                         </ToastProvider>
                     </NotificationProvider>
                 </AuthProvider>
             </AudioProvider>
             </ProveedorDeTema>
         </ErrorBoundary>
+        {/* El cartel va AFUERA del ErrorBoundary a propósito. Cuando la
+            versión vieja se rompe contra algo que cambió con el deploy, el
+            boundary reemplaza todo lo que tiene adentro por su pantalla de
+            error, y si el cartel viviera ahí se desmontaba justo cuando más
+            hacía falta: la persona quedaba en "¡Algo salió mal!" sin que
+            nadie le dijera que había una versión nueva. No usa ningún
+            contexto de los de arriba. */}
+        {updateAvailable && (
+            <ModalActualizacion
+                onConfirm={forceHardReset}
+                onPosponer={posponer}
+                fallido={actualizacionFallida}
+            />
+        )}
+        </>
     );
 };
 

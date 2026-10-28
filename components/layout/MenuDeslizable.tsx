@@ -17,6 +17,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     LogOut,
+    RotateCw,
     LogIn,
     Star,
     Trophy,
@@ -35,6 +36,8 @@ import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { useSinLeer } from '../../contexts/NotificationContext';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
+import { recargarApp } from '../../hooks/useVersionCheck';
+import { estaInstalada } from '../../src/utils/instalacion';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Los tokens del diseño (design-claude/Menu Deslizable.dc)
@@ -1346,6 +1349,15 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     label="Configuración"
                                     onClick={() => handleNavigation('/perfil')}
                                 />
+                                {/* Sólo con la app instalada: ahí no hay barra
+                                    del navegador ni botón de recargar. */}
+                                {estaInstalada() && (
+                                    <FilaCuenta
+                                        icon={RotateCw}
+                                        label="Recargar app"
+                                        onClick={() => recargarApp('el menú')}
+                                    />
+                                )}
                                 <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
                                 <FilaCuenta
                                     icon={LogOut}

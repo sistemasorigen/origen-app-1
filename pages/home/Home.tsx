@@ -15,6 +15,7 @@ import SeccionDeBanner, { MUSICA, YOUVERS } from '../../components/inicio/Seccio
 import SeccionDeEnlaces from '../../components/inicio/SeccionDeEnlaces';
 import SeccionGruposParaVos from '../../components/inicio/SeccionGruposParaVos';
 import PieDeInicio from '../../components/inicio/PieDeInicio';
+import TarjetaInstalar from '../../components/inicio/TarjetaInstalar';
 import { useBannersDeInicio } from '../../src/hooks/useBannersDeInicio';
 
 // --- TUTORIAL INTEGRATION ---
@@ -502,6 +503,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         ancho completo quedan proporcionados; a 1400px se verían
                         estirados. Fila 2: grupos. Mobile apila en el orden del DOM. */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+
+                        {/* === INSTALAR LA APP — sólo en iPhone/iPad sin instalar,
+                            o en Android si Chrome ofrece instalarla === */}
+                        <TarjetaInstalar />
 
                         {/* === PRÓXIMOS EVENTOS — portada + contador + CTA, en carrusel === */}
                         {upcomingEventos.length > 0 && (

@@ -1771,6 +1771,75 @@ npm run deploy =
 porque el aviso por Realtime lo hace innecesario. La config de la Home se
 sigue cacheando en `localStorage`, como respaldo ante fallas de red.
 
+### Refuerzos del 2026-10-28 (iPhone con la app en el inicio)
+- `reloadWithCacheBust` usa **`location.replace`**, no `href`: con `href` la
+  página vieja quedaba en el historial y el gesto de volver del iPhone la
+  traía de la caché de atrás/adelante, con el cartel congelado en
+  "Actualizando…". Está **exportada**: "Recargar app" usa la misma
+  (`recargarApp(desde)`), no se duplica.
+- La consulta a `app_version` tiene **tope de 8 s** (`abortSignal`) y, si
+  falla, se reintenta sola a los **3 s y a los 10 s**.
+- Si la app estuvo **más de 12 h** en segundo plano, al volver se revisa sí o
+  sí, sin el freno de 20 s.
+- El cartel (`ModalActualizacion`) va **afuera del ErrorBoundary** en
+  `App.tsx`: adentro, una versión vieja rota lo desmontaba justo cuando hacía
+  falta. Su botón se vuelve a prender a los 8 s, o si la página vuelve de la
+  caché de atrás/adelante.
+- La limpieza de `caches` tiene tope de 1,5 s (no hay service worker; es por
+  las dudas y no puede trabar el botón).
+
+### Diagnóstico en el aparato (`src/utils/diagnostico.ts`)
+- 30 eventos en `localStorage` (`origen_diagnostico`): arranque, revisiones,
+  cartel, recarga y su resultado, vuelta del fondo, `window.onerror`,
+  `unhandledrejection`, lo que ataja el ErrorBoundary y el error de MIME
+  (el script de `index.html` escribe en la **misma clave y con la misma
+  forma**; si cambia una, cambiar la otra).
+- **Cero datos personales:** todo pasa por `limpiar()` (emails, uuids,
+  tokens, parámetros de URL y números de 6+ cifras salen).
+- Se ve y se copia en **Mi cuenta → Sobre la app → Diagnóstico de la app**.
+  Si alguien dice "la app no anda", pedirle eso por WhatsApp.
+
+### App instalable (sin service worker)
+- `public/manifest.webmanifest` (`start_url` `/#/`, `display` standalone),
+  íconos en `public/icons/` (generados con `scripts/generar-iconos.mjs`
+  desde `favicon.png`; volver a correrlo sólo si cambia el logo) y los
+  metadatos de iPhone en `index.html`. `public/icons/.htaccess` les da un año
+  de caché; el manifiesto va con `no-cache`.
+- **NO hay service worker.** Si se agrega uno (notificaciones push), que no
+  cachee: con caché propia, una app instalada puede quedarse con una versión
+  vieja para siempre.
+- `src/utils/instalacion.ts`: `estaInstalada()`, `plataforma()` y el aviso
+  `beforeinstallprompt` de Chrome (se escucha desde `index.tsx`, antes de
+  montar). La tarjeta del inicio (`components/inicio/TarjetaInstalar.tsx`) sale
+  en iPhone/iPad sin instalar y en Android si Chrome ofrece instalarla;
+  "Ahora no" la oculta 30 días. Los pasos también están en Mi cuenta →
+  Instalar la app.
+- "Recargar app" sólo aparece instalada: en el menú de la cuenta y en Mi
+  cuenta (Sobre la app e Instalar la app).
+
+### Márgenes seguros: SIN `viewport-fit=cover`
+Sin `cover`, el iPhone deja la página dentro de la zona segura (la barra de
+estado está en `default`), y `env(safe-area-inset-*)` vale 0 en todos lados.
+**Si algún día se agrega `cover`**, antes hay que sumar las inserciones en:
+- arriba: el encabezado (`Estructura.tsx`, `sticky top-0 h-16`, y el `-mt-16`
+  del inicio), el menú deslizable (`MenuDeslizable.tsx`, `pt-5` de la marca),
+  el toast (`ContextoToast.tsx`, `top-4`), `AvisoConexion.tsx` (`top-20`),
+  el aviso de `CompraVoluntarios.tsx` (`top: 20`);
+- abajo, botoneras fijas sin inserción: `formulario-grupo/index.tsx`,
+  `DetalleGrupoAnfitrion.tsx`, `PaginaAsistenciaGrupo.tsx`,
+  `AudienciaServiciosFormulario.tsx`, `CrearEventoGeneral.tsx` (`pb-[34px]`
+  fijo), `ReproductorGlobal.tsx`, y las hojas que suben desde abajo de
+  `RegistroAuditoriaAdmin`, `SinAcceso`, `BarraHerramientasGruposAdmin`,
+  `formulario-grupo`, `GCX/patron`, `SubidaImagen`, `miCuenta/piezas`,
+  `HojaDetalle`, `EnlacesOrigen`, `piezasAdmin`, `AdminGCXLayout`,
+  `DetalleDiaNino`, `DetalleNocturna`, `PaginaSolicitudesGrupo`,
+  `InfluosPagina`, `PaginaReportarStock` (modal) y `Notificaciones`;
+- las que ya suman `env(safe-area-inset-bottom)` (hoy valen 0):
+  `DetalleTarea`, `HojaGrupos`, `PanelGuardado`, `FormularioDelPunto`,
+  `MenuDeslizable` (pie), `Administrador`, `FormularioDepartamento`,
+  `SelectorDeRango`, `equipo/piezas`, `PaginaMovimientosVarios`,
+  `PaginaReportarStock`, `CompraVoluntarios`; y `Eventos.tsx` arriba.
+
 ---
 
 ## 28. MÓDULO EVENTOS
@@ -2062,8 +2131,8 @@ propia del Día del Niño y no se puede probar sin cámara).
 
 - **Dry run** de los reemplazos: confirmar que cada patrón matchea el conteo
   esperado antes de escribir, y abortar sin tocar nada si alguno falla.
-- **`tsc --noEmit`** contra el baseline: **104 líneas** desde el 2026-10-27
-  (bajó de 137 al eliminar las copias `*-IgnacioPC`), incluidos los errores de
+- **`tsc --noEmit`** contra el baseline: **99 líneas** desde el 2026-10-28
+  (104 el 27; antes 137, hasta que se eliminaron las copias `*-IgnacioPC`), incluidos los errores de
   tipos de Deno de las Edge Functions. Lo que importa es que no haya errores
   **nuevos**.
 - **`git diff` filtrado**: en un rediseño, solo deberían cambiar `className`.

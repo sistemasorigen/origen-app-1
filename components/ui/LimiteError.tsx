@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { registrar } from '../../src/utils/diagnostico';
 
 interface Props {
     children: ReactNode;
@@ -26,6 +27,11 @@ class ErrorBoundary extends Component<Props, State> {
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         console.error('ErrorBoundary caught an error:', error, errorInfo);
         this.setState({ errorInfo });
+        // Al diagnóstico del aparato (Mi cuenta → Sobre la app). Los errores
+        // que ataja un boundary no llegan a window.onerror, así que si no se
+        // anotan acá no quedan en ningún lado. Sólo el mensaje: `registrar`
+        // le saca lo que pueda identificar a alguien.
+        registrar('error', `pantalla de error: ${error?.message || error}`);
 
         // Log to console for debugging
         console.group('🔴 Error Boundary - Error Details');

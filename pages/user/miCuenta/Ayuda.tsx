@@ -12,6 +12,10 @@ import {
 import {
     COMO_LLEGAR, RESPONSABLE, TERMINOS, ULTIMA_ACTUALIZACION, WHATSAPP,
 } from '../../../src/legal/terminosYPrivacidad';
+import { NOTA_REINSTALAR, PasosDeInstalacion } from '../../../components/instalacion/PasosDeInstalacion';
+import { pedirInstalacion, useInstalacion } from '../../../src/utils/instalacion';
+import { recargarApp } from '../../../hooks/useVersionCheck';
+import { DiagnosticoDeLaApp } from './DiagnosticoDeLaApp';
 
 declare const __BUILD_VERSION__: string;
 
@@ -487,10 +491,91 @@ export const Reportar: React.FC<{ onVolver?: () => void; avisar: (t: string) => 
     );
 };
 
+// ── Recargar la app ─────────────────────────────────────────────────────
+
+/**
+ * Sólo con la app instalada: ahí no hay barra del navegador ni botón de
+ * recargar, y si algo queda raro la única salida era cerrarla y abrirla.
+ */
+const RecargarApp: React.FC<{ className?: string }> = ({ className = '' }) => {
+    const [recargando, setRecargando] = useState(false);
+    return (
+        <BotonSecundario
+            className={`min-h-[48px] ${className}`}
+            disabled={recargando}
+            onClick={() => { setRecargando(true); recargarApp('Mi cuenta'); }}
+        >
+            {recargando ? <Girito /> : <Icono d="M19.5 12a7.5 7.5 0 11-2.2-5.3M19.5 4.5v3.5H16" tam={18} />}
+            Recargar app
+        </BotonSecundario>
+    );
+};
+
+// ── Instalar la app ─────────────────────────────────────────────────────
+
+export const InstalarApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => {
+    const { plataforma, instalada, puedeInstalar } = useInstalacion();
+    const [instalando, setInstalando] = useState(false);
+
+    const instalar = async () => {
+        setInstalando(true);
+        await pedirInstalacion();
+        setInstalando(false);
+    };
+
+    // Primero los pasos del aparato que se está usando.
+    const sistemas: Array<'iphone' | 'android'> = plataforma === 'android' ? ['android', 'iphone'] : ['iphone', 'android'];
+
+    return (
+        <>
+            <EncabezadoSubpagina titulo="Instalar la app" onVolver={onVolver} />
+
+            {instalada ? (
+                <div className={`${TARJETA} mt-[22px] p-[18px]`} style={ESTILO_TARJETA}>
+                    <p className="m-0 flex items-center gap-2 text-[15.5px] font-semibold">
+                        <span style={{ color: '#34c759' }}><Icono d={ICONOS.tilde} tam={18} grosor={3} /></span>
+                        Ya la estás usando instalada
+                    </p>
+                    <p className="mt-1.5 mb-0 text-[14px] leading-[1.5] font-medium" style={{ color: 'var(--mc-m66)' }}>
+                        Si algo se ve raro o no carga, recargala desde acá.
+                    </p>
+                    <RecargarApp className="mt-3.5" />
+                </div>
+            ) : (
+                <p className="mt-2.5 mb-0 text-[14.5px] leading-[1.5] font-medium text-pretty" style={{ color: 'var(--mc-m66)' }}>
+                    Origen queda en tu pantalla de inicio y se abre a pantalla completa, como cualquier app.
+                </p>
+            )}
+
+            {!instalada && puedeInstalar && (
+                <BotonPrimario ancho className="mt-5" disabled={instalando} onClick={instalar}>
+                    {instalando ? <Girito sobreOscuro /> : null}
+                    Instalar app
+                </BotonPrimario>
+            )}
+
+            {sistemas.map(sistema => (
+                <React.Fragment key={sistema}>
+                    <Rotulo className="mt-7 mb-2.5 ml-1.5">{sistema === 'iphone' ? 'EN IPHONE O IPAD' : 'EN ANDROID'}</Rotulo>
+                    <div className={`${TARJETA} p-[18px] pt-5`} style={{ ...ESTILO_TARJETA, color: 'var(--mc-ink)' }}>
+                        <PasosDeInstalacion sistema={sistema} />
+                        {sistema === 'iphone' && (
+                            <p className="mt-4 mb-0 text-[13.5px] leading-[1.5] font-medium" style={{ color: 'var(--mc-m66)' }}>
+                                {NOTA_REINSTALAR}
+                            </p>
+                        )}
+                    </div>
+                </React.Fragment>
+            ))}
+        </>
+    );
+};
+
 // ── Sobre la app ────────────────────────────────────────────────────────
 
 export const SobreLaApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) => {
     const version = typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : 'dev';
+    const { instalada } = useInstalacion();
     const [estado, setEstado] = useState<'quieto' | 'buscando' | 'ultima' | 'nueva' | 'error'>('quieto');
     const vivo = useRef(true);
     useEffect(() => () => { vivo.current = false; }, []);
@@ -573,10 +658,21 @@ export const SobreLaApp: React.FC<{ onVolver?: () => void }> = ({ onVolver }) =>
                 )}
             </div>
 
+            {instalada && (
+                <div className={`${TARJETA} mt-3 p-[18px] flex flex-col items-center text-center`} style={ESTILO_TARJETA}>
+                    <p className="m-0 text-[14.5px] font-medium" style={{ color: 'var(--mc-m66)' }}>
+                        Si algo se ve raro o no carga, recargala.
+                    </p>
+                    <RecargarApp className="mt-3.5" />
+                </div>
+            )}
+
             <p className="mt-6 mb-0 text-center text-[14px] leading-[1.6] font-medium text-pretty" style={{ color: 'var(--mc-m66)' }}>
                 Hecha por el equipo de tecnología de {RESPONSABLE.nombre}, con la ayuda de voluntarios.
                 <br />© 2026 {RESPONSABLE.razonSocial}
             </p>
+
+            <DiagnosticoDeLaApp />
         </>
     );
 };

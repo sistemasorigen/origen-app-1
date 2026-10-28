@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
@@ -18,6 +18,26 @@ const ModalActualizacion: React.FC<ModalActualizacionProps> = ({ onConfirm, onPo
     // Siempre visible mientras está montado: bloquea desde que aparece.
     useBloqueoDeFondo(true);
     const [reloading, setReloading] = useState(false);
+
+    /**
+     * El botón no puede quedar apagado para siempre.
+     *
+     * Si la página sigue acá un rato después de pedir la recarga, la
+     * navegación no arrancó (o el iPhone devolvió esta misma página desde la
+     * caché de atrás/adelante, con el estado congelado tal cual estaba). Sin
+     * esto el cartel bloqueante quedaba en "Actualizando…" sin ningún botón
+     * que respondiera, y la única salida era cerrar la app.
+     */
+    useEffect(() => {
+        if (!reloading) return;
+        const t = window.setTimeout(() => setReloading(false), 8000);
+        return () => window.clearTimeout(t);
+    }, [reloading]);
+    useEffect(() => {
+        const alRestaurar = (e: PageTransitionEvent) => { if (e.persisted) setReloading(false); };
+        window.addEventListener('pageshow', alRestaurar);
+        return () => window.removeEventListener('pageshow', alRestaurar);
+    }, []);
 
     const handleConfirm = () => {
         setReloading(true);

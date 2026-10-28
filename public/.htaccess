@@ -19,6 +19,26 @@
   </FilesMatch>
 </IfModule>
 
+# ── App instalable ─────────────────────────────────────────────────────
+# El manifiesto con su tipo propio: sin esto Apache lo manda como
+# text/plain (o, si faltara el archivo, el fallback de abajo devuelve
+# index.html) y Chrome no lo toma como instalable.
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+<IfModule mod_headers.c>
+  # El manifiesto se revalida siempre: si cambia el nombre o un ícono, que
+  # los teléfonos lo vean en la próxima visita y no en cuatro meses (el
+  # hosting le pone 120 días de caché a todo lo estático por su cuenta).
+  <FilesMatch "\.webmanifest$">
+    Header always set Cache-Control "no-cache"
+  </FilesMatch>
+  # La caché larga de /icons/ está en public/icons/.htaccess: acá haría
+  # falta un <If>, y en un Apache anterior a 2.4 eso tira 500 en todo el
+  # sitio.
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

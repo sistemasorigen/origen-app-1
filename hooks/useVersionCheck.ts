@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { anotarRevision, fechaYHora, registrar } from '../src/utils/diagnostico';
 
 // Embebido en el bundle vía `define` en vite.config.ts, a partir de
 // scripts/generate-build-version.js. Ver el comentario de reloadWithCacheBust
@@ -35,6 +36,34 @@ const ESPERA_ENTRE_CONSULTAS_MS = 20_000;
  * medio.
  */
 const INTERVALO_A_LA_VISTA_MS = 90_000;
+
+/**
+ * Cuándo se reintenta una revisión que falló, sin esperar al intervalo.
+ *
+ * Al volver de otra app —sobre todo en el iPhone— la red tarda un par de
+ * segundos en despertar y la primera consulta suele ser justo la que falla.
+ * Esperar los 90 s del intervalo era dejar a la persona ese rato en la
+ * versión vieja.
+ */
+const REINTENTOS_MS = [3_000, 10_000];
+
+/**
+ * Cuánto se le espera a la consulta antes de darla por fallida.
+ *
+ * Con la red a medio despertar, un fetch en iOS puede quedarse colgado un
+ * minuto entero. Mientras tanto no hay error que dispare los reintentos.
+ */
+const TOPE_DE_CONSULTA_MS = 8_000;
+
+/**
+ * Después de tanto tiempo en segundo plano, al volver se revisa sí o sí,
+ * sin el freno de los 20 s. Un teléfono que se dejó con la app abierta a la
+ * noche casi seguro se perdió un deploy.
+ */
+const LARGA_AUSENCIA_MS = 12 * 60 * 60 * 1000;
+
+/** Desde cuánto tiempo afuera vale la pena anotar la vuelta en el diagnóstico. */
+const AUSENCIA_QUE_SE_ANOTA_MS = 5 * 60 * 1000;
 
 // El reload destruye todo el estado de React, así que lo único que
 // sobrevive de un intento a otro es lo que quedó en sessionStorage antes
@@ -72,10 +101,30 @@ const FALLO_STORAGE_KEY = 'origen_version_fallo';
 // funciona — no queda nada pendiente de reintentar.
 const MODULE_LOAD_RETRY_KEY = 'origen_module_load_retry';
 
+/**
+ * Qué versión corría cuando se tocó "Recargar app". Al volver a montar se
+ * compara con la que llegó, para que el diagnóstico diga si la recarga
+ * cambió algo.
+ */
+const RECARGA_MANUAL_KEY = 'origen_recarga_manual';
+
 interface PendingReset {
     expectedVersion: string;
     attempts: number;
 }
+
+/** sessionStorage puede tirar (ventana privada estricta): nada de esto puede voltear la app. */
+const leerSesion = (clave: string): string | null => {
+    try { return sessionStorage.getItem(clave); } catch { return null; }
+};
+const escribirSesion = (clave: string, valor: string | null): void => {
+    try {
+        if (valor === null) sessionStorage.removeItem(clave);
+        else sessionStorage.setItem(clave, valor);
+    } catch { /* sin storage */ }
+};
+
+const corta = (v?: string | null) => (v ? v.slice(0, 7) : '—');
 
 /**
  * Recarga agregando un cache-buster a la URL, sin tocar el fragmento hash.
@@ -86,11 +135,28 @@ interface PendingReset {
  * servidor y para cualquier caché HTTP, que nunca llega a ver el hash — y
  * no serviría para nada. El objeto URL arma el query string real, antes
  * del `#`, sin importar qué router esté activo.
+ *
+ * Con `replace` y no asignando `href`: asignar deja la página vieja en el
+ * historial. En el iPhone con la app en el inicio, el gesto de deslizar
+ * desde el borde vuelve atrás, y volvía a ESA página —restaurada de la caché
+ * de atrás/adelante, con el cartel congelado en "Actualizando…" y el botón
+ * apagado—. Desde ahí no había salida más que cerrar la app. Además, cada
+ * reintento sumaba otra entrada.
  */
-const reloadWithCacheBust = () => {
+export const reloadWithCacheBust = () => {
     const url = new URL(window.location.href);
     url.searchParams.set('_cb', Date.now().toString());
-    window.location.href = url.toString();
+    window.location.replace(url.toString());
+};
+
+/**
+ * "Recargar app" del menú y de Mi cuenta: la misma recarga que el cartel,
+ * anotada en el diagnóstico con desde dónde se pidió.
+ */
+export const recargarApp = (desde: string) => {
+    registrar('recarga', `"Recargar app" desde ${desde}, en ${corta(__BUILD_VERSION__)}`);
+    escribirSesion(RECARGA_MANUAL_KEY, __BUILD_VERSION__);
+    reloadWithCacheBust();
 };
 
 export function useVersionCheck() {
@@ -138,14 +204,13 @@ export function useVersionCheck() {
             return publicada > MOMENTO_DEL_BUILD;
         };
 
-        const avisar = (version: string) => {
+        const avisar = (version: string, por: string) => {
             if (avisadoRef.current) return;
             // Ya dijo "ahora no" para esta misma versión: no se vuelve a
             // preguntar hasta que cierre la pestaña.
-            try {
-                if (sessionStorage.getItem(POSPUESTA_STORAGE_KEY) === version) return;
-            } catch { /* sin storage: se avisa igual */ }
+            if (leerSesion(POSPUESTA_STORAGE_KEY) === version) return;
             avisadoRef.current = true;
+            registrar('cartel', `versión ${corta(version)} (aviso por ${por}), corriendo ${corta(__BUILD_VERSION__)}`);
             // Se guarda para que forceHardReset sepa, sin volver a
             // preguntarle a la base, qué build está esperando.
             pendingVersionRef.current = version;
@@ -162,44 +227,99 @@ export function useVersionCheck() {
          * deploy que ocurrió mientras tanto no llega nunca, y al volver la
          * app seguía sin enterarse de que había una versión nueva.
          */
-        const revisar = async () => {
+        /** Cuál de REINTENTOS_MS toca, y el temporizador del que está esperando. */
+        let reintento = 0;
+        let temporizadorReintento = 0;
+
+        const revisar = async (motivo: string, forzar = false) => {
             if (cancelado || avisadoRef.current) return;
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 
             const ahora = Date.now();
-            if (ahora - ultimaConsultaRef.current < ESPERA_ENTRE_CONSULTAS_MS) return;
+            if (!forzar && ahora - ultimaConsultaRef.current < ESPERA_ENTRE_CONSULTAS_MS) return;
             ultimaConsultaRef.current = ahora;
 
-            const { data, error } = await supabase
-                .from('app_version')
-                .select('version, updated_at')
-                .eq('id', 1)
-                .single();
+            const tope = new AbortController();
+            const corte = window.setTimeout(() => tope.abort(), TOPE_DE_CONSULTA_MS);
+            let data: { version?: string | null; updated_at?: string | null } | null = null;
+            let falla = '';
+            try {
+                const r = await supabase
+                    .from('app_version')
+                    .select('version, updated_at')
+                    .eq('id', 1)
+                    .abortSignal(tope.signal)
+                    .single();
+                data = r.data;
+                if (r.error || !r.data) falla = r.error?.message || 'sin datos';
+            } catch (e) {
+                falla = e instanceof Error ? e.message : String(e);
+            } finally {
+                window.clearTimeout(corte);
+            }
+            if (tope.signal.aborted) falla = `sin respuesta en ${TOPE_DE_CONSULTA_MS / 1000} s`;
 
             if (cancelado) return;
-            if (error || !data) {
+            if (falla || !data) {
                 // Un fallo no cuenta como consulta hecha: si no, el freno de
                 // arriba bloqueaba el reintento durante 20 segundos, y al
                 // volver de otra app el primer intento suele ser justo el
                 // que falla.
                 ultimaConsultaRef.current = 0;
+                anotarRevision(`falló (${motivo}): ${falla}`);
+                // Y no se espera al próximo evento ni al intervalo: se vuelve
+                // a probar a los 3 s y a los 10 s.
+                if (reintento < REINTENTOS_MS.length && !temporizadorReintento) {
+                    const espera = REINTENTOS_MS[reintento++];
+                    temporizadorReintento = window.setTimeout(() => {
+                        temporizadorReintento = 0;
+                        revisar('reintento', true);
+                    }, espera);
+                }
                 return;
             }
-            if (esMasNueva(data)) avisar(data.version);
+            reintento = 0;
+            if (esMasNueva(data)) {
+                anotarRevision(`hay otra: ${corta(data.version)}, publicada ${data.updated_at ? fechaYHora(Date.parse(data.updated_at), false) : '—'}`);
+                avisar(data.version as string, motivo);
+            } else {
+                anotarRevision(`al día (${corta(data.version)})`);
+            }
         };
 
-        revisar();
+        revisar('inicio');
+
+        // Cuándo se fue la app al fondo, para saber al volver cuánto estuvo
+        // afuera. El momento sale de acá y no del intervalo porque en el
+        // fondo los temporizadores están congelados.
+        let ocultaDesde = 0;
 
         // Los tres eventos de "volví": en iOS el que manda suele ser
         // pageshow (la página vuelve de la caché de atrás/adelante, y ahí no
         // hay visibilitychange), en Android visibilitychange, y focus cubre
         // el escritorio cuando se cambia de ventana sin ocultar la pestaña.
         // Disparan juntos muchas veces; para eso está el freno de arriba.
-        const alVolver = () => { revisar(); };
-        const periodico = window.setInterval(() => { revisar(); }, INTERVALO_A_LA_VISTA_MS);
+        const alVolver = () => {
+            if (document.visibilityState === 'hidden') {
+                if (!ocultaDesde) ocultaDesde = Date.now();
+                return;
+            }
+            const afuera = ocultaDesde ? Date.now() - ocultaDesde : 0;
+            ocultaDesde = 0;
+            if (afuera >= AUSENCIA_QUE_SE_ANOTA_MS) {
+                registrar('volvio', `después de ${Math.round(afuera / 60_000)} min`);
+            }
+            // Cada vuelta es una oportunidad nueva: los reintentos arrancan
+            // de cero.
+            reintento = 0;
+            revisar('volver', afuera >= LARGA_AUSENCIA_MS);
+        };
+        const alIrse = () => { if (!ocultaDesde) ocultaDesde = Date.now(); };
+        const periodico = window.setInterval(() => { revisar('intervalo'); }, INTERVALO_A_LA_VISTA_MS);
         document.addEventListener('visibilitychange', alVolver);
         window.addEventListener('pageshow', alVolver);
         window.addEventListener('focus', alVolver);
+        window.addEventListener('pagehide', alIrse);
 
         // Realtime sigue siendo el camino rápido para quien SÍ tiene la app
         // abierta en ese momento: el aviso le llega en el acto, sin esperar
@@ -215,7 +335,7 @@ export function useVersionCheck() {
                     // después de que este bundle se cargó. Alcanza con que
                     // sea otra versión que la que estoy sirviendo.
                     const fila = payload.new as { version?: string };
-                    if (esOtraVersion(fila?.version)) avisar(fila.version as string);
+                    if (esOtraVersion(fila?.version)) avisar(fila.version as string, 'realtime');
                 }
             )
             .subscribe();
@@ -225,7 +345,9 @@ export function useVersionCheck() {
             document.removeEventListener('visibilitychange', alVolver);
             window.removeEventListener('pageshow', alVolver);
             window.removeEventListener('focus', alVolver);
+            window.removeEventListener('pagehide', alIrse);
             window.clearInterval(periodico);
+            window.clearTimeout(temporizadorReintento);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -243,27 +365,41 @@ export function useVersionCheck() {
         // porque el módulo principal cargó bien esta vez — lo que haya
         // quedado marcado por el listener de index.html ya cumplió su
         // función.
-        sessionStorage.removeItem(MODULE_LOAD_RETRY_KEY);
+        //
+        // Todo el acceso a sessionStorage va por leerSesion/escribirSesion:
+        // App monta este hook AFUERA del ErrorBoundary, así que un throw acá
+        // dejaba la pantalla en blanco sin nada que lo atajara.
+        escribirSesion(MODULE_LOAD_RETRY_KEY, null);
 
-        const raw = sessionStorage.getItem(RESET_STORAGE_KEY);
+        const manual = leerSesion(RECARGA_MANUAL_KEY);
+        if (manual) {
+            escribirSesion(RECARGA_MANUAL_KEY, null);
+            registrar('resultado', manual === __BUILD_VERSION__
+                ? `"Recargar app": sigue en ${corta(__BUILD_VERSION__)}`
+                : `"Recargar app": de ${corta(manual)} a ${corta(__BUILD_VERSION__)}`);
+        }
+
+        const raw = leerSesion(RESET_STORAGE_KEY);
         if (!raw) return;
 
         let pending: PendingReset;
         try {
             pending = JSON.parse(raw);
         } catch {
-            sessionStorage.removeItem(RESET_STORAGE_KEY);
+            escribirSesion(RESET_STORAGE_KEY, null);
             return;
         }
 
         if (__BUILD_VERSION__ === pending.expectedVersion) {
             // Llegó el build correcto: listo, no queda nada pendiente.
-            sessionStorage.removeItem(RESET_STORAGE_KEY);
+            escribirSesion(RESET_STORAGE_KEY, null);
+            registrar('resultado', `esperaba ${corta(pending.expectedVersion)}, llegó ${corta(__BUILD_VERSION__)} (intento ${pending.attempts}) ✓`);
             return;
         }
 
+        registrar('resultado', `esperaba ${corta(pending.expectedVersion)}, llegó ${corta(__BUILD_VERSION__)} (intento ${pending.attempts})`);
         if (pending.attempts < MAX_RESET_ATTEMPTS) {
-            sessionStorage.setItem(RESET_STORAGE_KEY, JSON.stringify({
+            escribirSesion(RESET_STORAGE_KEY, JSON.stringify({
                 expectedVersion: pending.expectedVersion,
                 attempts: pending.attempts + 1
             }));
@@ -273,10 +409,10 @@ export function useVersionCheck() {
             // propagar los archivos, o hay algo genuinamente roto. Mejor
             // quedarse con una versión vieja pero usable que insistir en un
             // loop de reloads que la persona ni puede frenar a mano.
-            sessionStorage.removeItem(RESET_STORAGE_KEY);
+            escribirSesion(RESET_STORAGE_KEY, null);
             // Queda anotado para que el cartel diga la verdad —que el reload
             // ya se probó y no alcanzó— en vez de volver a pedir lo mismo.
-            try { sessionStorage.setItem(FALLO_STORAGE_KEY, pending.expectedVersion); } catch { /* sin storage */ }
+            escribirSesion(FALLO_STORAGE_KEY, pending.expectedVersion);
             setActualizacionFallida(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,8 +443,15 @@ export function useVersionCheck() {
     const forceHardReset = async () => {
         try {
             if ('caches' in window) {
-                const keys = await caches.keys();
-                await Promise.all(keys.map(key => caches.delete(key)));
+                // Con tope: la app no usa service worker y no tiene nada en
+                // CacheStorage, así que esto es sólo por las dudas — y no
+                // puede ser lo que deje el botón girando para siempre si la
+                // promesa no vuelve.
+                const limpiar = (async () => {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(key => caches.delete(key)));
+                })();
+                await Promise.race([limpiar, new Promise(r => setTimeout(r, 1500))]);
             }
         } catch {
             // Si falla la limpieza de caché, igual seguimos con el reload.
@@ -319,12 +462,13 @@ export function useVersionCheck() {
         // consiguió — sin esto no habría forma de distinguir un reload
         // exitoso de uno que sirvió el mismo HTML viejo de nuevo.
         if (pendingVersionRef.current) {
-            sessionStorage.setItem(RESET_STORAGE_KEY, JSON.stringify({
+            escribirSesion(RESET_STORAGE_KEY, JSON.stringify({
                 expectedVersion: pendingVersionRef.current,
                 attempts: 1
             }));
         }
 
+        registrar('recarga', `desde el cartel: ${corta(__BUILD_VERSION__)} → ${corta(pendingVersionRef.current)}`);
         reloadWithCacheBust();
     };
 

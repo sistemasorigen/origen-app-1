@@ -16,7 +16,7 @@ export type SeccionDeMiCuenta =
     | 'editar' | 'grupos' | 'historial' | 'compras' | 'inscripciones' | 'servicio'
     | 'solicitudes'
     | 'seguridad' | 'privacidad' | 'terminos' | 'tutoriales' | 'contacto'
-    | 'reportar' | 'app';
+    | 'reportar' | 'instalar' | 'app';
 
 export interface ConteosDeMiCuenta {
     grupos: number;
@@ -237,6 +237,8 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                             activa={activa === 'reportar'} onClick={() => onIr('reportar')} />
                         <Fila icono={ICONOS.documento} nombre="Términos y privacidad"
                             activa={activa === 'terminos'} onClick={() => onIr('terminos')} />
+                        <Fila icono={ICONOS.celular} nombre="Instalar la app en tu teléfono"
+                            activa={activa === 'instalar'} onClick={() => onIr('instalar')} />
                         <Fila icono={ICONOS.info} nombre="Sobre la app" valor={version}
                             activa={activa === 'app'} onClick={() => onIr('app')} />
                     </GrupoDeFilas>
