@@ -4,6 +4,7 @@ import { db } from './dbService';
 import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
 import { padronDeReunion } from '../src/utils/asistencia';
+import { registrar } from '../src/utils/diagnostico';
 import type { CompromisoGCX } from '../src/utils/gruposMismoDia';
 import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
 
@@ -1647,6 +1648,19 @@ export const probarConexionBase = async (): Promise<boolean> => {
 
 export const supabaseService = {
   // --- NOTIFICATIONS ---
+  /**
+   * Crea un aviso para otra persona (o para uno mismo).
+   *
+   * Desde el 2026-10-28 no se inserta directo en app_notifications: la tabla
+   * ya no lo permite. Pasa por la RPC crear_aviso (sql/avisos_seguros.sql),
+   * que valida el tipo, los textos, la ruta y que quien avisa tenga relación
+   * con quien recibe (anfitrión ↔ inscripto, gestor de grupos, uno mismo).
+   *
+   * NUNCA rompe el flujo que lo llama: si la base lo rechaza, devuelve false,
+   * lo anota en la consola y en el diagnóstico (sólo el tipo y el motivo, sin
+   * nombres ni ids) y sigue. Inscribirse, aprobar o tomar asistencia andan
+   * aunque el aviso no salga.
+   */
   async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null): Promise<boolean> {
     try {
       if (!userId) {
@@ -1654,23 +1668,32 @@ export const supabaseService = {
         return false;
       }
 
-      const { error } = await supabase
-        .from('app_notifications')
-        .insert({
-          user_id: userId,
-          title,
-          message,
-          type,
-          action_url: actionUrl
-        });
+      // Los mismos topes que la base (120 y 500): una nota de rechazo larga
+      // recorta el aviso en vez de perderlo.
+      const recortar = (t: string, max: number) => {
+        const limpio = String(t ?? '').trim();
+        return limpio.length > max ? `${limpio.slice(0, max - 1).trimEnd()}…` : limpio;
+      };
 
-      if (error) {
-        console.error('[Notifications] Error creating notification:', error);
+      const { data, error } = await supabase.rpc('crear_aviso', {
+        p_destinatario: userId,
+        p_tipo: type,
+        p_titulo: recortar(title, 120),
+        p_mensaje: recortar(message, 500),
+        p_url: actionUrl,
+      });
+
+      const r = data as { ok?: boolean; motivo?: string } | null;
+      if (error || !r?.ok) {
+        const motivo = error?.message ?? r?.motivo ?? 'sin respuesta';
+        console.error('[Notifications] No se creó el aviso:', type, motivo);
+        registrar('error', `aviso ${type} no creado: ${motivo}`);
         return false;
       }
       return true;
     } catch (err) {
       console.error('[Notifications] Exception creating notification:', err);
+      registrar('error', `aviso ${type} no creado: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   },
@@ -4090,18 +4113,6 @@ export const supabaseService = {
 
 
 
-      // If REJECTED, also clear partner data to clean up
-      if (status === 'REJECTED') {
-        await supabase
-          .from('group_registrations')
-          .update({
-            partner_data: null,
-            partner_user_id: null
-          })
-          .eq('id', id);
-
-      }
-
       // Send notifications
       if (data === true && regInfo) {
         const groupData: any = regInfo.groups;
@@ -4120,6 +4131,20 @@ export const supabaseService = {
         if (regInfo.partner_user_id) {
           await supabaseService.createAppNotification(regInfo.partner_user_id, notifTitle, notifMessage, type, actionUrl);
         }
+      }
+
+      // If REJECTED, also clear partner data to clean up.
+      // Va DESPUÉS de los avisos: crear_aviso sólo deja avisarle a la pareja
+      // mientras figura en la inscripción, y esto la saca.
+      if (status === 'REJECTED') {
+        await supabase
+          .from('group_registrations')
+          .update({
+            partner_data: null,
+            partner_user_id: null
+          })
+          .eq('id', id);
+
       }
 
       // RPC returns true on success, false on failure

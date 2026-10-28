@@ -637,6 +637,7 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
 | `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
 | `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
+| `notify-host` | Avisos y emails a anfitriones: "Nueva solicitud de ingreso" (la dispara `notify_host_new_registration` en cada inscripción), recordatorio de asistencia y un modo `test_all`. **Su código no está en el repo y no exige ninguna clave** (ver sección 38). |
 | `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). La dispara `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo de `app_notifications`, sólo si esa persona tiene alguna suscripción. Acepta **sólo** la clave de servicio. Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. |
 | `send-agenda-aviso` | Emails de Agenda Origen: "Tarea asignada" y "Tarea completada". La dispara `trg_agenda_tareas_avisar` con `{tarea_id, tipo}`; lee los avisos `'pendiente'` de `agenda_avisos`. Acepta **sólo** la clave de servicio. Modo `{modo:'prueba', tipo}`: datos inventados, sólo a Sistemas. |
 
@@ -820,6 +821,13 @@ Las ocho tienen RLS y **ninguna policy de escritura**: todo va por RPC.
 9. **Cerrar una policy puede romper algo que la usaba.** Antes de restringir,
    buscar qué código lee o escribe esa tabla directo (no por RPC), y con qué
    rol. Si un panel queda vacío sin error, falta un rol en la policy.
+9b. **Los avisos (`app_notifications`) se crean SÓLO con `crear_aviso`**
+    (`sql/avisos_seguros.sql`) o desde la base (triggers y funciones
+    SECURITY DEFINER). La tabla no tiene policy de INSERT y `authenticated`
+    no tiene permiso de INSERT. Un tipo de aviso nuevo desde el frontend
+    necesita sumarse a la lista blanca de `crear_aviso` **con su regla de
+    relación** (quién le puede avisar a quién). Llegan como push al teléfono:
+    nunca dejar un camino para mandarle cualquier texto a cualquiera.
 
 ### Edge Functions
 10. **`verify_jwt` no alcanza**: la clave `anon` es un JWT válido y viaja en el
@@ -2210,7 +2218,7 @@ propia del Día del Niño y no se puede probar sin cámara).
 | Protección de contraseñas filtradas | Toggle manual en el dashboard de Supabase |
 | `pg_net` y `pg_trgm` en el schema `public` | Moverlos se prueba primero en una rama |
 | `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
-| `app_notifications`: la policy de INSERT es `WITH CHECK (true)` para `authenticated` | Cualquiera con sesión puede crear un aviso para cualquier otra persona, y desde octubre de 2026 eso llega como **push a su teléfono**. Varias pantallas crean avisos para otros desde el frontend (`createAppNotification`), así que cerrarla requiere pasarlas a RPC primero (fase 2b de la auditoría) |
+| **`notify-host` (Edge Function) sin autenticación** | Desplegada con `verify_jwt = false` y sin chequear la clave, inserta avisos con la clave de servicio (se saltea RLS) y manda emails. Cualquiera, sin sesión, puede pedirle `{type:'test_all', user_id}` (3 avisos + 3 emails a esa persona) o una "inscripción" inventada (aviso + email con cualquier texto al anfitrión de cualquier grupo). Con push, eso llega al teléfono. Además el trigger `notify_host_new_registration` le manda la fila entera de la inscripción (`to_jsonb(NEW)`: datos personales en la cola de pg_net). Su código **no está en el repo**. Arreglo: chequear la clave de servicio, que el trigger mande sólo el id con la clave de Vault, y versionarla. Detectado el 2026-10-28 |
 
 ### Código
 - `react-joyride` 2.9 no declara soporte para React 19 (por eso hace falta
