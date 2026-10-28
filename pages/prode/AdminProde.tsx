@@ -631,51 +631,65 @@ const AdminProdeContent: React.FC = () => {
         }
     };
 
+    /**
+     * Pide la sincronización con worldcup26.ir.
+     *
+     * Hasta el 2026-10-28 esto llamaba a la edge function prode-sync-results
+     * directo, con el token de la persona — que la función no miraba: tenía
+     * verify_jwt en false y ningún chequeo, así que cualquiera, sin sesión,
+     * podía forzar la sincronización y el recálculo de puntos. Ahora pasa por
+     * la RPC prode_sincronizar(), que valida el rol PRODE o SUPER_ADMIN y
+     * encola el pedido del lado del servidor (sql/fase3_seguridad_crons.sql).
+     *
+     * El pedido queda ENCOLADO: la función corre después, por su cuenta. Así
+     * que acá se espera unos segundos y se vuelve a leer la tabla para contar
+     * qué cambió, en vez de leerlo de la respuesta.
+     */
     const handleManualSync = async () => {
         setIsSyncing(true);
         setSyncUpdatedMatches([]);
         const beforeFinished = new Set(prodeMatches.filter(m => m.isFinished).map(m => m.id));
-        try {
-            const session = (await supabase.auth.getSession()).data.session;
-            const res = await fetch(
-                'https://oqtumgalnozppqnnjjdb.supabase.co/functions/v1/prode-sync-results',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session?.access_token}`
-                    }
-                }
-            );
-            if (!res.ok) {
-                const text = await res.text().catch(() => '');
-                const msg = `Error ${res.status}: ${text.slice(0, 120)}`;
-                setLastSyncResult(msg);
-                localStorage.setItem('prode_last_sync', msg);
-                return;
-            }
-            const result = await res.json();
-            const timeStr = new Date().toLocaleTimeString('es-AR');
-            const syncMsg = `${timeStr} · ${result.matchesUpdated} partido(s) actualizado(s)`;
-            setLastSyncResult(syncMsg);
-            localStorage.setItem('prode_last_sync', syncMsg);
-            if (result.matchesUpdated > 0) {
-                const [matches, ranking] = await Promise.all([
-                    supabaseService.getProdeMatches(),
-                    supabaseService.getProdeRanking(),
-                ]);
-                setProdeMatches(matches);
-                setProdeRanking(ranking);
-                const updated = matches
-                    .filter(m => m.isFinished && !beforeFinished.has(m.id))
-                    .map(m => `${m.homeTeam} vs ${m.awayTeam} (${m.homeScoreReal}–${m.awayScoreReal})`);
-                setSyncUpdatedMatches(updated);
-            }
-        } catch (err) {
-            const errMsg = err instanceof Error ? err.message : String(err);
-            const msg = `Error al sincronizar: ${errMsg.slice(0, 80)}`;
+        const anotar = (msg: string) => {
             setLastSyncResult(msg);
             localStorage.setItem('prode_last_sync', msg);
+        };
+        try {
+            const { data, error } = await supabase.rpc('prode_sincronizar');
+            if (error) {
+                anotar(`Error al sincronizar: ${error.message.slice(0, 80)}`);
+                return;
+            }
+            const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+            if (!r.ok) {
+                const porQue: Record<string, string> = {
+                    sin_sesion: 'Tenés que volver a iniciar sesión',
+                    sin_permiso: 'No tenés permiso para sincronizar',
+                    sin_secreto: 'La sincronización no está configurada'
+                };
+                anotar(porQue[r.motivo ?? ''] ?? 'No se pudo pedir la sincronización');
+                return;
+            }
+
+            // El pedido ya salió; la función tarda unos segundos en traer los
+            // resultados y recalcular los puntos.
+            await new Promise(resolve => setTimeout(resolve, 6000));
+            const [matches, ranking] = await Promise.all([
+                supabaseService.getProdeMatches(),
+                supabaseService.getProdeRanking(),
+            ]);
+            setProdeMatches(matches);
+            setProdeRanking(ranking);
+            const updated = matches
+                .filter(m => m.isFinished && !beforeFinished.has(m.id))
+                .map(m => `${m.homeTeam} vs ${m.awayTeam} (${m.homeScoreReal}–${m.awayScoreReal})`);
+            setSyncUpdatedMatches(updated);
+            const timeStr = new Date().toLocaleTimeString('es-AR');
+            anotar(updated.length > 0
+                ? `${timeStr} · ${updated.length} partido(s) actualizado(s)`
+                : `${timeStr} · sin cambios todavía`);
+        } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            anotar(`Error al sincronizar: ${errMsg.slice(0, 80)}`);
         } finally {
             setIsSyncing(false);
         }

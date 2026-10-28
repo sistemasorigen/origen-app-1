@@ -112,6 +112,24 @@ serve(async (req) => {
         return new Response('ok', { headers: corsHeaders });
     }
 
+    // Sólo la clave de servicio. La manda el cron prode-sync-results (jobid 6)
+    // desde Vault, y la RPC prode_sincronizar() cuando alguien aprieta el
+    // botón en AdminProde.
+    //
+    // Hasta el 2026-10-28 no pedía ninguna (verify_jwt false y ningún
+    // chequeo): cualquiera, sin sesión, podía forzar la sincronización con
+    // worldcup26.ir y el recálculo de puntos del Prode. El cron mandaba
+    // current_setting('app.service_role_key', true), una variable que no
+    // estaba seteada, así que el encabezado iba en NULL.
+    const CLAVE = Deno.env.get('ORIGEN_SERVICE_ROLE_KEY');
+    const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+    if (!CLAVE || bearer !== CLAVE) {
+        console.warn('[prode-sync] llamada rechazada: sin la clave de servicio');
+        return new Response(JSON.stringify({ error: 'No autorizado' }), {
+            status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+
     const startTime = Date.now();
     let matchesProcessed = 0;
     let matchesUpdated   = 0;

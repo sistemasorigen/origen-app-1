@@ -1,24 +1,49 @@
 // Edge Function: welcome-reminder
-// Llamada cada lunes a las 10am UTC por pg_cron.
-// Busca ingresantes que no completaron /form y
-// envía hasta 3 recordatorios semanales.
+//
+// La llama el cron welcome-form-reminders (jobid 1) cada lunes a las 10am
+// UTC. Busca ingresantes que no completaron /form y manda hasta 3
+// recordatorios semanales a bienvenida@origeniglesia.org.
+//
+// Acepta ÚNICAMENTE la clave de servicio. Hasta el 2026-10-28 no pedía
+// ninguna (verify_jwt false y ningún chequeo) y el cron tampoco la mandaba:
+// cualquiera, sin sesión, podía dispararla y subir el contador
+// form_reminder_count de la gente, llenando la casilla de Bienvenida y
+// gastando la cuota de Resend. El cron ahora manda la clave de Vault
+// (sql/fase3_seguridad_crons.sql).
+//
+// No lleva tope propio: el freno son los contadores de cada fila
+// (form_reminder_count < 3 y un recordatorio por semana), que esta misma
+// función actualiza.
+//
+// Desplegar con: npx supabase functions deploy welcome-reminder
+//   --project-ref oqtumgalnozppqnnjjdb --use-api --no-verify-jwt
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { templates } from '../email-notifier/emailTemplates.ts';
+import { enUnaLinea } from '../email-notifier/armado.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('ORIGEN_SERVICE_ROLE_KEY')!;
+const SERVICE_KEY = Deno.env.get('ORIGEN_SERVICE_ROLE_KEY')!;
 const BIENVENIDA_EMAIL = 'bienvenida@origeniglesia.org';
 const FROM_EMAIL = 'Origen <team@app.origeniglesia.org>';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
 serve(async (req) => {
-    // Solo aceptar POST (desde pg_cron o llamada manual)
+    // Solo aceptar POST (desde pg_cron)
     if (req.method !== 'POST') {
         return new Response('Method Not Allowed', { status: 405 });
+    }
+
+    // Sólo la clave de servicio, que es la que manda el cron desde Vault.
+    const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+    if (!SERVICE_KEY || bearer !== SERVICE_KEY) {
+        console.warn('[Reminder] llamada rechazada: sin la clave de servicio');
+        return new Response(JSON.stringify({ error: 'No autorizado' }), {
+            status: 401, headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     try {
@@ -94,11 +119,15 @@ serve(async (req) => {
                     body: JSON.stringify({
                         from: FROM_EMAIL,
                         to: [BIENVENIDA_EMAIL],
-                        subject:
+                        // enUnaLinea: el nombre lo escribe quien atiende en
+                        // Bienvenida, y un salto de línea en un asunto de
+                        // email permite colgarle encabezados propios.
+                        subject: enUnaLinea(
                             `🔔 Recordatorio #${nextReminderNum}: ` +
                             `${visitor.first_name} ` +
                             `${visitor.last_name} ` +
-                            `sin completar formulario — Origen`,
+                            `sin completar formulario — Origen`
+                        ),
                         html
                     })
                 });
