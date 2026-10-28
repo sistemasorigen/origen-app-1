@@ -245,7 +245,7 @@ function buildEmailHtml(
           <tr>
             <td style="background-color: #000000; padding: 24px 40px; text-align: center;">
               <p style="margin: 0; font-size: 13px; color: #888888;">
-                © 2026 Origen App · Grupos de Conexión
+                &copy; 2026 Origen App &middot; Grupos de Conexión
               </p>
             </td>
           </tr>
