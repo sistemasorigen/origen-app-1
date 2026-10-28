@@ -514,7 +514,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         },
         {
             // El calendario de cada uno (Agenda Origen): las tareas de sus
-            // equipos. Con sesión; sin departamentos, la pantalla lo explica.
+            // equipos. Sólo para quien pertenece a un departamento o a un
+            // sub-departamento (ver puedeVer, más abajo).
             label: 'Agenda Origen',
             icon: CalendarDays,
             path: '/agenda',
@@ -725,6 +726,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // "Administración" sin nada debajo le dice al voluntario que hay algo que
     // no está viendo.
     const puedeVer = (item: MenuItem): boolean => {
+        if (item.path === '/agenda') {
+            // Sólo quien pertenece a un departamento o a un sub-departamento
+            // (o SUPER_ADMIN). A quien no está en ninguno la pantalla no le
+            // mostraba nada más que "Todavía no formás parte…". Mientras se
+            // pregunta no aparece, para que no parpadee.
+            if (!currentUser || accesoAgenda.cargando) return false;
+            return accesoAgenda.puedeVerAgenda;
+        }
         if (item.path === '/departamentos') {
             // Lo ve quien tiene algo adentro: SUPER_ADMIN, los encargados de un
             // departamento y quien dirige un sub-departamento. Mientras se

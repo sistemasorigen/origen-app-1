@@ -8,7 +8,7 @@ import {
 import DetalleTarea from '../../components/agenda/DetalleTarea';
 import type { AccionesDeAgenda } from '../../components/agenda/contratos';
 import { ModalConfirmacion, type PedidoConfirmacion } from '../admin/piezasAdmin';
-import { BOTON_CHICO, BOTON_GRIS, BOTON_NEGRO, ESTILOS, ID_AGENDA, Mensaje, TARJETA } from '../departamentos/equipo/piezas';
+import { BOTON_CHICO, BOTON_NEGRO, ESTILOS, ID_AGENDA, Mensaje, TARJETA } from '../departamentos/equipo/piezas';
 import {
     SIN_ASIGNAR, apagadosRecordados, diasDeLaSemana, esVista, moverFecha, pasaElFiltro, recordarApagados,
     recordarTodo, recordarVista, textoDelPeriodo, todoRecordado, vistaRecordada, type Vista,
@@ -278,9 +278,7 @@ const PaginaAgenda: React.FC = () => {
                     icono={<CalendarDays size={26} strokeWidth={1.75} />}
                     titulo="Todavía no formás parte de ningún departamento"
                     texto="Cuando un encargado te sume a un equipo, sus tareas van a aparecer acá. ¿Necesitás algo de un área? Pedilo en Solicitudes."
-                >
-                    <button type="button" onClick={() => navigate('/solicitudes')} className={`${BOTON_GRIS} mt-5`}>Ir a Solicitudes</button>
-                </Mensaje>
+                />
             );
         }
         if (estado.tipo === 'cargando' || esperandoLink) return <EsqueletoDeVista vista={formaDelEsqueleto} />;

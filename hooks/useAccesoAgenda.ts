@@ -104,6 +104,14 @@ export const useAccesoAgenda = () => {
         /** La última consulta falló (red): la pantalla puede ofrecer reintentar. */
         fallo: deEstaSesion && actual.fallo,
         puedeVerDepartamentos: acceso.superAdmin || acceso.encargado.length > 0 || acceso.dirijo.length > 0,
+        /**
+         * "Agenda Origen" en el menú: quien pertenece a algo —encargado de un
+         * departamento, o miembro de un sub-departamento (`miembro` incluye a
+         * quien lo dirige)— y SUPER_ADMIN, que en la Agenda ve todo. Es la
+         * misma condición con la que la pantalla muestra tareas en vez del
+         * "Todavía no formás parte de ningún departamento".
+         */
+        puedeVerAgenda: acceso.superAdmin || acceso.encargado.length > 0 || acceso.dirijo.length > 0 || acceso.miembro.length > 0,
         esEncargadoDe,
         dirige,
         recargar,
