@@ -1801,10 +1801,13 @@ sigue cacheando en `localStorage`, como respaldo ante fallas de red.
 
 ### App instalable (sin service worker)
 - `public/manifest.webmanifest` (`start_url` `/#/`, `display` standalone),
-  íconos en `public/icons/` (generados con `scripts/generar-iconos.mjs`
+  íconos en `public/iconos/` (generados con `scripts/generar-iconos.mjs`
   desde `favicon.png`; volver a correrlo sólo si cambia el logo) y los
-  metadatos de iPhone en `index.html`. `public/icons/.htaccess` les da un año
+  metadatos de iPhone en `index.html`. `public/iconos/.htaccess` les da un año
   de caché; el manifiesto va con `no-cache`.
+- **Nunca una carpeta `/icons/`** en `public/`: el Apache del hosting tiene un
+  `Alias /icons/` global (sus íconos de listados) que le gana a nuestros
+  archivos y da 404. `/iconos/` no tiene ese problema.
 - **NO hay service worker.** Si se agrega uno (notificaciones push), que no
   cachee: con caché propia, una app instalada puede quedarse con una versión
   vieja para siempre.

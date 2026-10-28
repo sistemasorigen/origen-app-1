@@ -1,4 +1,9 @@
 # Los íconos de la app instalable no cambian: un año de caché.
+#
+# La carpeta NO puede llamarse /icons/: el Apache del hosting tiene un
+# "Alias /icons/" global (los íconos de sus listados de carpetas) que le gana
+# a cualquier archivo nuestro, y todo lo de ahí adentro daba 404. Pasó con el
+# primer deploy, el 28-oct-2026.
 # Si algún día cambian, que vayan con otro nombre (y se actualizan los
 # links en index.html y en manifest.webmanifest), como los de /assets.
 <IfModule mod_headers.c>

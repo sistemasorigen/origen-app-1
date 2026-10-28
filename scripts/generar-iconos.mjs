@@ -1,4 +1,4 @@
-// Genera los íconos de la app instalable (public/icons/) a partir del isotipo.
+// Genera los íconos de la app instalable (public/iconos/) a partir del isotipo.
 //
 // Se corrió una vez (28-oct-2026). Volver a correrlo sólo si cambia el logo:
 //
@@ -10,6 +10,9 @@
 // (react-joyride contra React 19) y cada paquete nuevo obliga a
 // --legacy-peer-deps. Playwright ya está entre las devDependencies y su
 // Chromium dibuja en un <canvas> igual que cualquier editor.
+//
+// Van en public/iconos/ y no en public/icons/: en el hosting, /icons/ es un
+// alias global de Apache y nuestros archivos ahí daban 404.
 //
 // Qué sale:
 //   · icon-192.png, icon-512.png  → "any": el isotipo blanco sobre negro,
@@ -31,7 +34,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SALIDA = join(ROOT, 'public', 'icons');
+const SALIDA = join(ROOT, 'public', 'iconos');
 const LOGO = readFileSync(join(ROOT, 'public', 'favicon.png')).toString('base64');
 
 const FONDO = '#000000';

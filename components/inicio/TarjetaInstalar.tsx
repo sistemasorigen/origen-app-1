@@ -54,7 +54,7 @@ const TarjetaInstalar: React.FC = () => {
         >
             <div className="flex items-center gap-4">
                 <img
-                    src="/icons/apple-touch-icon.png"
+                    src="/iconos/apple-touch-icon.png"
                     alt=""
                     width={52}
                     height={52}

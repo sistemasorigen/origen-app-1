@@ -34,7 +34,7 @@
   <FilesMatch "\.webmanifest$">
     Header always set Cache-Control "no-cache"
   </FilesMatch>
-  # La caché larga de /icons/ está en public/icons/.htaccess: acá haría
+  # La caché larga de /iconos/ está en public/iconos/.htaccess: acá haría
   # falta un <If>, y en un Apache anterior a 2.4 eso tira 500 en todo el
   # sitio.
 </IfModule>
