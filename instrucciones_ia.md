@@ -625,21 +625,34 @@ Los diseños se hacen en Claude Design y se exportan a `design-claude/` como
 
 Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 
-| Función | Propósito |
-|---|---|
-| `email-notifier` | Central de emails (Resend). Recibe webhooks de triggers SQL. |
-| `welcome-reminder` | Cron job semanal (pg_cron, lunes 10am UTC). Busca `welcome_visitors` con `stage='NEW'` y `form_reminder_count < 3`. Envía recordatorios a bienvenida@origeniglesia.org |
-| `send-group-confirmation` | Email de confirmación de inscripción a grupos |
-| `send-gcx-welcome` | Email de bienvenida al módulo GCX |
-| `send-whatsapp` | Envío de mensajes por WhatsApp Business API |
-| `generate-image` | Generación de imágenes con Google Imagen (Gemini) |
-| `admin-manage-user` | Gestión administrativa de usuarios vía service role |
-| `prode-sync-results` | Sincronización automática de resultados del Mundial con worldcup26.ir. Cron cada 5 min. Calcula puntos automáticamente. |
-| `send-dianino-tickets` | Email con los QR del Día del Niño. **Sin verificación de la clave: cualquiera puede invocarla.** |
-| `send-nocturna-entrada` | Email con la entrada de Nocturna. La dispara `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email`. Acepta **sólo** la clave de servicio. |
-| `notify-host` | Avisos a anfitriones. `{registration_id}` (lo manda `notify_host_new_registration` en cada inscripción PENDING): aviso "Nueva solicitud de ingreso 👤" + email al anfitrión y al co-anfitrión. `{grupo_aprobado_id}` (lo manda `notify_host_group_approved` en el paso a 'approved'): aviso "¡Tu grupo fue aprobado! 🎉", sin email. `{modo:'prueba'}`: un email de muestra sólo a sistemas@. **Acepta sólo la clave de servicio.** Idempotente (`notify_host_hechos`), tope de 30 emails por día. `sql/notify_host_seguro.sql`. |
-| `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). La dispara `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo de `app_notifications`, sólo si esa persona tiene alguna suscripción. Acepta **sólo** la clave de servicio. Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. |
-| `send-agenda-aviso` | Emails de Agenda Origen: "Tarea asignada" y "Tarea completada". La dispara `trg_agenda_tareas_avisar` con `{tarea_id, tipo}`; lee los avisos `'pendiente'` de `agenda_avisos`. Acepta **sólo** la clave de servicio. Modo `{modo:'prueba', tipo}`: datos inventados, sólo a Sistemas. |
+| Función | Qué hace | Quién la llama | Qué acepta |
+|---|---|---|---|
+| `email-notifier` | Los cinco emails de GCX y Bienvenida: grupo nuevo y postulación a los admins, grupo aprobado al anfitrión, bienvenida al nuevo anfitrión, ingresante a bienvenida@. Plantillas en `emailTemplates.ts`. | `email_notifier_avisar()` desde 5 triggers (`groups` ×2, `leader_applications`, `users`, `welcome_visitors`), con `{evento, id}` | **Sólo la clave de servicio.** Idempotente (`email_notifier_hechos`), tope 40/día. `sql/email_notifier_seguro.sql` |
+| `send-gcx-welcome` | Email de bienvenida a un Grupo de Conexión. | `notify_gcx_welcome()` con `{inscripcion_id}` al pasar a APPROVED, y la RPC `gcx_reenviar_bienvenida(text[])` con `{inscripciones}` para el reenvío a mano | **Sólo la clave de servicio.** Idempotente (`gcx_welcome_hechos`: la aprobación una vez, el reenvío una vez por día), tope 80/día. `sql/send_gcx_welcome_seguro.sql` |
+| `send-dianino-tickets` | Email con el QR de entrada al Día del Niño. | `notify_dianino_tickets()` con `{sesion_id}` | **Sólo la clave de servicio.** Idempotente (`dianino_hechos`), tope 90/día. `sql/send_dianino_seguro.sql` |
+| `welcome-reminder` | Hasta 3 recordatorios semanales a bienvenida@ por cada ingresante que no completó `/form` (`stage='NEW'`, `form_reminder_count < 3`). | cron `welcome-form-reminders` (jobid 1), lunes 10:00 UTC, con la clave de Vault | **Sólo la clave de servicio.** Sin tope propio: el freno son los contadores de cada fila. `sql/fase3_seguridad_crons.sql` |
+| `prode-sync-results` | Sincroniza los resultados del Mundial con worldcup26.ir y recalcula los puntos. Matchea por código ISO de equipos, no por número. | cron `prode-sync-results` (jobid 6) cada 5 min con la clave de Vault, y la RPC `prode_sincronizar()` desde el botón de `AdminProde.tsx` | **Sólo la clave de servicio.** `sql/fase3_seguridad_crons.sql` |
+| `notify-host` | Avisos a los anfitriones de un GCX: `{registration_id}` → "Nueva solicitud de ingreso 👤" + email; `{grupo_aprobado_id}` → "¡Tu grupo fue aprobado! 🎉", sin email. | `notify_host_new_registration` y `notify_host_group_approved` | **Sólo la clave de servicio.** Idempotente (`notify_host_hechos`), tope 30/día. `sql/notify_host_seguro.sql` |
+| `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. | `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo, sólo si esa persona tiene suscripción | **Sólo la clave de servicio.** |
+| `send-nocturna-entrada` | Email con la entrada de Nocturna. | `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email` | **Sólo la clave de servicio.** |
+| `send-nocturna-datos-faltantes` | Email pidiendo los datos que faltan de una inscripción a Nocturna. | — | **Sólo la clave de servicio.** |
+| `send-reporte-problema` | Email a Sistemas con un reporte de problema. Plantilla generada: `scripts/generar-plantilla-reporte.cjs`. | trigger de `reportes_problemas` | **Sólo la clave de servicio.** Tope 30/día. |
+| `admin-manage-user` | Gestión administrativa de usuarios con la clave de servicio. | el frontend | Sesión + `SUPER_ADMIN`, chequeados adentro. |
+| `generate-image` | Imágenes con Google Imagen 4.0 a partir de un texto. | **nadie** (al 2026-10-28) | Sesión de una persona + `SUPER_ADMIN`, y tope de 20 por persona y por día (`generate_image_usos`). `sql/fase3_seguridad_crons.sql` |
+
+**Las 12 piden la clave.** Desde el 2026-10-28 ninguna acepta un pedido sin
+autenticación: las que disparan triggers y crons comparan el bearer contra
+`ORIGEN_SERVICE_ROLE_KEY`, y las dos que llama el frontend
+(`admin-manage-user`, `generate-image`) exigen sesión y rol adentro. Lo que el
+frontend necesitaba disparar pasa ahora por una RPC `SECURITY DEFINER` que
+valida quién llama y encola el pedido con la clave de Vault
+(`gcx_reenviar_bienvenida`, `prode_sincronizar`).
+
+**Borradas el 2026-10-28** (nadie las llamaba; quedan en el historial de git):
+`send-group-confirmation` —la reemplazó `send-gcx-welcome`— y `send-whatsapp`,
+que era un esqueleto que sólo escribía el teléfono y el texto en el log.
+`send-agenda-aviso` se había borrado antes, cuando los avisos de Agenda
+dejaron de ir por email.
 
 > ⚠️ **El límite de Resend es de 100 emails por día.** No es teórico: un día de
 > muchas inscripciones se alcanza. Cualquier función que mande emails en lote
@@ -650,7 +663,11 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 alcanza: la clave `anon` también es un JWT válido y viaja en el bundle del
 frontend, así que con `verify_jwt = true` cualquiera que abra la app puede
 llamar a la función. Hay que comparar el bearer contra la clave de servicio
-adentro de la función, como hace `send-nocturna-entrada`.
+adentro de la función, como hace `send-nocturna-entrada`. Si lo que tiene que
+disparar el pedido es una pantalla y no un trigger, el camino es una RPC
+`SECURITY DEFINER` que valide el rol o la relación de quien llama y encole el
+pedido con `net.http_post` y la clave de Vault — nunca
+`supabase.functions.invoke` desde el frontend, que viaja con la clave `anon`.
 
 **Variables de entorno requeridas en las Edge Functions:**
 - `RESEND_API_KEY` — Proveedor de emails
@@ -670,9 +687,18 @@ adentro de la función, como hace `send-nocturna-entrada`.
 tiene que ser igual a lo que hay en `supabase/functions/`. `notify-host`
 estuvo meses en producción sin código en el repo y sin pedir ninguna clave; el
 2026-10-28, 9 de las 14 funciones desplegadas no coincidían con su versión del
-repo (ver sección 38). Para desplegar:
+repo — y en varias el repo era **más nuevo** y tenía arreglos que nunca se
+habían desplegado (ver sección 38). De esas 9 quedan **2 sin igualar**:
+`admin-manage-user` y `send-reporte-problema`, que no se tocaron. Para
+desplegar:
 `npx supabase functions deploy <nombre> --project-ref oqtumgalnozppqnnjjdb --use-api`
-(con `--no-verify-jwt` si la función controla la clave adentro).
+(con `--no-verify-jwt` si la función controla la clave adentro; `generate-image`
+va **sin** esa bandera, porque ahí `verify_jwt = true` suma una capa).
+
+**Para comparar lo desplegado con el repo**, `npx supabase functions download
+<nombre>` corrido en una carpeta aparte (deja el código en
+`supabase/functions/<nombre>/` de esa carpeta). La Management API devuelve el
+cuerpo como un ESZIP, así que bajarlo "a mano" con `fetch` no sirve.
 
 **Reglas que salieron de construir `send-nocturna-entrada` (aplicar a toda
 función nueva):**
@@ -696,7 +722,15 @@ organizaciones conserva el ref y no las afecta.
 
 **Estado conocido:**
 - `prode-sync-results` falla cada 5 minutos con `API login failed: 404`
-  (visto en `net._http_response`). Revisar las credenciales de worldcup26.ir.
+  (visto en `net._http_response`): **288 llamadas por día, todas fallidas**
+  (72 de 72 en las últimas 6 horas, medido el 2026-10-28). El Mundial ya
+  terminó. Revisar las credenciales de worldcup26.ir o apagar el cron
+  (`SELECT cron.alter_job(6, active := false)`), que es lo recomendado hasta
+  que haya algo que sincronizar. No se apagó porque no lo pidió Ignacio.
+- `app.service_role_key` **no está seteada** en este proyecto. Cualquier cron
+  o trigger que la use con `current_setting('app.service_role_key', true)`
+  manda el encabezado en NULL sin avisar. La clave va en Vault
+  (`webhook_service_role_key`).
 
 ---
 
@@ -841,6 +875,19 @@ Las ocho tienen RLS y **ninguna policy de escritura**: todo va por RPC.
 10. **`verify_jwt` no alcanza**: la clave `anon` es un JWT válido y viaja en el
     bundle. Comparar el bearer contra la clave de servicio adentro de la
     función (como `send-nocturna-entrada`).
+10b. **El frontend no llama a una Edge Function que haga algo sensible.**
+    `supabase.functions.invoke(...)` viaja con la clave `anon`, así que la
+    función no puede distinguir a un anfitrión de un tercero sin sesión. El
+    camino es una RPC `SECURITY DEFINER` que valide el rol o la relación de
+    quien llama y encole el pedido con `net.http_post` y la clave de Vault
+    (`gcx_reenviar_bienvenida`, `prode_sincronizar`). Si la función tiene que
+    responderle a la pantalla, entonces el chequeo va adentro, leyendo el JWT
+    de la persona y su rol de `users` (`admin-manage-user`, `generate-image`).
+10c. **El trigger manda sólo el id.** `pg_net` guarda el cuerpo de cada pedido
+    en `net._http_request_queue`: con `row_to_json(NEW)` quedan ahí escritos
+    emails, teléfonos y DNI. Lo mismo vale para la RESPUESTA de la función,
+    que `pg_net` guarda en `net._http_response` por 6 horas: devolver
+    `{ ok: true, emails: 1 }`, no `Email enviado a <dirección>`.
 
 ### Repositorio y datos
 11. **El repo `sistemasorigen/origen-app-1` es público**, y `npm run deploy`
@@ -2138,13 +2185,32 @@ propia del Día del Niño y no se puede probar sin cámara).
 
 - **Resend: 100 emails por día**, compartidos por todas las funciones.
   Registrar qué salió y qué no, y dejar reenviar.
-- **Topes propios por día (hora argentina)**, para que nadie se coma la
-  cuota de las entradas: reportes de problemas **30**
-  (`send-reporte-problema`, en `reportes_problemas.email_error`); Agenda
-  Origen **40** (`send-agenda-aviso`, cuenta los `'enviado'` de
-  `agenda_avisos`); solicitudes de ingreso a un grupo **30** (`notify-host`,
-  cuenta las claves `reg:%:email:%` de `notify_host_hechos`). Pasado el tope el email no sale, queda anotado
-  (`'tope_diario'`) y la notificación en la app igual llega.
+- **Topes propios por día (hora argentina)**, uno por función, con su propia
+  tabla de "lo ya mandado":
+
+  | función | tope | dónde se cuenta | por qué ese número |
+  |---|---|---|---|
+  | `send-reporte-problema` | 30 | `reportes_problemas.email_error` | ninguno es urgente |
+  | `notify-host` | 30 | claves `reg:%:email:%` de `notify_host_hechos` | promedio 8,5/día, pico 84 |
+  | `email-notifier` | 40 | `email_notifier_hechos` | pico histórico 33 ingresantes en un día |
+  | `send-gcx-welcome` | 80 | `gcx_welcome_hechos` | pico histórico 71 aprobaciones en un día |
+  | `send-dianino-tickets` | 90 | `dianino_hechos` | pico histórico 83 sesiones en un día |
+
+  Los dos primeros están **abajo** del pico a propósito: ahí el tope protege
+  la cuota y el aviso en la app llega igual. Los tres últimos están **arriba**
+  del pico real, porque desde que las funciones piden la clave de servicio
+  nadie de afuera puede hacer salir un email: el tope pasó a ser un freno de
+  mano contra un bucle, y un tope que corta emails de verdad esconde el
+  problema en vez de mostrarlo.
+
+  **Los cinco topes suman 270 contra un plan de 100 por día.** No es un error
+  de cuentas: son máximos por función, no un presupuesto repartido, y las
+  temporadas no se pisan (Día del Niño en agosto, Nocturna en octubre). Si
+  alguna vez coinciden, lo que limita es Resend, que devuelve error y queda
+  anotado. Decisión pendiente de Ignacio: subir el plan o bajar los topes.
+
+  Pasado el tope el email no sale, queda anotado y la notificación en la app
+  igual llega.
 - **HTML de email, no de web:** maquetado con tablas, estilos en línea, ancho
   máximo 600 px, sin JavaScript, fuentes del sistema, botones hechos con tablas.
 - **Modo oscuro de Gmail:** poner el fondo en el atributo `bgcolor` **y** en el
@@ -2157,10 +2223,17 @@ propia del Día del Niño y no se puede probar sin cámara).
 - **Respaldo en texto** de todo lo importante (un código corto debajo del QR).
 - **Escapar todo lo que viene del usuario** antes de meterlo en el HTML.
 - Los links llevan `/#/`.
-- `email-notifier` (`emailTemplates.ts`) tiene las plantillas de "grupo nuevo"
-  y "postulación a anfitrión": hoy sin botón ni link directo, y la de
-  postulación no muestra si la persona completó "Crecer" y el curso de líderes
+- `email-notifier` (`emailTemplates.ts`) tiene las seis plantillas de GCX y
+  Bienvenida. Desde el 2026-10-28 escapan todo lo que escribió una persona,
+  van maquetadas con tablas con `bgcolor` para el modo oscuro, y los links
+  llevan `/#/` y el dominio real: dos apuntaban a `app.iglesiaorigen.com` (un
+  dominio que no es de la app) y dos a `/#/welcome` (una ruta que no existe;
+  es `/#/bienvenida`).
+- Sigue pendiente en esas plantillas: "grupo nuevo" y "postulación a anfitrión"
+  no tienen botón ni link directo al panel, y la de postulación no muestra si
+  la persona completó "Crecer" y el curso de líderes
   (`leader_applications.completed_hiciste_crecer`, `completed_leader_course`).
+  No se tocaron para no cambiar los textos.
 
 ---
 
@@ -2217,7 +2290,6 @@ propia del Día del Niño y no se puede probar sin cámara).
 ### Seguridad
 | Pendiente | Riesgo |
 |---|---|
-| `send-dianino-tickets` invocable sin autenticación | Cualquiera puede quemar la cuota diaria y mandar emails a familias |
 | Comprobantes de Tribal Wars en el bucket público `images` | Nombre, CBU y monto detrás de una URL pública |
 | `influos_attendees`: la sección 17 la da por cerrada, pero `sql/influos_public_select_policy.sql` crea un `SELECT` para `anon` | **Confirmar con `pg_policies`.** Son teléfonos de menores |
 | `get_registrations_by_partner_email` y `upsert_couple_registration` | Existe `sql/fix_partner_email_rpc.sql`: verificar que esté aplicado |
@@ -2227,31 +2299,34 @@ propia del Día del Niño y no se puede probar sin cámara).
 | Protección de contraseñas filtradas | Toggle manual en el dashboard de Supabase |
 | `pg_net` y `pg_trgm` en el schema `public` | Moverlos se prueba primero en una rama |
 | `PASTOR` ve los grupos ocultos | Decidir si se acota (sección 24) |
-| **`email-notifier` sin autenticación** 🔴 | `verify_jwt = false` y ningún chequeo. Cualquiera, sin sesión, le hace mandar "🎉 ¡Bienvenido como Anfitrión de Origen!" **a cualquier dirección** con el nombre que quiera (sin escapar en la plantilla), o emails a los admins, a Bienvenida y a cualquier anfitrión. Gasta la cuota compartida de Resend (100/día) y sirve para phishing desde el dominio de Origen. La llama `send_webhook_event` (5 triggers: `groups`, `users`, `leader_applications`, `welcome_visitors`) con la fila entera y sin clave. Detectado el 2026-10-28 |
+| Los QR del Día del Niño se suben al bucket público `images` (`dianino-tickets/<id>.png`) | La entrada de cualquier familia queda detrás de una URL pública y adivinable. La sección 35 pide el QR incrustado con CID. No se cambió: el evento ya pasó y hacerlo bien es rehacer el envío |
+| `generate-image` no la llama **nadie** | Cerrada con sesión + `SUPER_ADMIN` + tope, pero si no se va a usar conviene borrarla. Decisión de Ignacio |
+| `admin-manage-user` y `send-reporte-problema`: lo desplegado ≠ el repo | En las dos el repo es más nuevo. En `admin-manage-user` el repo acota el CORS a `ALLOWED_ORIGIN`; lo desplegado tiene `*`. No se tocaron |
+| Los cinco topes de email suman 270 contra un plan de Resend de 100/día | Si dos temporadas coinciden, lo que corta es Resend. Subir el plan o bajar los topes |
 
-### Edge Functions (inventario del 2026-10-28)
-| función | en el repo | desplegada = repo | verify_jwt | chequea la clave | la llama | sin sesión, un tercero puede… | riesgo |
-|---|---|---|---|---|---|---|---|
-| `email-notifier` | sí | no (plantillas) | false | no | `send_webhook_event` (5 triggers) | mandar emails de Origen a cualquier dirección, a admins y a anfitriones, con texto propio sin escapar | 🔴 alto |
-| `send-dianino-tickets` | sí | sí | false | no | `notify_dianino_tickets` | mandar los emails con QR de Día del Niño (a las familias de la base) y gastar la cuota | alto |
-| `send-gcx-welcome` | sí | no | false | no | `notify_gcx_welcome` (con clave, que no mira) y el frontend | mandar en masa la bienvenida a inscriptos aprobados (ids en el pedido) y gastar la cuota | alto |
-| `send-group-confirmation` | sí | no | false | no | nadie (ni frontend ni triggers) | lo mismo que `send-gcx-welcome` | alto (y sin uso: borrarla) |
-| `welcome-reminder` | sí | no | false | no | cron semanal (`jobid 1`) | disparar el recordatorio a bienvenida@ y subir `form_reminder_count` | medio |
-| `prode-sync-results` | sí | no | false | no | cron cada 5 min y `AdminProde.tsx` | forzar la sincronización y el recálculo de puntos del Prode | medio |
-| `generate-image` | sí | no | true | no (sin rol) | el frontend | con la clave anon (pública), generar imágenes con la cuenta de Google de la iglesia | medio (costo) |
-| `send-whatsapp` | sí | no | false | no | nadie | nada (es un esqueleto que sólo escribe en el log el teléfono y el texto) | bajo (borrarla) |
-| `admin-manage-user` | sí | no | true | sí (sesión + SUPER_ADMIN) | el frontend | nada | bajo |
-| `notify-host` | sí | sí | false | **sí** | 2 triggers | nada | resuelto (2026-10-28) |
-| `send-nocturna-entrada` | sí | sí | true | sí | trigger y RPC | nada | bajo |
-| `send-nocturna-datos-faltantes` | sí | sí | true | sí | — | nada | bajo |
-| `send-reporte-problema` | sí | no (plantilla) | true | sí | trigger | nada | bajo |
-| `send-push` | sí | sí | true | sí | trigger | nada | bajo |
+### Edge Functions (inventario del 2026-10-28, ya cerrado)
 
-Arreglo recomendado, en orden: `email-notifier` (bearer contra la clave de
-servicio + `send_webhook_event` con sólo el id y la clave de Vault + escapar
-las plantillas), `send-dianino-tickets`, `send-gcx-welcome` (aceptar la clave
-o una sesión de anfitrión del grupo), borrar `send-group-confirmation` y
-`send-whatsapp`, y después igualar repo y producción en las que difieren.
+Las 14 que había quedaron en **12**: `send-group-confirmation` y
+`send-whatsapp` se borraron (no las llamaba nadie) y `send-agenda-aviso` ya se
+había borrado antes. **Las 12 piden la clave** (ver la tabla de la sección 10).
+
+| función | cómo quedó | lo que se podía hacer antes, sin sesión |
+|---|---|---|
+| `email-notifier` | sólo la clave de servicio; 5 triggers con `{evento, id}`; plantillas escapadas | mandar emails de Origen a cualquier dirección, con el texto que quisiera, y a los admins y anfitriones |
+| `send-dianino-tickets` | sólo la clave de servicio; `{sesion_id}` | mandar los QR de entrada de cualquier familia y quemar la cuota |
+| `send-gcx-welcome` | sólo la clave de servicio; `{inscripcion_id}` o la RPC `gcx_reenviar_bienvenida` | mandar en masa la bienvenida a los inscriptos aprobados |
+| `welcome-reminder` | sólo la clave de servicio; el cron la manda desde Vault | subirle `form_reminder_count` a la gente y llenar la casilla de Bienvenida |
+| `prode-sync-results` | sólo la clave de servicio; el cron desde Vault y la RPC `prode_sincronizar` | forzar la sincronización y el recálculo de puntos del Prode |
+| `generate-image` | sesión + `SUPER_ADMIN` + 20 por persona y por día; sin la API key en el log | generar imágenes con la cuenta de Google de la iglesia usando la clave `anon` |
+| `send-group-confirmation`, `send-whatsapp` | **borradas** | lo mismo que `send-gcx-welcome` / nada |
+| `notify-host`, `send-push`, `send-nocturna-entrada`, `send-nocturna-datos-faltantes`, `send-reporte-problema`, `admin-manage-user` | ya estaban cerradas | nada |
+
+**Lo que dejó este trabajo, y conviene repetir:** el repo se versionó primero
+con lo que estaba en producción (commit `a0c4f0d`), cada cambio tiene su
+`sql/<nombre>_seguro.sql` con su `PROBAR_` y su `ROLLBACK_` de definiciones
+exactas, y la función nueva se desplegó y el SQL se aplicó **en el mismo
+minuto** (ventanas medidas: 6 s, 6 s, 6 s, 18 s, sin una sola fila creada en
+ninguna).
 
 ### Código
 - `react-joyride` 2.9 no declara soporte para React 19 (por eso hace falta
@@ -2274,7 +2349,15 @@ o una sesión de anfitrión del grupo), borrar `send-group-confirmation` y
   abandonadas); limpiarlos requiere una tarea del lado del servidor
 
 ### Operativo
-- `prode-sync-results` falla cada 5 minutos (`404` en el login de la API)
+- ⚠️ **El botón de reenviar la bienvenida de GCX necesita un `npm run deploy`.**
+  El bundle que está servido todavía llama a la edge function directo y ahora
+  le dan 401. La bienvenida automática al aprobar una inscripción no se toca:
+  esa la manda el trigger. Lo mismo vale para el botón "Sync ahora" del Prode,
+  que ahora va por `prode_sincronizar()`.
+- `prode-sync-results` falla cada 5 minutos (`404` en el login de la API):
+  288 llamadas por día, todas fallidas. Recomendación: apagar el cron
+  (`SELECT cron.alter_job(6, active := false)`) hasta que haya algo que
+  sincronizar
 - Nocturna: datos de pago, teléfono y texto de la puerta antes de abrir
 - El plan de Resend: 100 emails por día
 

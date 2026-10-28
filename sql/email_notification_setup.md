@@ -1,3 +1,10 @@
+> ⚠️ **VIEJO — no seguir estos pasos (2026-10-28).** Esta guía despliega
+> `send-group-confirmation`, una edge function que ya no existe: nadie la
+> llamaba y se borró del proyecto y del repo (queda en el historial de git). El
+> email de bienvenida de GCX lo manda hoy `send-gcx-welcome`
+> (`sql/send_gcx_welcome_seguro.sql`), que acepta sólo la clave de servicio.
+> Se deja por historia.
+
 # Email Notification System - Setup Guide
 
 This guide explains how to deploy and configure the automated email notification system for approved group registrations.

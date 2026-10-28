@@ -1,3 +1,11 @@
+-- ⚠️ VIEJO · NO CORRER (2026-10-28)
+-- Este script arma un webhook hacia send-group-confirmation, una edge function
+-- que YA NO EXISTE: nadie la llamaba y se borró del proyecto y del repo (queda
+-- en el historial de git). El email de bienvenida de GCX lo manda hoy
+-- send-gcx-welcome, con el trigger trigger_gcx_welcome y la RPC
+-- gcx_reenviar_bienvenida: ver sql/send_gcx_welcome_seguro.sql.
+-- Se deja por historia. Para la migración, sql/migrate_edge_function_webhook.sql.
+
 -- ==============================================================================
 -- DATABASE WEBHOOK: Email Notification on Group Registration Approval
 -- ==============================================================================
