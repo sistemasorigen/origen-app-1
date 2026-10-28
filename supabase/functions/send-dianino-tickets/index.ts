@@ -1,17 +1,49 @@
 // Supabase Edge Function: send-dianino-tickets
-// Envía el email con los QR de entrada al crearse una sesión de Día del Niño
+//
+// Manda el email con el QR de entrada al Día del Niño:
+//   · { sesion_id }      → lo manda notify_dianino_tickets al crearse la
+//                           sesión. El email va a la dirección que guarda esa
+//                           sesión, leída de la base.
+//   · { modo: 'prueba' } → un email de muestra con datos inventados, SÓLO a
+//                           sistemas@origeniglesia.org (fijo acá).
+//
+// La dispara el trigger de sql/send_dianino_seguro.sql con la clave de
+// servicio, que es lo ÚNICO que acepta.
+//
+// Hasta el 2026-10-28 esta función no pedía ninguna clave (verify_jwt false y
+// ningún chequeo) aunque el trigger sí la mandaba: cualquiera, sin sesión,
+// podía hacerle mandar las entradas de cualquier familia de la base y quemar
+// la cuota compartida de Resend (100 por día). Además el nombre entraba crudo
+// al HTML y al atributo alt del <img> del QR.
+//
+// verify_jwt sigue en false a propósito: el control es el bearer contra la
+// clave de servicio, como en send-nocturna-entrada (la clave anon también es
+// un JWT válido, así que verify_jwt no alcanzaría).
+//
+//   · Idempotente: tabla dianino_hechos, una fila por sesión.
+//   · Tope de 90 emails por día (hora argentina). Ver TOPE_EMAILS_DIA.
+//
+// El evento fue el 2026-08-15 y no hay sesiones nuevas desde entonces, pero el
+// trigger sigue prendido para la próxima edición.
+//
+// Desplegar con: npx supabase functions deploy send-dianino-tickets
+//   --project-ref oqtumgalnozppqnnjjdb --use-api --no-verify-jwt
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import QRCode from "npm:qrcode";
+import {
+  ASUNTO, claveSesion, DATOS_DE_PRUEBA, DESTINO_PRUEBA, escaparHtml,
+  inicioDelDiaArgentino, nombreCompleto, TOPE_EMAILS_DIA,
+} from "./armado.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || 'https://tu-dominio.com';
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("ORIGEN_SERVICE_ROLE_KEY");
 
 const FROM_EMAIL = "'Origen' <team@app.origeniglesia.org>";
 const QR_PREFIX = "ORIGEN-DIANINO-";
+const ES_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── Paleta "Día del Niño" (misma que pages/eventos/dianino/InscripcionDiaNino.tsx) ──
 const INK = "#2A211B";
@@ -32,18 +64,6 @@ interface DianinoTicket {
   first_name: string;
   last_name: string;
   is_adult: boolean;
-}
-
-interface SessionRecord {
-  id: string;
-  email: string;
-}
-
-interface WebhookPayload {
-  type: "INSERT";
-  table: "dianino_sessions";
-  schema: "public";
-  record: SessionRecord;
 }
 
 async function generateQrPublicUrl(
@@ -72,7 +92,10 @@ async function generateQrPublicUrl(
   }
 }
 
-function buildTicketCardHtml(name: string, roleLabel: string, qrUrl: string | null): string {
+function buildTicketCardHtml(nombreCrudo: string, roleLabel: string, qrUrl: string | null): string {
+  // Escapado acá adentro, no en quien llama: el nombre aparece dos veces, y
+  // una de ellas es dentro del atributo alt, donde una comilla doble se sale.
+  const name = escaparHtml(nombreCrudo);
   return `
     <tr>
       <td style="background-color: ${BG_CARD}; padding: 8px 40px 24px 40px;" bgcolor="${BG_CARD}">
@@ -97,7 +120,8 @@ function buildTicketCardHtml(name: string, roleLabel: string, qrUrl: string | nu
   `;
 }
 
-function buildEmailHtml(adultName: string, cards: string): string {
+function buildEmailHtml(adultNameCrudo: string, cards: string): string {
+  const adultName = escaparHtml(adultNameCrudo);
   return `
 <!DOCTYPE html>
 <html lang="es">
@@ -204,45 +228,77 @@ function buildEmailHtml(adultName: string, cards: string): string {
   `.trim();
 }
 
+const json = (cuerpo: unknown, status = 200) =>
+  new Response(JSON.stringify(cuerpo), { status, headers: { "Content-Type": "application/json" } });
+
+// deno-lint-ignore no-explicit-any
+type Cliente = any;
+
+/** Anota la sesión; devuelve false si ya estaba (el email ya salió). */
+async function tomar(supabase: Cliente, clave: string): Promise<boolean> {
+  const { error } = await supabase.from("dianino_hechos").insert({ clave });
+  if (!error) return true;
+  if (error.code === "23505") return false;
+  throw new Error(`dianino_hechos: ${error.code}`);
+}
+
+async function soltar(supabase: Cliente, clave: string): Promise<void> {
+  await supabase.from("dianino_hechos").delete().eq("clave", clave);
+}
+
+/** Cuántos emails ya salieron hoy (hora argentina). */
+async function emailsDeHoy(supabase: Cliente): Promise<number> {
+  const { count } = await supabase
+    .from("dianino_hechos")
+    .select("clave", { count: "exact", head: true })
+    .gte("created_at", inicioDelDiaArgentino());
+  return count ?? 0;
+}
+
+async function mandarEmail(to: string, asunto: string, html: string): Promise<{ ok: boolean; status?: number }> {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+    body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject: asunto, html }),
+  });
+  return { ok: r.ok, status: r.status };
+}
+
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey, x-supabase-api-key",
-      },
-    });
+  if (req.method === "OPTIONS") return new Response("ok", { status: 200 });
+
+  if (!RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[dianino] faltan variables de entorno");
+    return json({ error: "Servicio no configurado" }, 500);
+  }
+
+  // Sólo la clave de servicio. Cualquier otra cosa —sin bearer, la clave
+  // anon, un JWT de usuario— se rechaza antes de leer el cuerpo.
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (bearer !== SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("[dianino] llamada rechazada: sin la clave de servicio");
+    return json({ error: "No autorizado" }, 401);
   }
 
   try {
-    if (!RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("Faltan variables de entorno");
-      return new Response(JSON.stringify({ error: "Servicio no configurado" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const body = await req.json().catch(() => ({}));
+
+    if (body?.modo === "prueba") {
+      const nombre = nombreCompleto(DATOS_DE_PRUEBA.nombre, DATOS_DE_PRUEBA.apellido);
+      const html = buildEmailHtml(nombre, buildTicketCardHtml(nombre, "Entrada familiar", null));
+      const r = await mandarEmail(DESTINO_PRUEBA, `[PRUEBA] ${ASUNTO}`, html);
+      return json({ ok: r.ok, status: r.status ?? null }, r.ok ? 200 : 502);
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const payload = (await req.json()) as WebhookPayload;
+    const sesionId = String(body?.sesion_id ?? "");
+    if (!ES_UUID.test(sesionId)) return json({ error: "Falta sesion_id" }, 400);
 
-    if (payload.type !== "INSERT" || payload.table !== "dianino_sessions") {
-      return new Response(JSON.stringify({ message: "Evento ignorado" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const session = payload.record;
-
-    if (!session.email) {
-      console.error("Sesión sin email:", session.id);
-      return new Response(JSON.stringify({ error: "Sesión sin email" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // La dirección sale de la base, nunca del pedido.
+    const { data: session } = await supabase
+      .from("dianino_sessions").select("id, email").eq("id", sesionId).maybeSingle();
+    if (!session) return json({ error: "Sesión no encontrada" }, 404);
+    if (!session.email) return json({ ok: true, omitido: "sin_email" });
 
     const { data: tickets, error: ticketsError } = await supabase
       .from("dianino_tickets")
@@ -268,45 +324,36 @@ serve(async (req: Request) => {
       });
     }
 
-    const adultName = `${adultTicket.first_name} ${adultTicket.last_name}`;
-    const qrUrl = await generateQrPublicUrl(supabase, adultTicket.id);
-    const cardsHtml = buildTicketCardHtml(adultName, "Entrada familiar", qrUrl);
+    const adultName = nombreCompleto(adultTicket.first_name, adultTicket.last_name);
+    const clave = claveSesion(sesionId);
 
-    const emailHtml = buildEmailHtml(adultName, cardsHtml);
-
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [session.email],
-        subject: "🎉 ¡Tus entradas para el Día del Niño!",
-        html: emailHtml,
-      }),
-    });
-
-    const resendData = await resendResponse.json();
-
-    if (!resendResponse.ok) {
-      console.error("Error de Resend:", resendData);
-      return new Response(JSON.stringify({ error: "Error al enviar el email", details: resendData }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (await emailsDeHoy(supabase) >= TOPE_EMAILS_DIA) {
+      console.warn("[dianino] tope diario alcanzado");
+      return json({ ok: true, omitido: "tope_diario" });
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: `Email enviado a ${session.email}`, emailId: resendData.id }),
-      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": ALLOWED_ORIGIN } }
-    );
+    // La clave se toma ANTES de generar el QR y de llamar a Resend: si por
+    // cualquier motivo llegan dos pedidos de la misma sesión, el segundo no
+    // manda nada. Si después falla, se suelta y un reintento vuelve a andar.
+    if (!(await tomar(supabase, clave))) return json({ ok: true, omitido: "ya_enviado" });
+
+    try {
+      const qrUrl = await generateQrPublicUrl(supabase, adultTicket.id);
+      const emailHtml = buildEmailHtml(adultName, buildTicketCardHtml(adultName, "Entrada familiar", qrUrl));
+      const r = await mandarEmail(session.email, ASUNTO, emailHtml);
+      if (!r.ok) {
+        console.error("[dianino] Resend falló:", r.status);
+        await soltar(supabase, clave);
+        return json({ error: "Error al enviar el email", status: r.status }, 502);
+      }
+      // Sin la dirección en la respuesta: pg_net guarda el cuerpo.
+      return json({ ok: true, emails: 1, qr: qrUrl ? "sí" : "no" });
+    } catch (e) {
+      await soltar(supabase, clave);
+      throw e;
+    }
   } catch (error) {
-    console.error("Error de la Edge Function:", error);
-    return new Response(JSON.stringify({ error: "Error interno", details: String(error) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("[dianino] error interno:", String(error).slice(0, 200));
+    return json({ error: "Error interno" }, 500);
   }
 });

@@ -5888,25 +5888,48 @@ export const supabaseService = {
   },
 
   /**
-   * Resend group confirmation emails to selected registrations
-   * Invokes the send-gcx-welcome Edge Function directly
+   * Reenvía el email de bienvenida de las inscripciones que se le pasan.
+   *
+   * Hasta el 2026-10-28 esto llamaba a la edge function send-gcx-welcome
+   * directo, con la clave anon. Esa clave viaja en el bundle, así que
+   * cualquiera podía mandar una lista de ids y hacer salir la bienvenida en
+   * masa a los inscriptos aprobados, gastando la cuota de Resend. Ahora pasa
+   * por la RPC gcx_reenviar_bienvenida, que exige sesión y que quien pide sea
+   * gestor de grupos o anfitrión/co-anfitrión de esos grupos, y encola el
+   * pedido del lado del servidor (sql/send_gcx_welcome_seguro.sql).
+   *
+   * El envío es asincrónico: la RPC dice cuántas quedaron encoladas, no
+   * cuántas salieron.
    */
   async resendGroupConfirmationEmails(registrationIds: string[]): Promise<{ success: boolean; message: string; sent?: number; failed?: number }> {
     try {
-      const { data, error } = await supabase.functions.invoke('send-gcx-welcome', {
-        body: { registration_ids: registrationIds }
+      const { data, error } = await supabase.rpc('gcx_reenviar_bienvenida', {
+        p_inscripciones: registrationIds
       });
 
       if (error) {
-        console.error('[Email Resend] Error invoking function:', error);
-        return { success: false, message: error.message || 'Error al enviar correos' };
+        console.error('[Email Resend] Error llamando a gcx_reenviar_bienvenida:', error);
+        return { success: false, message: 'Error al enviar correos' };
       }
 
+      const r = (data ?? {}) as { ok?: boolean; encoladas?: number; motivo?: string };
+
+      if (!r.ok) {
+        const porQue: Record<string, string> = {
+          sin_sesion: 'Tenés que volver a iniciar sesión',
+          sin_permiso: 'No podés reenviar esos correos',
+          cantidad_invalida: 'Elegí entre 1 y 100 personas',
+          sin_secreto: 'El servicio de correo no está configurado'
+        };
+        return { success: false, message: porQue[r.motivo ?? ''] ?? 'No se pudieron enviar los correos' };
+      }
+
+      const n = r.encoladas ?? registrationIds.length;
       return {
         success: true,
-        message: data?.message || `${registrationIds.length} correos enviados`,
-        sent: data?.sent || 0,
-        failed: data?.failed || 0
+        message: n === 1 ? 'Mandamos el correo' : `Mandamos ${n} correos`,
+        sent: n,
+        failed: 0
       };
     } catch (error) {
       console.error('[Email Resend] Exception:', error);
