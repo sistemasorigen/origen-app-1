@@ -73,18 +73,19 @@ console.log(`[notify-deploy] app_version actualizada a ${newVersion} — los cli
 //   SIN_AVISO=1    → este deploy no manda ningún push (un arreglo chico,
 //                    una prueba, un deploy a las 3 de la mañana).
 //   AVISO_HORAS=n  → no repetirle a la misma persona dentro de n horas.
-//                    Por defecto 6, para que tres deploys seguidos
-//                    arreglando una coma no sean tres pushes. Con 0 sale
-//                    siempre, en todos los deploys.
+//                    Por defecto 0: sale SIEMPRE, en todos los deploys
+//                    (pedido de Ignacio, 28-oct-2026: "siempre que aplique
+//                    npm run deploy, que salga el push"). Para que tres
+//                    deploys seguidos no sean tres pushes, AVISO_HORAS=6.
 //
 // Si esto falla, el deploy NO falla: a esta altura ya está todo publicado y
 // verificado. Se avisa y se sigue.
 if (process.env.SIN_AVISO === '1') {
     console.log('[notify-deploy] SIN_AVISO=1 — este deploy no manda push a los teléfonos.');
 } else {
-    const horas = Number.parseInt(process.env.AVISO_HORAS ?? '6', 10);
+    const horas = Number.parseInt(process.env.AVISO_HORAS ?? '0', 10);
     const { data: avisados, error: errorAviso } = await supabase.rpc('avisar_actualizacion', {
-        p_horas: Number.isFinite(horas) ? horas : 6,
+        p_horas: Number.isFinite(horas) ? horas : 0,
     });
 
     if (errorAviso) {

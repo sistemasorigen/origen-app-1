@@ -1850,12 +1850,13 @@ el 2026-10-28, `notify-deploy.js` manda además una notificación al teléfono e
 - **Sólo `service_role` puede ejecutarla.** Ni `anon` ni `authenticated`: si
   cualquiera con sesión pudiera, tendría cómo mandarle una notificación al
   teléfono de todos los demás.
-- **Freno de 6 horas por persona y por título.** Tres deploys seguidos
-  arreglando una coma serían tres pushes, y la gente sólo necesita enterarse
-  una vez: la última versión es la que queda.
+- **Sale en TODOS los deploys** (pedido de Ignacio, 28-oct-2026: "siempre que
+  aplique npm run deploy, que salga el push"). Hasta ese día tenía un freno de
+  6 horas por persona, y un deploy hecho poco después de otro no mandaba nada.
 - Dos perillas, en el entorno:
   - `SIN_AVISO=1 npm run deploy` → ese deploy no manda ningún push.
-  - `AVISO_HORAS=0 npm run deploy` → sale siempre, sin freno.
+  - `AVISO_HORAS=6 npm run deploy` → no le repite el aviso a quien ya lo
+    recibió en las últimas 6 horas (útil para varios deploys seguidos).
 - **Si falla, el deploy no falla.** A esa altura ya está todo publicado y
   verificado: se avisa por consola y se sigue.
 - **Llega a quien tiene la app en la pantalla de inicio.** En iPhone no hay
