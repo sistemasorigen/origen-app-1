@@ -77,3 +77,51 @@ export const desenlace = (statusCode: number | null | undefined): Desenlace => {
 
 /** Con tantos fallos seguidos, la suscripción se borra. */
 export const FALLOS_PARA_BORRAR = 5;
+
+
+// ── Las reglas de la Gestión de notificaciones ──────────────────────────────
+// La decisión la toma la base (notif_puede_enviar, sql/notif_catalogo.sql),
+// que es la que conoce la alerta, su horario y lo que ya salió hoy. Acá sólo
+// se traduce esa respuesta a lo que hace la función.
+
+/** Lo que contesta notif_puede_enviar. */
+export type Decision = "enviar" | "pausada" | "tope" | "diferir";
+
+/** Cómo entró el pedido: un aviso nuevo, o la pasada del cron. */
+export type Modo = "aviso" | "diferidos";
+
+export type Accion = "mandar" | "no_mandar" | "diferir";
+
+/**
+ * Qué hacer con la respuesta de la base.
+ *
+ * Si la respuesta no se entiende —la función todavía no existe, el pedido
+ * falló— se MANDA. Un aviso que no llega es peor que uno que llega en un
+ * horario raro: esto tiene que fallar abriendo, no cerrando.
+ *
+ * En la pasada del cron, "diferir" se manda igual: ese push ya esperó su
+ * turno una vez y volver a diferirlo lo dejaría colgado para siempre si
+ * alguien cambió el horario mientras tanto.
+ */
+export const accionDe = (decision: string | null | undefined, modo: Modo = "aviso"): Accion => {
+  switch (decision) {
+    case "pausada":
+    case "tope":
+      return "no_mandar";
+    case "diferir":
+      return modo === "diferidos" ? "mandar" : "diferir";
+    default:
+      return "mandar";
+  }
+};
+
+/** Con qué resultado se anota en notif_push_log. */
+export const resultadoDe = (
+  accion: Accion,
+  decision: string | null | undefined,
+  enviados: number,
+): "enviado" | "pausada" | "tope" | "diferido" | "fallo" => {
+  if (accion === "diferir") return "diferido";
+  if (accion === "no_mandar") return decision === "tope" ? "tope" : "pausada";
+  return enviados > 0 ? "enviado" : "fallo";
+};

@@ -656,8 +656,8 @@ Las Edge Functions viven en `supabase/functions/`. Todas usan Deno + TypeScript.
 | `send-dianino-tickets` | Email con el QR de entrada al Día del Niño. | `notify_dianino_tickets()` con `{sesion_id}` | **Sólo la clave de servicio.** Idempotente (`dianino_hechos`), tope 90/día. `sql/send_dianino_seguro.sql` |
 | `welcome-reminder` | Hasta 3 recordatorios semanales a bienvenida@ por cada ingresante que no completó `/form` (`stage='NEW'`, `form_reminder_count < 3`). | cron `welcome-form-reminders` (jobid 1), lunes 10:00 UTC, con la clave de Vault | **Sólo la clave de servicio.** Sin tope propio: el freno son los contadores de cada fila. `sql/fase3_seguridad_crons.sql` |
 | `prode-sync-results` | Sincroniza los resultados del Mundial con worldcup26.ir y recalcula los puntos. Matchea por código ISO de equipos, no por número. | cron `prode-sync-results` (jobid 6) cada 5 min con la clave de Vault, y la RPC `prode_sincronizar()` desde el botón de `AdminProde.tsx` | **Sólo la clave de servicio.** `sql/fase3_seguridad_crons.sql` |
-| `notify-host` | Avisos a los anfitriones de un GCX: `{registration_id}` → "Nueva solicitud de ingreso 👤" + email; `{grupo_aprobado_id}` → "¡Tu grupo fue aprobado! 🎉", sin email. | `notify_host_new_registration` y `notify_host_group_approved` | **Sólo la clave de servicio.** Idempotente (`notify_host_hechos`), tope 30/día. `sql/notify_host_seguro.sql` |
-| `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. | `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo, sólo si esa persona tiene suscripción | **Sólo la clave de servicio.** |
+| `notify-host` | Avisos a los anfitriones de un GCX: `{registration_id}` → "Nueva solicitud de ingreso 👤" + email; `{grupo_aprobado_id}` → "¡Tu grupo fue aprobado! 🎉", sin email. Los avisos los crea `notif_emitir` por RPC (el texto está en el catálogo, sección 40); el email lo sigue armando `armado.ts`. | `notify_host_new_registration` y `notify_host_group_approved` | **Sólo la clave de servicio.** Idempotente (`notify_host_hechos`), tope 30/día. `sql/notify_host_seguro.sql` |
+| `send-push` | Notificaciones push (Web Push + VAPID, `npm:web-push`). Antes de mandar consulta las reglas de la alerta (`notif_puede_enviar`): pausa, no molestar y tope por día (sección 40). Borra las suscripciones muertas (404/410, o 5 fallos seguidos). Ver sección 27. | `trg_app_notifications_push` con `{notificacion_id}` en cada aviso nuevo, sólo si esa persona tiene suscripción; y el cron `notif-push-diferidos` (cada 5 min) con `{modo:'diferidos'}` | **Sólo la clave de servicio.** |
 | `send-nocturna-entrada` | Email con la entrada de Nocturna. | `trigger_nocturna_entrada` y la RPC `reenviar_nocturna_email` | **Sólo la clave de servicio.** |
 | `send-nocturna-datos-faltantes` | Email pidiendo los datos que faltan de una inscripción a Nocturna. | — | **Sólo la clave de servicio.** |
 | `send-reporte-problema` | Email a Sistemas con un reporte de problema. Plantilla generada: `scripts/generar-plantilla-reporte.cjs`. | trigger de `reportes_problemas` | **Sólo la clave de servicio.** Tope 30/día. |
@@ -1867,10 +1867,13 @@ el 2026-10-28, `notify-deploy.js` manda además una notificación al teléfono e
 **cada deploy**.
 
 - Llama a la RPC `avisar_actualizacion(titulo, mensaje, horas)`
-  (`sql/avisar_actualizacion.sql`), que crea un aviso en `app_notifications`
+  (hoy en `sql/notif_catalogo.sql`), que crea un aviso en `app_notifications`
   por cada persona con la app instalada y las notificaciones activadas. De ahí
   en adelante es el camino de siempre: `trg_app_notifications_push` →
   `send-push` → el teléfono.
+- **El texto sale del catálogo**, de la alerta `app_version_nueva` (sección
+  40): se edita desde Sistemas, no en el script. `notify-deploy.js` la llama
+  sólo con `p_horas`.
 - **Sólo `service_role` puede ejecutarla.** Ni `anon` ni `authenticated`: si
   cualquiera con sesión pudiera, tendría cómo mandarle una notificación al
   teléfono de todos los demás.
@@ -2580,6 +2583,82 @@ Pruebas en `sql/PROBAR_agenda_avisos.sql`, deshacer en
 - `agenda_avisos` tiene RLS y ningún privilegio para `anon` ni
   `authenticated`; las funciones del circuito no se pueden ejecutar desde
   afuera.
+
+---
+
+## 40. GESTIÓN DE NOTIFICACIONES (catálogo y emisor central)
+
+Desde el **2026-10-29** todos los avisos de la app pasan por un solo lugar.
+Base: `sql/notif_catalogo.sql` (pruebas `PROBAR_`, deshacer `ROLLBACK_`).
+Diseño de la pantalla: `design-claude/Sistemas - Gestion de notificaciones.dc.html`.
+
+### El catálogo
+`notif_alertas`: una fila por alerta, con RLS y sin policies (todo por RPC).
+Cada fila tiene `clave`, `nombre`, `descripcion_evento`, `destinatario_texto`,
+`variables[]`, `titulo_plantilla`, `mensaje_plantilla`, `url_plantilla`,
+`type_legacy` (el `type` con el que se sigue escribiendo en
+`app_notifications`, para no romper los íconos ni los filtros), `activa`,
+`no_molestar` + `no_molestar_desde/hasta`, `max_por_dia`, y las columnas de
+las **programadas** (`siempre_activa`, `desde`, `hasta`, `cada_n_dias`,
+`horas[]`, `audiencia_*`), que hoy están en NULL.
+
+**20 alertas automáticas** sembradas, con el texto exacto que ya mandaba cada
+productor. `app_notifications.alerta_clave` dice de qué alerta salió cada
+aviso (NULL en los de antes).
+
+### El emisor
+`notif_emitir(clave, destinatario, vars, url, creado_por)` renderiza la
+plantilla (reemplaza `{variable}`, como texto plano, recortado a 120 y 500) y
+crea la fila. **Crea el aviso aunque la alerta esté pausada**: la pausa la
+resuelve el push, no la campanita, para que nadie pierda algo que tiene que
+hacer. `notif_emitir_texto(...)` es la variante con el texto ya armado, para
+la firma vieja de `crear_aviso`. Las dos son `SECURITY DEFINER` y sólo las
+pueden llamar la base y `service_role`.
+
+`crear_aviso` tiene **dos firmas**: la nueva `(destinatario, clave, vars, url)`
+—la que usa el frontend— y la vieja `(destinatario, tipo, titulo, mensaje,
+url)`, que sigue andando para los bundles viejos que alguien tenga abiertos y
+manda el texto tal como lo recibe. Las reglas de relación y el tope de 60 por
+hora están una sola vez, en `crear_aviso_permitido()`.
+
+### Las reglas de envío
+`send-push` le pregunta a `notif_puede_enviar(id)` antes de mandar:
+- `pausada` / `tope` → no sale push (el aviso queda en la app);
+- `diferir` → va a `notif_push_diferidos` y lo manda el cron
+  **`notif-push-diferidos`** (cada 5 minutos, `{modo:'diferidos'}`, clave de
+  Vault) cuando termina el horario de no molestar. **No se pierde.**
+- `enviar` → como siempre.
+
+Todo queda en `notif_push_log` (`enviado`, `pausada`, `tope`, `diferido`,
+`fallo`, `prueba`), que es de donde sale el tope del día y las métricas.
+**Si la base no contesta, se manda**: `accionDe()` en
+`supabase/functions/send-push/armado.ts` falla abriendo. El horario puede
+cruzar la medianoche (23:00–08:00) y lo resuelve `notif_no_molestar_hasta()`,
+que toma el instante por parámetro justamente para poder probarlo a las 23:30
+y a las 02:00.
+
+### Las RPC de la pantalla (sólo SUPER_ADMIN)
+`notif_alertas_admin()`, `notif_guardar_automatica(...)` (texto, pausa, no
+molestar y tope; el nombre, el evento y el destinatario **no** se editan) y
+`notif_enviar_prueba(id, vars)` (renderiza con datos de ejemplo y se la manda
+sólo a quien la pide, 5 por día; el aviso de prueba va **sin** `alerta_clave`
+para que no lo frene el horario de la alerta que se está probando).
+
+### Avisos repetidos (reportados, no tocados)
+Hay dos hechos que generan **dos** avisos cada uno, porque los produce el
+frontend y además un trigger:
+- alguien se anota a un grupo → `gcx_solicitud_ingreso` (notify-host) +
+  `gcx_solicitud_ingreso_app` / `gcx_solicitud_pareja_app` (el modal);
+- se aprueba un grupo → `gcx_grupo_aprobado` (notify-host) +
+  `gcx_grupo_aprobado_app` (Gestión de grupos), **con el mismo título**.
+Mientras no se decida borrar un productor, se puede **pausar el repetido**
+desde la pantalla: el aviso sigue en la campanita y deja de sonar dos veces.
+
+### Lo que NO va por acá
+`public.notifications` (otra tabla, de 2026) es un camino muerto: la escriben
+`notify_admins_on_new_group`, `notify_host_on_status_change` y las dos
+transferencias de grupo de `supabaseService.ts`, **nadie la lee** y no genera
+push. Su última fila es del 2026-09-24.
 
 ---
 

@@ -8,12 +8,18 @@
 // escribió quien se inscribe va escapado, se ve en el modo oscuro de Gmail y
 // el botón lleva directo a las solicitudes del grupo.
 
-/** Un aviso para la tabla app_notifications. */
+/**
+ * Un aviso, para que lo cree el emisor central (notif_emitir).
+ *
+ * Desde el 2026-10-29 el texto NO se arma acá: vive en el catálogo de
+ * alertas (notif_alertas, sql/notif_catalogo.sql), que es lo que Sistemas
+ * puede editar y pausar desde Gestión de notificaciones. Acá viajan la clave
+ * de la alerta y los datos que van en los huecos.
+ */
 export interface Aviso {
-  title: string;
-  message: string;
-  type: string;
-  action_url: string;
+  clave: string;
+  vars: Record<string, string>;
+  url: string;
 }
 
 /** Emails por día (hora argentina). Ver TOPE_EMAILS_DIA en el reporte. */
@@ -54,24 +60,22 @@ export function destinatarios(hostId: string | null | undefined, coHostId: strin
   return [...new Set([hostId, coHostId].filter((x): x is string => !!x))];
 }
 
-/** El aviso de una inscripción nueva: idéntico al de antes. */
+/**
+ * El aviso de una inscripción nueva. La plantilla, hoy:
+ *   "Nueva solicitud de ingreso 👤"
+ *   "{nombre} quiere unirse a "{grupo}". Revisá las solicitudes pendientes."
+ */
 export function avisoInscripcion(nombre: string, grupo: string): Aviso {
-  return {
-    title: "Nueva solicitud de ingreso 👤",
-    message: `${nombre} quiere unirse a "${grupo}". Revisá las solicitudes pendientes.`,
-    type: "info",
-    action_url: "/",
-  };
+  return { clave: "gcx_solicitud_ingreso", vars: { nombre, grupo }, url: "/" };
 }
 
-/** El aviso de grupo aprobado: idéntico al de antes. */
+/**
+ * El aviso de grupo aprobado. La plantilla, hoy:
+ *   "¡Tu grupo fue aprobado! 🎉"
+ *   "El grupo "{grupo}" fue aprobado y ya está visible en la app."
+ */
 export function avisoGrupoAprobado(grupo: string): Aviso {
-  return {
-    title: "¡Tu grupo fue aprobado! 🎉",
-    message: `El grupo "${grupo}" fue aprobado y ya está visible en la app.`,
-    type: "success",
-    action_url: "/",
-  };
+  return { clave: "gcx_grupo_aprobado", vars: { grupo }, url: "/" };
 }
 
 /**

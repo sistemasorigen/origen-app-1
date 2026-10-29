@@ -72,11 +72,20 @@ async function mandarEmail(to: string, asunto: string, html: string): Promise<{ 
   return { ok: r.ok, status: r.status };
 }
 
+/**
+ * El aviso lo crea el emisor central, que pone el texto del catálogo y le
+ * deja anotada la clave de la alerta: así Sistemas puede pausarla o ponerle
+ * un tope desde Gestión de notificaciones (sql/notif_catalogo.sql).
+ */
 async function crearAviso(supabase: Cliente, userId: string, a: Aviso): Promise<void> {
-  const { error } = await supabase.from("app_notifications").insert({
-    user_id: userId, title: a.title, message: a.message, type: a.type, action_url: a.action_url,
+  const { data, error } = await supabase.rpc("notif_emitir", {
+    p_clave: a.clave,
+    p_destinatario: userId,
+    p_vars: a.vars,
+    p_url: a.url,
   });
-  if (error) throw new Error(`app_notifications: ${error.code}`);
+  if (error) throw new Error(`notif_emitir: ${error.code}`);
+  if (!data) throw new Error(`notif_emitir: no creó el aviso ${a.clave}`);
 }
 
 async function inscripcion(supabase: Cliente, id: string) {

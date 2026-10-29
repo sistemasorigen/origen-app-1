@@ -67,7 +67,13 @@ console.log(`[notify-deploy] app_version actualizada a ${newVersion} — los cli
 //
 // La RPC crea un aviso en app_notifications por cada persona con la app
 // instalada y las notificaciones activadas, y el trigger
-// trg_app_notifications_push lo empuja al teléfono (sql/avisar_actualizacion.sql).
+// trg_app_notifications_push lo empuja al teléfono.
+//
+// Desde el 2026-10-29 el TEXTO sale del catálogo de alertas (la alerta
+// 'app_version_nueva' de notif_alertas, sql/notif_catalogo.sql): se puede
+// editar, pausar o ponerle un horario de no molestar desde Sistemas →
+// Gestión de notificaciones, sin tocar este script. Por eso acá no va
+// ningún título ni mensaje.
 //
 // Dos perillas, las dos opcionales:
 //   SIN_AVISO=1    → este deploy no manda ningún push (un arreglo chico,

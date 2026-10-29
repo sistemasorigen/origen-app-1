@@ -177,11 +177,10 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({ isOpen, onClose, grou
             // Send confirmation notification to the host
             if (user?.id) {
                 const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
-                await supabaseService.createAppNotification(
+                await supabaseService.crearAviso(
                     user.id,
-                    '✅ Asistencia registrada',
-                    `Registraste ${selectedMembers.size} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
-                    'ATTENDANCE',
+                    'gcx_asistencia_guardada',
+                    { presentes: selectedMembers.size, grupo: group.name, fecha: formattedDate },
                     '/mis-grupos'
                 );
             }

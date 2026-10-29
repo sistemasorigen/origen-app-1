@@ -1651,49 +1651,52 @@ export const supabaseService = {
   /**
    * Crea un aviso para otra persona (o para uno mismo).
    *
-   * Desde el 2026-10-28 no se inserta directo en app_notifications: la tabla
-   * ya no lo permite. Pasa por la RPC crear_aviso (sql/avisos_seguros.sql),
-   * que valida el tipo, los textos, la ruta y que quien avisa tenga relación
-   * con quien recibe (anfitrión ↔ inscripto, gestor de grupos, uno mismo).
+   * No lleva el texto: lleva la CLAVE de la alerta del catálogo
+   * (sql/notif_catalogo.sql) y los datos que van en los huecos de la
+   * plantilla ({nombre}, {grupo}…). El texto lo pone la base, que es donde
+   * Sistemas lo puede editar desde Gestión de notificaciones y donde se
+   * decide si esa alerta está pausada o llegó a su tope del día.
+   *
+   * La RPC valida las mismas cosas que antes: la sesión, que las variables
+   * sean las de esa alerta, la ruta, y que quien avisa tenga una relación
+   * real con quien recibe (anfitrión ↔ inscripto, gestor de grupos, uno
+   * mismo). Más un tope de 60 por hora por persona.
    *
    * NUNCA rompe el flujo que lo llama: si la base lo rechaza, devuelve false,
-   * lo anota en la consola y en el diagnóstico (sólo el tipo y el motivo, sin
-   * nombres ni ids) y sigue. Inscribirse, aprobar o tomar asistencia andan
-   * aunque el aviso no salga.
+   * lo anota en la consola y en el diagnóstico (sólo la clave y el motivo,
+   * sin nombres ni ids) y sigue. Inscribirse, aprobar o tomar asistencia
+   * andan aunque el aviso no salga.
    */
-  async createAppNotification(userId: string, title: string, message: string, type: string, actionUrl: string | null = null): Promise<boolean> {
+  async crearAviso(
+    userId: string,
+    clave: string,
+    vars: Record<string, string | number> = {},
+    actionUrl: string | null = null,
+  ): Promise<boolean> {
     try {
       if (!userId) {
         console.warn('[Notifications] Cannot create notification without user_id');
         return false;
       }
 
-      // Los mismos topes que la base (120 y 500): una nota de rechazo larga
-      // recorta el aviso en vez de perderlo.
-      const recortar = (t: string, max: number) => {
-        const limpio = String(t ?? '').trim();
-        return limpio.length > max ? `${limpio.slice(0, max - 1).trimEnd()}…` : limpio;
-      };
-
       const { data, error } = await supabase.rpc('crear_aviso', {
         p_destinatario: userId,
-        p_tipo: type,
-        p_titulo: recortar(title, 120),
-        p_mensaje: recortar(message, 500),
+        p_clave: clave,
+        p_vars: vars,
         p_url: actionUrl,
       });
 
       const r = data as { ok?: boolean; motivo?: string } | null;
       if (error || !r?.ok) {
         const motivo = error?.message ?? r?.motivo ?? 'sin respuesta';
-        console.error('[Notifications] No se creó el aviso:', type, motivo);
-        registrar('error', `aviso ${type} no creado: ${motivo}`);
+        console.error('[Notifications] No se creó el aviso:', clave, motivo);
+        registrar('error', `aviso ${clave} no creado: ${motivo}`);
         return false;
       }
       return true;
     } catch (err) {
       console.error('[Notifications] Exception creating notification:', err);
-      registrar('error', `aviso ${type} no creado: ${err instanceof Error ? err.message : String(err)}`);
+      registrar('error', `aviso ${clave} no creado: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     }
   },
@@ -3253,18 +3256,19 @@ export const supabaseService = {
       if (status === 'approved' || status === 'rejected') {
         if (groupData) {
           const isApproved = status === 'approved';
-          const title = isApproved ? '¡Tu grupo fue aprobado! 🎉' : 'Actualización sobre tu grupo';
-          const message = isApproved
-            ? `Tu grupo "${groupData.name}" ha sido aprobado. Recuerda registrar asistencia cada ${groupData.meeting_day || 'reunión'}.`
-            : `Tu grupo "${groupData.name}" no ha podido ser aprobado en este momento.${adminNote ? ` Motivo: ${adminNote}` : ''}`;
-          const type = isApproved ? 'GROUP_APPROVED' : 'GROUP_REJECTED';
+          const clave = isApproved ? 'gcx_grupo_aprobado_app' : 'gcx_grupo_rechazado_app';
+          // `motivo` lleva la frase entera y no sólo la nota: cuando no hay
+          // nota va vacío y el mensaje termina en el punto, igual que antes.
+          const vars = isApproved
+            ? { grupo: groupData.name, dia: groupData.meeting_day || 'reunión' }
+            : { grupo: groupData.name, motivo: adminNote ? ` Motivo: ${adminNote}` : '' };
           const actionUrl = '/mis-grupos';
 
           if (groupData.host_id) {
-            await supabaseService.createAppNotification(groupData.host_id, title, message, type, actionUrl);
+            await supabaseService.crearAviso(groupData.host_id, clave, vars, actionUrl);
           }
           if (groupData.co_host_id) {
-            await supabaseService.createAppNotification(groupData.co_host_id, title, message, type, actionUrl);
+            await supabaseService.crearAviso(groupData.co_host_id, clave, vars, actionUrl);
           }
         } else {
           console.warn('[Groups] Could not send notification: Group data missing after update');
@@ -4117,19 +4121,16 @@ export const supabaseService = {
       if (data === true && regInfo) {
         const groupData: any = regInfo.groups;
         const groupName = groupData?.name || 'un grupo';
-        
-        const notifTitle = status === 'APPROVED' ? 'Solicitud Aprobada' : 'Solicitud Rechazada';
-        const notifMessage = status === 'APPROVED' 
-            ? `Tu solicitud para unirte a ${groupName} ha sido aprobada.` 
-            : `Tu solicitud para unirte a ${groupName} no ha podido ser aceptada en este momento.`;
-        const type = status === 'APPROVED' ? 'REGISTRATION_APPROVED' : 'REGISTRATION_REJECTED';
+
+        const clave = status === 'APPROVED' ? 'gcx_inscripcion_aprobada' : 'gcx_inscripcion_rechazada';
+        const vars = { grupo: groupName };
         const actionUrl = '/';
 
         if (regInfo.user_id) {
-          await supabaseService.createAppNotification(regInfo.user_id, notifTitle, notifMessage, type, actionUrl);
+          await supabaseService.crearAviso(regInfo.user_id, clave, vars, actionUrl);
         }
         if (regInfo.partner_user_id) {
-          await supabaseService.createAppNotification(regInfo.partner_user_id, notifTitle, notifMessage, type, actionUrl);
+          await supabaseService.crearAviso(regInfo.partner_user_id, clave, vars, actionUrl);
         }
       }
 

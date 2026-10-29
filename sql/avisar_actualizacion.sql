@@ -2,6 +2,15 @@
 -- avisar_actualizacion() · el push de "hay una versión nueva"
 -- 2026-10-28 · pedido de Ignacio: tiene que salir en cada `npm run deploy`
 --
+-- ⚠️ ESTA VERSIÓN YA NO ES LA QUE CORRE. El 2026-10-29 la reemplazó
+-- sql/notif_catalogo.sql: ahora el texto sale de la alerta
+-- 'app_version_nueva' del catálogo (y se puede editar desde la pantalla de
+-- Sistemas), p_titulo y p_mensaje pasaron a ser opcionales y el aviso se crea
+-- por el emisor central. El resto —a quién le llega, el freno de p_horas y
+-- que sólo la pueda llamar service_role— quedó igual. Este archivo se
+-- conserva porque es la definición a la que vuelve
+-- sql/ROLLBACK_notif_catalogo.sql.
+--
 -- QUÉ HACE. Crea UN aviso en app_notifications para cada persona que tiene la
 -- app instalada con las notificaciones activadas (una fila en
 -- push_suscripciones y la cuenta activa). El trigger

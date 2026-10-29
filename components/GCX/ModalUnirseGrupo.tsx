@@ -342,35 +342,26 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, group,
             const success = await supabaseService.registerMemberToGroup(reg);
 
             if (success) {
-                const notifMessage = hasPartnerData
-                    ? `${formData.firstName} ${formData.lastName} y ${partnerData.firstName} ${partnerData.lastName} se inscribieron como pareja en ${group.name}.`
-                    : `${formData.firstName} ${formData.lastName} se unió a ${group.name}.`;
-
-                const notifTitle = hasPartnerData ? `Nueva solicitud de pareja` : `Nueva solicitud de miembro`;
+                // El texto vive en el catálogo de alertas; de acá sólo viajan
+                // los nombres y el grupo (sql/notif_catalogo.sql).
+                const clave = hasPartnerData ? 'gcx_solicitud_pareja_app' : 'gcx_solicitud_ingreso_app';
+                const vars: Record<string, string> = {
+                    nombre: `${formData.firstName} ${formData.lastName}`,
+                    grupo: group.name,
+                };
+                if (hasPartnerData) {
+                    vars.pareja = `${partnerData.firstName} ${partnerData.lastName}`;
+                }
                 const actionUrl = `/panel-admin/groups?groupId=${group.id}`;
 
                 // Notify host
                 if ((group as any).host_id) {
-                    await supabaseService.createAppNotification(
-                        (group as any).host_id,
-                        notifTitle,
-                        notifMessage,
-                        'REGISTRATION',
-                        actionUrl,
-                        { groupId: group.id, ...formData }
-                    );
+                    await supabaseService.crearAviso((group as any).host_id, clave, vars, actionUrl);
                 }
 
                 // Notify co-host
                 if ((group as any).co_host_id) {
-                    await supabaseService.createAppNotification(
-                        (group as any).co_host_id,
-                        notifTitle,
-                        notifMessage,
-                        'REGISTRATION',
-                        actionUrl,
-                        { groupId: group.id, ...formData }
-                    );
+                    await supabaseService.crearAviso((group as any).co_host_id, clave, vars, actionUrl);
                 }
 
                 if (onSuccess) onSuccess();

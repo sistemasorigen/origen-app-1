@@ -477,11 +477,10 @@ const PaginaAsistenciaGrupo: React.FC<{ currentUser: User }> = ({ currentUser })
         // novedad que merezca su propia notificación.
         if (esAlta && user?.id) {
             const formattedDate = new Date(fechaGuardada + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long' });
-            await supabaseService.createAppNotification(
+            await supabaseService.crearAviso(
                 user.id,
-                '✅ Asistencia registrada',
-                `Registraste ${presentes} presente(s) en ${group.name} el ${formattedDate}. ¡Seguí así!`,
-                'ATTENDANCE',
+                'gcx_asistencia_guardada',
+                { presentes, grupo: group.name, fecha: formattedDate },
                 // Al historial de ESTE grupo, no a la lista de grupos: desde la
                 // notificación se quiere ver la reunión, no buscarla.
                 `/mis-grupos/${group.id}/asistencia?vista=historial`
