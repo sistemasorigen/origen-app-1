@@ -13,6 +13,7 @@ import {
     ClipboardCheck,
     Inbox,
     Info,
+    Megaphone,
     MessageSquareReply,
     MoreHorizontal,
     Pin,
@@ -84,6 +85,8 @@ const ICONOS: Record<string, React.ElementType> = {
     AGENDA_SOLICITUD_REVISADA: MessageSquareReply,
     // La de prueba de Mi cuenta → Notificaciones en este dispositivo.
     PUSH_PRUEBA: BellRing,
+    // Las que programa Sistemas (sql/notif_programadas.sql).
+    PROGRAMADA: Megaphone,
 };
 
 const iconoDe = (tipo: string): React.ElementType => ICONOS[tipo] || Bell;

@@ -2644,6 +2644,45 @@ molestar y tope; el nombre, el evento y el destinatario **no** se editan) y
 sólo a quien la pide, 5 por día; el aviso de prueba va **sin** `alerta_clave`
 para que no lo frene el horario de la alerta que se está probando).
 
+### Las programadas (las que crea Sistemas)
+Base: `sql/notif_programadas.sql` (pruebas `PROBAR_`, 93 casos; deshacer
+`ROLLBACK_`). Son filas de `notif_alertas` con `tipo = 'programada'`,
+`type_legacy = 'PROGRAMADA'` (ícono Megaphone en la campanita) y una clave
+generada (`prog_` + 12). Texto fijo: título ≤ 60, mensaje ≤ 160, sin
+`{variables}`, ruta interna.
+
+- **Pausada no emite nada** (ni campanita): al revés que las automáticas.
+  **Eliminar es lógico** (`eliminada_at`) y también la pausa.
+- **El reloj**: `notif_programadas_tick(p_ahora)`, cron **`notif-programadas`**
+  cada 5 minutos (SQL directo, sin HTTP). Sale un horario si la programada
+  está activa, vigente hoy (hora argentina) y `(hoy − desde) % cada_n_dias = 0`.
+  Cada horario se **reserva** en `notif_programadas_hechas`
+  (`UNIQUE(alerta_id, fecha, hora)`, `INSERT … ON CONFLICT DO NOTHING`) antes
+  de emitir: dos corridas no lo mandan dos veces. Si el cron estuvo caído
+  salen los atrasados **de hoy**; los de ayer, nunca. `reloj_desde` (alta,
+  activación, cambio de horarios, con 10 min de gracia) evita que crear una a
+  las 11:00 con un horario de las 10:00 la mande en el momento.
+- **El lote**: la emisión crea todos los avisos de una con un `envio_id`; el
+  trigger `trg_app_notifications_push` **ignora** los que traen `envio_id`
+  (`WHEN … AND NEW.envio_id IS NULL`) y sale **un** pedido a
+  `send-push {modo:'lote', envio_id}`. La cola (`notif_lote_cola`) tiene sólo
+  a los que tienen dispositivo; send-push toma de a 50 con reserva
+  (`notif_lote_tomar`, SKIP LOCKED), manda de a 10 con las reglas de siempre,
+  borra (`notif_lote_hechos`) y, pasados 30 s o 100 avisos, se vuelve a pedir
+  (`notif_lote_encolar`). Un lote sin novedad hace 10 min lo relanza el reloj.
+  Más de **5000** personas (`notif_tope_por_emision()`): no se emite y queda
+  `excedida`.
+- **Las RPC** (sólo SUPER_ADMIN): `notif_guardar_programada` (id del cliente,
+  idempotente), `notif_cambiar_estado` (cualquier alerta),
+  `notif_eliminar_programada`, `notif_estimar_audiencia` (la misma cuenta que
+  la emisión), `notif_roles_disponibles`. La búsqueda de personas es
+  `agenda_buscar_usuarios` (a SUPER_ADMIN le da el email completo).
+  `notif_alertas_admin()` deja afuera las eliminadas y, en las programadas,
+  suma `alcance`, `alcance_detalle`, `audiencia_personas`,
+  `audiencia_con_push`, `audiencia_detalle` y `proximo_envio`.
+- Toda alta, edición, pausa y baja de `notif_alertas` queda en `audit_logs`
+  (trigger `audit_notif_alertas_changes`, el mismo de users y groups).
+
 ### Avisos repetidos (reportados, no tocados)
 Hay dos hechos que generan **dos** avisos cada uno, porque los produce el
 frontend y además un trigger:

@@ -125,3 +125,111 @@ export const resultadoDe = (
   if (accion === "no_mandar") return decision === "tope" ? "tope" : "pausada";
   return enviados > 0 ? "enviado" : "fallo";
 };
+
+
+// ── El envío en lote de las programadas ─────────────────────────────────────
+// Una programada crea todos sus avisos de una vez (sql/notif_programadas.sql)
+// y pide UN lote, en vez de un pedido por persona. Acá está la vuelta que lo
+// recorre; index.ts sólo le pasa cómo hablar con la base.
+//
+// Los límites salen de los de las Edge Functions (los del plan gratuito, que
+// son los más chicos: 150 s de reloj y 2 s de CPU por invocación):
+//   · Reloj: se dejan de tomar avisos a los 30 s. Con la última tanda adentro
+//     la función contesta muy por debajo de los 150 s y de los 120 s que
+//     espera pg_net.
+//   · CPU: cifrar un push son ~0,13 ms medidos en Node (ECDH + HKDF +
+//     AES-GCM + la firma VAPID). Aunque en Deno fuera 10 veces más, 100 avisos
+//     con hasta 3 dispositivos cada uno son ~0,4 s.
+//   · Lo que no entra, sigue en otra invocación: la función le pide a la base
+//     que la vuelva a llamar (notif_lote_encolar). El "cursor" es la cola del
+//     lote en la base, no un número que viaja en el pedido: lo que se tomó
+//     queda reservado y lo que se procesó se borra, así que la invocación
+//     siguiente —o una que corra a la vez— no puede repetir a nadie.
+
+/** Cuántos avisos se toman de la base por vez. */
+export const LOTE_TOMA = 50;
+/** Cuántos avisos se mandan a la vez. */
+export const LOTE_CONCURRENCIA = 10;
+/** Pasado este tiempo no se toman más avisos en esta invocación. */
+export const LOTE_PRESUPUESTO_MS = 30_000;
+/** Como mucho, tantos avisos por invocación (el límite de CPU). */
+export const LOTE_MAX_POR_INVOCACION = 100;
+
+/** Corre fn sobre cada elemento, con a lo sumo `limite` a la vez. */
+export async function enParalelo<T>(items: readonly T[], limite: number, fn: (x: T) => Promise<void>): Promise<void> {
+  let siguiente = 0;
+  const trabajador = async () => {
+    while (siguiente < items.length) {
+      const x = items[siguiente++];
+      await fn(x);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limite, items.length)) }, trabajador));
+}
+
+/** Cómo habla la vuelta del lote con el mundo (la base y el push). */
+export interface DependenciasLote {
+  /** notif_lote_tomar: reserva y devuelve hasta `tope` ids. */
+  tomar: (tope: number) => Promise<{ ids: string[]; quedan: number }>;
+  /** Manda el push de un aviso, con las reglas de siempre. */
+  mandar: (id: string) => Promise<{ enviados: number; borradas: number; fallidas: number }>;
+  /** notif_lote_hechos: los saca de la cola. */
+  hechos: (ids: string[]) => Promise<{ quedan: number }>;
+  /** notif_lote_encolar: que la base vuelva a llamar a send-push. */
+  seguirDespues: () => Promise<void>;
+  ahora: () => number;
+}
+
+export interface ResultadoLote {
+  procesados: number;
+  enviados: number;
+  borradas: number;
+  fallidas: number;
+  /** true si quedaron avisos y se pidió otra invocación. */
+  continua: boolean;
+}
+
+export async function procesarLote(
+  d: DependenciasLote,
+  limites = {
+    toma: LOTE_TOMA,
+    concurrencia: LOTE_CONCURRENCIA,
+    presupuestoMs: LOTE_PRESUPUESTO_MS,
+    maximo: LOTE_MAX_POR_INVOCACION,
+  },
+): Promise<ResultadoLote> {
+  const inicio = d.ahora();
+  const r: ResultadoLote = { procesados: 0, enviados: 0, borradas: 0, fallidas: 0, continua: false };
+  let quedan = 0;
+
+  while (r.procesados < limites.maximo && d.ahora() - inicio < limites.presupuestoMs) {
+    const tanda = await d.tomar(Math.min(limites.toma, limites.maximo - r.procesados));
+    quedan = tanda.quedan;
+    // Nada para tomar: o terminó, o lo que falta lo tiene reservado otra
+    // invocación (si ésa se muere, el reloj relanza el lote a los 10 min).
+    if (tanda.ids.length === 0) return r;
+
+    await enParalelo(tanda.ids, limites.concurrencia, async (id) => {
+      try {
+        const x = await d.mandar(id);
+        r.enviados += x.enviados;
+        r.borradas += x.borradas;
+        r.fallidas += x.fallidas;
+      } catch (_e) {
+        // Un aviso que revienta no frena el lote. Se da por procesado igual:
+        // reintentarlo para siempre sería peor que perder ese push (el aviso
+        // está en la campanita).
+        r.fallidas++;
+      }
+    });
+
+    quedan = (await d.hechos(tanda.ids)).quedan;
+    r.procesados += tanda.ids.length;
+  }
+
+  if (quedan > 0) {
+    await d.seguirDespues();
+    r.continua = true;
+  }
+  return r;
+}

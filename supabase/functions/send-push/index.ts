@@ -29,6 +29,13 @@
 // Acepta también { modo: 'diferidos' } (lo llama el cron cada 5 minutos):
 // toma los diferidos vencidos y los manda.
 //
+// Y { modo: 'lote', envio_id } (desde el 2026-10-29, sql/notif_programadas.sql):
+// los avisos de una alerta programada, que el trigger NO manda uno por uno.
+// Toma de a tandas de la cola del lote, manda con concurrencia limitada (las
+// mismas reglas de arriba para cada persona) y, si no termina dentro del
+// presupuesto, le pide a la base que la vuelva a llamar. Los números y por qué
+// están en armado.ts (procesarLote).
+//
 // Secretos: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT,
 // ORIGEN_SERVICE_ROLE_KEY y SUPABASE_URL. La clave pública también está en
 // el frontend (src/utils/push.ts): si se cambian las claves, cambiar las dos,
@@ -38,7 +45,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import webpush from "npm:web-push@3.6.7";
 import {
-  accionDe, armarPayload, desenlace, FALLOS_PARA_BORRAR, resultadoDe, TIPOS_SIN_PUSH, type Modo,
+  accionDe, armarPayload, desenlace, FALLOS_PARA_BORRAR, procesarLote, resultadoDe, TIPOS_SIN_PUSH, type Modo,
 } from "./armado.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -194,6 +201,33 @@ async function mandarDiferidos(supabase: Cliente) {
   return json({ ok: true, diferidos: ids.length, enviados, borradas, fallidas });
 }
 
+/** Una tanda (o varias) de un envío en lote de una programada. */
+async function mandarLote(supabase: Cliente, envioId: string) {
+  const r = await procesarLote({
+    tomar: async (tope) => {
+      const { data, error } = await supabase.rpc("notif_lote_tomar", { p_envio: envioId, p_tope: tope });
+      if (error) throw new Error(`notif_lote_tomar: ${error.code ?? error.message}`);
+      const ids = ((data as { ids?: unknown })?.ids as string[] ?? []).filter((x) => ES_UUID.test(String(x)));
+      return { ids, quedan: Number((data as { quedan?: number })?.quedan ?? 0) };
+    },
+    mandar: (id) => mandarUno(supabase, id, "aviso"),
+    hechos: async (ids) => {
+      const { data, error } = await supabase.rpc("notif_lote_hechos", { p_envio: envioId, p_ids: ids });
+      // Si esto falla, los avisos quedan reservados: a los 10 minutos se
+      // pueden retomar, y los que ya figuran en el log se descartan.
+      if (error) console.warn("[send-push] notif_lote_hechos falló:", error.code ?? error.message);
+      return { quedan: Number((data as { quedan?: number })?.quedan ?? 0) };
+    },
+    seguirDespues: async () => {
+      const { error } = await supabase.rpc("notif_lote_encolar", { p_envio: envioId });
+      // Si no se pudo pedir la vuelta siguiente, el reloj la relanza a los 10 min.
+      if (error) console.warn("[send-push] no se pudo pedir la vuelta siguiente:", error.code ?? error.message);
+    },
+    ahora: () => Date.now(),
+  });
+  return json({ ok: true, lote: envioId, ...r });
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { status: 200 });
 
@@ -217,6 +251,12 @@ serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
 
     if (body?.modo === "diferidos") return await mandarDiferidos(supabase);
+
+    if (body?.modo === "lote") {
+      const envio = String(body?.envio_id ?? "");
+      if (!ES_UUID.test(envio)) return json({ error: "Falta envio_id" }, 400);
+      return await mandarLote(supabase, envio);
+    }
 
     const id = String(body?.notificacion_id ?? "");
     if (!ES_UUID.test(id)) return json({ error: "Falta notificacion_id" }, 400);
