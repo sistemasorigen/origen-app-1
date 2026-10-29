@@ -2683,6 +2683,33 @@ generada (`prog_` + 12). Texto fijo: título ≤ 60, mensaje ≤ 160, sin
 - Toda alta, edición, pausa y baja de `notif_alertas` queda en `audit_logs`
   (trigger `audit_notif_alertas_changes`, el mismo de users y groups).
 
+### La pantalla: `/panel-admin?tab=notificaciones`
+Sección `notificaciones` de `pages/admin/Administrador.tsx`, grupo Sistema
+(menú del engranaje en la compu, hoja "Configuración" en el teléfono).
+Código en `pages/admin/notificaciones/` (`GestionNotificaciones.tsx` la lista,
+`EditorAlerta.tsx` la hoja/modal, `SelectorDeAudiencia.tsx`, `piezas.tsx`) y
+las RPC en `services/notificaciones.ts`, con el molde de `services/agenda.ts`.
+
+- **La lista** muestra `alcance`, `horario` y `vigencia` de las programadas
+  TAL COMO vienen de `notif_alertas_admin` (no se rearman en el front).
+  Próximo envío en hora argentina ("dom 8/11, 10:00"); sin fecha: "Pausada",
+  "Terminó" (vigencia vencida) o "Sin más envíos"; automáticas: "Cuando pasa".
+  Después de cada cambio se vuelve a pedir la lista: nada optimista.
+- **El editor**: programada → `notif_guardar_programada` (id con
+  `crypto.randomUUID()` UNA vez al abrir), con límites 60/160, sin
+  `{variables}` (la base las rechaza) y destino elegido de `PANTALLAS`
+  (`piezas.tsx`), sólo rutas internas: **se sacó la URL externa del diseño**.
+  Automática → `notif_guardar_automatica` (texto 120/500 con chips de sus
+  variables, no molestar, tope, activa); cuándo sale y a quién le llega se
+  muestran fijos. La estimación de audiencia frena el guardado si pasa el tope.
+- **Eliminar** sólo en programadas, con "Pausar en vez de eliminar"
+  (`PedidoConfirmacion.secundaria` en `piezasAdmin.tsx`).
+- **"Enviarme una prueba"** → `notif_probar_texto(titulo, mensaje, url,
+  alerta_id)` (`sql/notif_prueba.sql`): el texto del editor, sólo a
+  `auth.uid()`, 10 por día, variables con `notif_ejemplos()` (los mismos
+  ejemplos que `EJEMPLOS` de `piezas.tsx`). Si la función no existe, el botón
+  lo dice (`no_disponible`).
+
 ### Avisos repetidos (reportados, no tocados)
 Hay dos hechos que generan **dos** avisos cada uno, porque los produce el
 frontend y además un trigger:

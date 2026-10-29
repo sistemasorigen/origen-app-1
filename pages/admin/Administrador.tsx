@@ -22,6 +22,7 @@ import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
 import BandejaDeDatos from './BandejaDeDatos';
 import ReportesSistemas from './ReportesSistemas';
 import DepartamentosAdmin from './DepartamentosAdmin';
+import GestionNotificaciones from './notificaciones/GestionNotificaciones';
 import { reportesSistemas } from '../../services/miCuenta';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
@@ -39,7 +40,7 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
  * solo cambia por dónde se llega a ellas.
  */
 
-type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes' | 'departamentos';
+type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes' | 'departamentos' | 'notificaciones';
 
 const safeUUID = () => {
     // Respaldo para contextos no seguros (http://IP), donde crypto.randomUUID
@@ -141,6 +142,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             logs: 'auditoria', auditoria: 'auditoria',
             datos: 'datos',
             departamentos: 'departamentos',
+            notificaciones: 'notificaciones',
         };
         if (enRutaDeReportes) setSeccion('reportes');
         else if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
@@ -368,13 +370,14 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
 
     // ── Cabecera ──────────────────────
     const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes' || seccion === 'departamentos';
-    const enSistema = seccion === 'config' || seccion === 'auditoria';
+    const enSistema = seccion === 'config' || seccion === 'auditoria' || seccion === 'notificaciones';
     // En el teléfono "Sistema" junta las tres: configuración, registro y datos.
     const enSistemaMovil = enSistema || seccion === 'datos';
 
     const NOMBRE: Record<Seccion, string> = {
         usuarios: 'Usuarios', directorio: 'Directorio', reportes: 'Reportes', departamentos: 'Departamentos',
         config: 'Configuración', auditoria: 'Registro de cambios', datos: 'Solicitudes de datos',
+        notificaciones: 'Notificaciones',
     };
     const DETALLE: Partial<Record<Seccion, string>> = {
         usuarios: 'Cuentas, roles y permisos.',
@@ -384,14 +387,16 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         config: 'Identidad, banners, música y pies. Lo ve toda la iglesia.',
         auditoria: 'Quién tocó qué y cuándo.',
         datos: 'Pedidos de acceso, corrección o baja (Ley 25.326).',
+        notificaciones: 'Qué avisos manda la app, a quién y cuándo.',
     };
     const GRUPO: Record<'personas' | 'sistema', Seccion[]> = {
         personas: ['usuarios', 'directorio', 'reportes', 'departamentos'],
-        sistema: ['config', 'auditoria', 'datos'],
+        sistema: ['config', 'auditoria', 'datos', 'notificaciones'],
     };
 
     const titulo = seccion === 'reportes' ? 'Reportes de problemas'
         : seccion === 'departamentos' ? 'Departamentos'
+        : seccion === 'notificaciones' ? 'Gestión de notificaciones'
         : seccion === 'usuarios'
         ? (creando ? 'Nueva cuenta' : abierto ? `Roles de ${(abierto.name || '').split(' ')[0] || 'la cuenta'}` : 'Usuarios y permisos')
         : seccion === 'directorio' ? 'Directorio de responsables'
@@ -429,6 +434,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         ? 'Sin reportes'
                                         : `${reportesNuevos} ${reportesNuevos === 1 ? 'nuevo' : 'nuevos'} · ${reportesTotal} en total`}
                                 </p>
+                            )}
+                            {seccion === 'notificaciones' && (
+                                <p className="mt-1 text-[13.5px] font-medium text-black/[.56]">{DETALLE.notificaciones}</p>
                             )}
                         </div>
 
@@ -475,8 +483,17 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             Quién tocó qué y cuándo.
                                         </span>
                                     </button>
+                                    <button
+                                        onClick={() => irA('notificaciones')}
+                                        className={`mt-[7px] w-full rounded-[16px] px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${seccion === 'notificaciones' ? 'bg-white/[.16]' : 'bg-white/[.07] hover:bg-white/[.12]'}`}
+                                    >
+                                        <span className="block text-[14px] font-semibold text-white">Gestión de notificaciones</span>
+                                        <span className="mt-1 block text-[12px] font-medium leading-[1.45] text-white/60">
+                                            Qué avisos manda la app, a quién y cuándo.
+                                        </span>
+                                    </button>
                                     <p className="mx-1 mb-0.5 mt-3 text-[11.5px] font-medium leading-[1.5] text-white/45">
-                                        Dos ajustes que afectan a todo el sistema. Se entra poco y se sale.
+                                        Ajustes que afectan a todo el sistema. Se entra poco y se sale.
                                     </p>
                                 </div>
                             )}
@@ -585,6 +602,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                 <button onClick={() => irA('datos')} className={botonNav(seccion === 'datos')}>
                                     Solicitudes de datos
                                 </button>
+                                <button onClick={() => irA('notificaciones')} className={botonNav(seccion === 'notificaciones')}>
+                                    Notificaciones
+                                </button>
                             </>
                         )}
                     </div>
@@ -657,6 +677,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 {seccion === 'departamentos' && (
                     <DepartamentosAdmin miId={currentUser?.id} avisar={avisar} />
                 )}
+
+                {seccion === 'notificaciones' && <GestionNotificaciones avisar={avisar} />}
 
                 {seccion === 'usuarios' && !abierto && !creando && (
                     <UsuariosAdmin

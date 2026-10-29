@@ -100,6 +100,11 @@ export interface PedidoConfirmacion {
      * mayúsculas ni acentos, para que "Producción" y "produccion" valgan igual.
      */
     escribirParaConfirmar?: string;
+    /**
+     * Una salida más suave, entre la principal y Cancelar ("Pausar en vez de
+     * eliminar"). También cierra el modal.
+     */
+    secundaria?: { etiqueta: string; onClick: () => void };
 }
 
 const sinAcentos = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -184,6 +189,14 @@ export const ModalConfirmacion: React.FC<{
                     >
                         {pedido.etiquetaBoton}
                     </button>
+                    {pedido.secundaria && (
+                        <button
+                            onClick={() => { const s = pedido.secundaria!; onCerrar(); s.onClick(); }}
+                            className="h-[52px] w-full rounded-full border-[1.5px] border-[#0a0a0a] bg-white text-[14.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                        >
+                            {pedido.secundaria.etiqueta}
+                        </button>
+                    )}
                     <button
                         onClick={onCerrar}
                         className="h-[52px] w-full rounded-full bg-[#f2f2f0] text-[14.5px] font-semibold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
