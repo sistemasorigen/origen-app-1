@@ -2710,6 +2710,41 @@ las RPC en `services/notificaciones.ts`, con el molde de `services/agenda.ts`.
   ejemplos que `EJEMPLOS` de `piezas.tsx`). Si la función no existe, el botón
   lo dice (`no_disponible`).
 
+### Cada persona elige qué le suena
+Base: `sql/notif_preferencias.sql` (pruebas `PROBAR_`, 36 casos; deshacer
+`ROLLBACK_`).
+
+- **Apagar = no suena, en ningún dispositivo de la persona. El aviso IGUAL
+  queda en /notificaciones** (como pausar una automática).
+- `notif_alertas.permite_apagar` lo decide Sistemas (interruptor "Cada persona
+  la puede apagar" en el editor; `push_prueba` no). Si una alerta deja de ser
+  apagable, lo elegido no se borra: deja de aplicarse.
+- `notif_silenciadas(user_id → users, alerta_id)`: sólo lo apagado. RLS: cada
+  uno lee lo suyo; **nadie escribe directo**, sólo `notif_silenciar(alerta,
+  apagada)`, que no recibe a quién (es siempre `auth.uid()`). Apunta a `users`
+  y no a `profiles` (profiles no tiene a 6 de cada 10 cuentas).
+- **Avisos repetidos**: `principal_id` apunta a la alerta principal del mismo
+  hecho (`gcx_solicitud_ingreso_app` y `gcx_solicitud_pareja_app` →
+  `gcx_solicitud_ingreso`; `gcx_grupo_aprobado_app` → `gcx_grupo_aprobado`).
+  La persona ve una entrada; lo apagado se guarda en la principal y vale para
+  todas.
+- **Dónde se aplica**: en `notif_puede_enviar`, decisión `'silenciada'`
+  (después de `pausada`, antes del tope y del no molestar), que queda en
+  `notif_push_log`. La llama send-push en los tres caminos —aviso suelto,
+  lote de programadas y diferidos del cron—, así que no hay otro lugar que
+  tocar. `send-push` (`armado.ts`, `accionDe`) la trata como no mandar en
+  todos los modos: **el send-push de antes la mandaría** (falla abriendo), por
+  eso se desplegó send-push v5 ANTES del SQL. `notif_probar_texto` no la
+  respeta (su aviso va sin clave).
+- `notif_mis_preferencias()`: automáticas que le llegaron, programadas activas
+  que lo incluyen (`notif_audiencia`) y las que ya apagó; sólo apagables, con
+  `nombre_publico`, `descripcion_publica` y `area` (GCX, Agenda, Punto de
+  información, Sistemas, App; las programadas, "Avisos de la iglesia").
+- Pantalla: botón "Preferencias" en /notificaciones →
+  `components/notifications/PreferenciasDeAvisos.tsx` dentro de la `Hoja` de
+  esa página, con `TarjetaActivarPush enPreferencias` arriba. En Sistemas,
+  "N la apagaron" (`apagada_por`) junto a Personas.
+
 ### Avisos repetidos (reportados, no tocados)
 Hay dos hechos que generan **dos** avisos cada uno, porque los produce el
 frontend y además un trigger:

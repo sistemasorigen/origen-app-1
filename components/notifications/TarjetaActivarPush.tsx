@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BellRing } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -16,6 +16,10 @@ import { esIOS } from '../miCuenta/avisos';
  *   · navegador sin push  → qué usar en su lugar.
  *
  * Estética de la página de Notificaciones: Manrope, tarjeta blanca, píldora negra.
+ *
+ * `enPreferencias` es la misma tarjeta arriba de la hoja de Preferencias: se
+ * ve siempre (aunque la hayan pospuesto acá), sin "Ahora no", y con el push ya
+ * prendido dice una línea: "Este dispositivo recibe notificaciones".
  */
 
 const CLAVE_POSPUESTA = 'origen_push_tarjeta_pospuesta';
@@ -36,15 +40,25 @@ const FOCO = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-black/2
 const PRIMARIO = `min-h-[44px] px-5 rounded-full bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[14px] font-semibold active:scale-[0.98] disabled:opacity-50 ${FOCO}`;
 const SECUNDARIO = `min-h-[44px] px-5 rounded-full bg-[#f2f2f0] dark:bg-[#2a2a28] text-[14px] font-semibold ${TINTA} ${FOCO}`;
 
-const TarjetaActivarPush: React.FC = () => {
+const TarjetaActivarPush: React.FC<{ enPreferencias?: boolean }> = ({ enPreferencias = false }) => {
     const navigate = useNavigate();
     const push = usePushNotifications();
     const [oculta, setOculta] = useState(pospuesta);
     const [noDioPermiso, setNoDioPermiso] = useState(false);
     const [error, setError] = useState(false);
+    const idTitulo = useId();
 
     const { estado } = push;
-    if (oculta || estado === null || estado === 'prendido') return null;
+    if (estado === null) return null;
+    if (enPreferencias && estado === 'prendido') {
+        return (
+            <p className={`m-0 flex items-center gap-2.5 rounded-[18px] bg-[#f7f7f5] dark:bg-[#232321] px-4 py-3 text-[14px] font-semibold ${TINTA}`}>
+                <BellRing className="w-[18px] h-[18px] flex-none" strokeWidth={1.9} aria-hidden="true" />
+                Este dispositivo recibe notificaciones
+            </p>
+        );
+    }
+    if ((oculta && !enPreferencias) || estado === 'prendido') return null;
 
     const ahoraNo = () => {
         try { localStorage.setItem(CLAVE_POSPUESTA, String(Date.now())); } catch { /* se oculta hasta recargar */ }
@@ -76,15 +90,17 @@ const TarjetaActivarPush: React.FC = () => {
 
     return (
         <section
-            aria-labelledby="activar-push-titulo"
-            className={`mt-[22px] p-[18px] rounded-[22px] bg-white dark:bg-[#1b1b1a] shadow-[0_1px_3px_rgba(0,0,0,.04)] dark:shadow-none ${TINTA}`}
+            aria-labelledby={idTitulo}
+            className={enPreferencias
+                ? `p-4 rounded-[20px] bg-[#f7f7f5] dark:bg-[#232321] ${TINTA}`
+                : `mt-[22px] p-[18px] rounded-[22px] bg-white dark:bg-[#1b1b1a] shadow-[0_1px_3px_rgba(0,0,0,.04)] dark:shadow-none ${TINTA}`}
         >
             <div className="flex items-start gap-3.5">
                 <span aria-hidden="true" className="w-10 h-10 flex-none rounded-full flex items-center justify-center bg-[#f2f2f0] dark:bg-[#2a2a28]">
                     <BellRing className="w-[19px] h-[19px]" strokeWidth={1.9} />
                 </span>
                 <div className="min-w-0">
-                    <h2 id="activar-push-titulo" className="m-0 text-[15.5px] leading-snug font-semibold text-pretty">{titulo}</h2>
+                    <h2 id={idTitulo} className="m-0 text-[15.5px] leading-snug font-semibold text-pretty">{titulo}</h2>
                     <p className={`mt-1 mb-0 text-[13.5px] leading-[1.5] font-medium text-pretty ${M66}`}>{texto}</p>
                     {noDioPermiso && (
                         <p role="alert" className="mt-2 mb-0 text-[13.5px] font-semibold">
@@ -98,7 +114,7 @@ const TarjetaActivarPush: React.FC = () => {
             </div>
 
             <div className="mt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button type="button" onClick={ahoraNo} className={SECUNDARIO}>Ahora no</button>
+                {!enPreferencias && <button type="button" onClick={ahoraNo} className={SECUNDARIO}>Ahora no</button>}
                 {estado === 'apagado' && (
                     <button type="button" onClick={activarAhora} disabled={push.ocupado} className={PRIMARIO}>
                         Activar

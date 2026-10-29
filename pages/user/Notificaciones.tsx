@@ -17,6 +17,7 @@ import {
     MessageSquareReply,
     MoreHorizontal,
     Pin,
+    Settings2,
     ShieldCheck,
     Trash2,
     Users,
@@ -26,6 +27,7 @@ import type { AppNotification } from '../../hooks/useNotifications';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { volverOA } from '../../src/utils/volver';
 import TarjetaActivarPush from '../../components/notifications/TarjetaActivarPush';
+import PreferenciasDeAvisos from '../../components/notifications/PreferenciasDeAvisos';
 
 /**
  * El centro de notificaciones (design-claude/Notificaciones.dc).
@@ -465,8 +467,8 @@ const Notifications: React.FC = () => {
     } = useNotifications();
 
     const [vista, setVista] = useState<Vista>('todas');
-    /** Qué hoja está abierta: las acciones de una fila, el menú o el confirmar. */
-    const [hoja, setHoja] = useState<{ tipo: 'fila'; id: string } | { tipo: 'menu' } | { tipo: 'confirmar' } | null>(null);
+    /** Qué hoja está abierta: las acciones de una fila, el menú, el confirmar o las preferencias. */
+    const [hoja, setHoja] = useState<{ tipo: 'fila'; id: string } | { tipo: 'menu' } | { tipo: 'confirmar' } | { tipo: 'preferencias' } | null>(null);
     const [menuPc, setMenuPc] = useState(false);
     const [aviso, setAviso] = useState<{ texto: string; k: number } | null>(null);
     /**
@@ -631,6 +633,18 @@ const Notifications: React.FC = () => {
                         </button>
                     )}
 
+                    {/* Qué avisos le suenan a cada uno (sql/notif_preferencias.sql). */}
+                    <button
+                        type="button"
+                        onClick={() => { setMenuPc(false); setHoja({ tipo: 'preferencias' }); }}
+                        aria-label="Preferencias"
+                        aria-haspopup="dialog"
+                        className={`h-11 shrink-0 rounded-full flex items-center justify-center gap-2 w-11 sm:w-auto sm:px-[18px] text-[13.5px] font-semibold transition-colors ${CHIP} ${ENCIMA} ${TINTA} ${FOCO}`}
+                    >
+                        <Settings2 className="w-[19px] h-[19px]" strokeWidth={2.2} aria-hidden="true" />
+                        <span className="hidden sm:inline">Preferencias</span>
+                    </button>
+
                     <div className="relative shrink-0">
                         <button
                             type="button"
@@ -794,8 +808,10 @@ const Notifications: React.FC = () => {
                 </AnimatePresence>
             </div>
 
-            {/* ── El aviso de abajo ──────────────────────────────────── */}
-            <AnimatePresence>
+            {/* ── El aviso de abajo ──────────────────────────────────────
+                En el body, como la hoja: si no, el layout lo deja debajo de
+                ella y el aviso de las preferencias no se ve. */}
+            {typeof document !== 'undefined' && createPortal(<AnimatePresence>
                 {aviso && (
                     <motion.div
                         role="status"
@@ -803,12 +819,15 @@ const Notifications: React.FC = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={sinMovimiento ? { opacity: 0 } : { opacity: 0, y: 14 }}
                         transition={{ duration: sinMovimiento ? 0 : 0.22 }}
-                        className="fixed left-1/2 -translate-x-1/2 bottom-10 z-[130] w-max max-w-[calc(100%-32px)] px-5 py-3.5 rounded-full bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[14px] font-semibold shadow-[0_10px_30px_rgba(0,0,0,.2)]"
+                        // El centrado va por framer: animar `y` pisa el transform de
+                        // -translate-x-1/2 y el aviso quedaba corrido a la derecha.
+                        style={{ x: '-50%' }}
+                        className="fixed left-1/2 bottom-10 z-[130] w-max max-w-[calc(100%-32px)] px-5 py-3.5 rounded-full bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[14px] font-semibold shadow-[0_10px_30px_rgba(0,0,0,.2)]"
                     >
                         {aviso.texto}
                     </motion.div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
             {/* ── La hoja ────────────────────────────────────────────
                 Una sola, que cambia de adentro: pasar del menú a la
@@ -817,8 +836,10 @@ const Notifications: React.FC = () => {
             <Hoja
                 abierta={!!hoja && (hoja.tipo !== 'fila' || !!laDeLaHoja)}
                 onCerrar={() => setHoja(null)}
-                etiqueta={hoja?.tipo === 'confirmar' ? 'Borrar todas' : hoja?.tipo === 'menu' ? 'Opciones' : 'Acciones de la notificación'}
+                etiqueta={hoja?.tipo === 'confirmar' ? 'Borrar todas' : hoja?.tipo === 'menu' ? 'Opciones' : hoja?.tipo === 'preferencias' ? 'Preferencias' : 'Acciones de la notificación'}
             >
+                {hoja?.tipo === 'preferencias' && <PreferenciasDeAvisos avisar={avisar} />}
+
                 {hoja?.tipo === 'fila' && laDeLaHoja && (() => {
                     const Icono = iconoDe(laDeLaHoja.type);
                     return (

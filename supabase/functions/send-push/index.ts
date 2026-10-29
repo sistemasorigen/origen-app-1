@@ -17,6 +17,8 @@
 // LAS REGLAS DE LA GESTIÓN DE NOTIFICACIONES (desde el 2026-10-29).
 // Antes de mandar le pregunta a la base (notif_puede_enviar):
 //   · pausada → no sale push. El aviso igual está en la campanita.
+//   · silenciada → la persona apagó esa alerta en /notificaciones: no sale
+//               push (el aviso queda). Vale en los tres modos.
 //   · tope    → esa persona ya recibió hoy el máximo de esa alerta.
 //   · diferir → cae en el horario de no molestar: se guarda en
 //               notif_push_diferidos y lo manda el cron notif-push-diferidos

@@ -29,7 +29,7 @@ export type MotivoNotif =
     | 'fechas_invalidas' | 'frecuencia_invalida' | 'horas_invalidas' | 'horas_repetidas'
     | 'audiencia_vacia' | 'rol_invalido' | 'usuario_invalido'
     | 'tope_invalido' | 'horario_invalido' | 'estado_invalido'
-    | 'sin_dispositivos' | 'tope'
+    | 'sin_dispositivos' | 'tope' | 'sin_sesion' | 'no_apagable'
     | 'red' | 'no_disponible';
 
 export interface Falla {
@@ -85,6 +85,23 @@ export interface Alerta {
     /** timestamptz ISO, o null (pausada, vencida o sin más días). */
     proximoEnvio: string | null;
     enviados7d: number;
+    /** Si cada persona la puede apagar en /notificaciones. */
+    permiteApagar: boolean;
+    /** Cuántas personas la apagaron (en un repetido, las de su principal). */
+    apagadaPor: number;
+    /** Aviso repetido: la alerta principal del mismo hecho. */
+    principalId: string | null;
+    principalNombre: string | null;
+}
+
+/** Una alerta en las preferencias de la persona. */
+export interface Preferencia {
+    id: string;
+    nombre: string;
+    /** Cuándo llega, en una línea. */
+    descripcion: string;
+    area: string;
+    apagada: boolean;
 }
 
 export interface RolDisponible { rol: string; personas: number }
@@ -142,6 +159,10 @@ const alertaDe = (a: Crudo): Alerta => {
         })),
         proximoEnvio: txtONull(a.proximo_envio),
         enviados7d: num(a.enviados_7d),
+        permiteApagar: a.permite_apagar !== false,
+        apagadaPor: num(a.apagada_por),
+        principalId: txtONull(a.principal_id),
+        principalNombre: txtONull(a.principal_nombre),
     };
 };
 
@@ -214,6 +235,7 @@ export interface DatosProgramada {
     nmHasta: string | null;
     maxPorDia: number | null;
     activa: boolean;
+    permiteApagar: boolean;
 }
 
 /** Crea (con el id del cliente: idempotente) o edita. */
@@ -237,12 +259,14 @@ export const guardarProgramada = (p: DatosProgramada) =>
         p_nm_hasta: p.noMolestar ? p.nmHasta : null,
         p_max_por_dia: p.maxPorDia,
         p_activa: p.activa,
+        p_permite_apagar: p.permiteApagar,
     }, d => ({ id: txt(d.id), creada: d.creada === true }));
 
 /** Automáticas: sólo texto, pausa, no molestar y tope (lo demás lo decide la app). */
 export const guardarAutomatica = (p: {
     id: string; titulo: string; mensaje: string; activa: boolean;
     noMolestar: boolean; nmDesde: string | null; nmHasta: string | null; maxPorDia: number | null;
+    permiteApagar: boolean;
 }) =>
     llamar('notif_guardar_automatica', {
         p_id: p.id,
@@ -253,6 +277,7 @@ export const guardarAutomatica = (p: {
         p_desde: p.noMolestar ? p.nmDesde : null,
         p_hasta: p.noMolestar ? p.nmHasta : null,
         p_max_por_dia: p.maxPorDia,
+        p_permite_apagar: p.permiteApagar,
     }, sinDatos);
 
 /** Pausar o activar cualquier alerta. */
@@ -280,6 +305,21 @@ export const probarTexto = (titulo: string, mensaje: string, url: string | null,
     llamar<{ quedan: number }>('notif_probar_texto', {
         p_titulo: titulo, p_mensaje: mensaje, p_url: url, p_alerta_id: alertaId,
     }, d => ({ quedan: num(d.quedan) }));
+
+// ── Lo que usa la persona (/notificaciones → Preferencias) ──────────────
+
+/** Las alertas que la persona puede apagar (sql/notif_preferencias.sql). */
+export const getMisPreferencias = () =>
+    llamar<{ alertas: Preferencia[] }>('notif_mis_preferencias', {}, d => ({
+        alertas: lista(d.alertas).map(a => ({
+            id: txt(a.id), nombre: txt(a.nombre), descripcion: txt(a.descripcion),
+            area: txt(a.area) || 'App', apagada: a.apagada === true,
+        })),
+    }));
+
+/** Apaga o prende una alerta SÓLO para quien la toca (la base no recibe a quién). */
+export const silenciar = (alertaId: string, apagada: boolean) =>
+    llamar('notif_silenciar', { p_alerta_id: alertaId, p_apagada: apagada }, sinDatos);
 
 // ── Mensajes ────────────────────────────────────────────────────────────
 
@@ -312,6 +352,8 @@ export const mensajeDeMotivo = (f: { motivo?: MotivoNotif; campo?: string; varia
         case 'estado_invalido': return 'No se pudo cambiar el estado. Probá de nuevo.';
         case 'sin_dispositivos': return 'Activá las notificaciones en este dispositivo para recibir la prueba (Mi cuenta › Notificaciones).';
         case 'tope': return 'Ya mandaste 10 pruebas hoy. Mañana podés mandar más.';
+        case 'sin_sesion': return 'Tu sesión se cerró. Volvé a entrar y probá de nuevo.';
+        case 'no_apagable': return 'Este aviso no se puede apagar.';
         case 'no_disponible': return 'La prueba todavía no está disponible: falta instalar su función en la base (sql/notif_prueba.sql).';
         case 'red':
         default: return 'No pudimos hablar con el servidor. Revisá la conexión y probá de nuevo.';

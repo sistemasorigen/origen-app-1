@@ -54,6 +54,7 @@ interface Valores {
     siempre: boolean; desde: string; hasta: string; cada: number; horas: string[];
     todos: boolean; roles: string[]; personas: Elegida[];
     nm: boolean; nmDesde: string; nmHasta: string; max: number | null; activa: boolean;
+    permiteApagar: boolean;
 }
 
 const iniciales = (modo: ModoEditor): Valores => {
@@ -63,6 +64,7 @@ const iniciales = (modo: ModoEditor): Valores => {
             siempre: true, desde: hoyAr(), hasta: '', cada: 7, horas: ['10:00'],
             todos: false, roles: [], personas: [],
             nm: true, nmDesde: '23:00', nmHasta: '08:00', max: null, activa: true,
+            permiteApagar: true,
         };
     }
     const a = modo.alerta;
@@ -74,6 +76,7 @@ const iniciales = (modo: ModoEditor): Valores => {
         personas: a.audienciaDetalle.map(p => ({ id: p.id, nombre: p.nombre })),
         nm: a.noMolestar, nmDesde: a.nmDesde || '23:00', nmHasta: a.nmHasta || '08:00',
         max: a.maxPorDia, activa: a.activa,
+        permiteApagar: a.permiteApagar,
     };
 };
 
@@ -211,10 +214,13 @@ const EditorAlerta: React.FC<{
                 siempreActiva: v.siempre, desde: v.desde, hasta: v.siempre ? null : v.hasta, cadaNDias: v.cada,
                 horas: v.horas, todos: v.todos, roles: v.roles, usuarios: v.personas.map(p => p.id),
                 noMolestar: v.nm, nmDesde: v.nmDesde, nmHasta: v.nmHasta, maxPorDia: v.max, activa: v.activa,
+                permiteApagar: v.permiteApagar,
             })
             : await guardarAutomatica({
                 id, titulo: v.titulo.trim(), mensaje: v.mensaje.trim(), activa: v.activa,
                 noMolestar: v.nm, nmDesde: v.nmDesde, nmHasta: v.nmHasta, maxPorDia: v.max,
+                // Un repetido sigue a su principal: no se manda lo que no se puede tocar.
+                permiteApagar: alerta?.principalId ? (alerta.permiteApagar) : v.permiteApagar,
             });
         enviando.current = false;
         setGuardando(false);
@@ -282,6 +288,29 @@ const EditorAlerta: React.FC<{
                 </span>
                 <Perilla on={v.activa} />
             </button>
+            {alerta?.principalId ? (
+                <p className="m-0 rounded-[16px] bg-[#f6f6f4] px-4 py-3 text-[12.5px] font-semibold leading-[1.5] text-black/[.66]">
+                    Es un aviso repetido de «{alerta.principalNombre}»: cada persona lo apaga junto con ése, desde sus preferencias.
+                </p>
+            ) : (
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={v.permiteApagar}
+                    onClick={() => cambiar({ permiteApagar: !v.permiteApagar })}
+                    className="flex min-h-[60px] w-full items-center gap-3 rounded-[18px] bg-[#f6f6f4] px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                >
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-[14.5px] font-bold text-[#0a0a0a]">Cada persona la puede apagar</span>
+                        <span className="mt-0.5 block text-[12.5px] font-medium leading-[1.45] text-black/[.6]">
+                            {v.permiteApagar
+                                ? 'Aparece en sus preferencias de Notificaciones. Si la apaga, no le suena; el aviso queda en la app.'
+                                : 'No aparece en sus preferencias: le suena a todos los que la reciben.'}
+                        </span>
+                    </span>
+                    <Perilla on={v.permiteApagar} />
+                </button>
+            )}
         </div>
     );
 
@@ -350,7 +379,7 @@ const EditorAlerta: React.FC<{
                                 className="h-[50px] w-full px-4 text-[15px] font-semibold"
                                 style={rojo(errNombre)}
                             />
-                            <span className="text-[12.5px] font-medium text-black/[.58]">Es interno: lo ve sólo Sistemas.</span>
+                            <span className="text-[12.5px] font-medium text-black/[.58]">Lo ve Sistemas y, en sus preferencias, la gente que la recibe.</span>
                             {errNombre && <ErrorDeCampo>{errNombre}</ErrorDeCampo>}
                         </label>
                     ) : (

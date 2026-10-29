@@ -87,6 +87,13 @@ const Alcance: React.FC<{ a: Alerta }> = ({ a }) => a.tipo === 'programada' ? (
     </>
 );
 
+/** "N la apagaron": sólo si alguien la apagó en sus preferencias. */
+const Apagaron: React.FC<{ a: Alerta }> = ({ a }) => (a.apagadaPor > 0 ? (
+    <span className="mt-0.5 block text-[12px] font-semibold text-black/[.55]">
+        {a.apagadaPor} la {a.apagadaPor === 1 ? 'apagó' : 'apagaron'}
+    </span>
+) : null);
+
 /** "Personas": cuántas (programadas) o a quién le llega (automáticas). */
 const Personas: React.FC<{ a: Alerta }> = ({ a }) => a.tipo === 'programada' ? (
     <>
@@ -94,9 +101,13 @@ const Personas: React.FC<{ a: Alerta }> = ({ a }) => a.tipo === 'programada' ? (
             {a.audienciaPersonas ?? '—'} <span className="text-[12.5px] font-semibold text-black/[.55]">{a.audienciaPersonas === 1 ? 'persona' : 'personas'}</span>
         </span>
         <span className="block text-[12px] font-semibold text-black/[.55]">{a.audienciaConPush ?? 0} con el push activado</span>
+        <Apagaron a={a} />
     </>
 ) : (
-    <span className="block text-[13px] font-semibold leading-[1.45] text-black/[.72]">{a.destinatarioTexto}</span>
+    <>
+        <span className="block text-[13px] font-semibold leading-[1.45] text-black/[.72]">{a.destinatarioTexto}</span>
+        <Apagaron a={a} />
+    </>
 );
 
 const GestionNotificaciones: React.FC<{

@@ -84,8 +84,11 @@ export const FALLOS_PARA_BORRAR = 5;
 // que es la que conoce la alerta, su horario y lo que ya salió hoy. Acá sólo
 // se traduce esa respuesta a lo que hace la función.
 
-/** Lo que contesta notif_puede_enviar. */
-export type Decision = "enviar" | "pausada" | "tope" | "diferir";
+/**
+ * Lo que contesta notif_puede_enviar. 'silenciada' (desde el 2026-10-29,
+ * sql/notif_preferencias.sql): la persona apagó esa alerta en /notificaciones.
+ */
+export type Decision = "enviar" | "pausada" | "silenciada" | "tope" | "diferir";
 
 /** Cómo entró el pedido: un aviso nuevo, o la pasada del cron. */
 export type Modo = "aviso" | "diferidos";
@@ -102,10 +105,14 @@ export type Accion = "mandar" | "no_mandar" | "diferir";
  * En la pasada del cron, "diferir" se manda igual: ese push ya esperó su
  * turno una vez y volver a diferirlo lo dejaría colgado para siempre si
  * alguien cambió el horario mientras tanto.
+ *
+ * "silenciada" no se manda en ningún modo: la persona la apagó, y vale
+ * también para un diferido que apagó mientras esperaba.
  */
 export const accionDe = (decision: string | null | undefined, modo: Modo = "aviso"): Accion => {
   switch (decision) {
     case "pausada":
+    case "silenciada":
     case "tope":
       return "no_mandar";
     case "diferir":
@@ -120,9 +127,9 @@ export const resultadoDe = (
   accion: Accion,
   decision: string | null | undefined,
   enviados: number,
-): "enviado" | "pausada" | "tope" | "diferido" | "fallo" => {
+): "enviado" | "pausada" | "silenciada" | "tope" | "diferido" | "fallo" => {
   if (accion === "diferir") return "diferido";
-  if (accion === "no_mandar") return decision === "tope" ? "tope" : "pausada";
+  if (accion === "no_mandar") return decision === "tope" ? "tope" : decision === "silenciada" ? "silenciada" : "pausada";
   return enviados > 0 ? "enviado" : "fallo";
 };
 
