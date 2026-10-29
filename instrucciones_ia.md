@@ -1939,6 +1939,15 @@ instalada** (iOS 16.4+; Safari sin instalar no tiene push).
   `/perfil/dispositivos` con la lista y "Enviar notificación de prueba") y la
   tarjeta de arriba de `/notificaciones`. El banner global de permiso que
   había en `Estructura.tsx` se sacó.
+- **El pedido al entrar** (`components/notifications/PedidoDeNotificaciones.tsx`,
+  montado en `App.tsx` con sesión y con el velo de entrada ya ido): hoja
+  desde abajo en el teléfono y modal en la compu (el `Panel` de Mi cuenta),
+  con "Activar notificaciones" / "Ahora no". Sale sólo en estado `apagado`
+  (ni prendidas, ni bloqueadas, ni iPhone sin instalar), no en
+  `/notificaciones` ni `/perfil/*` ni en el escáner de la puerta. "Ahora no"
+  (o cerrar tocando afuera) lo pospone 7 días en ese dispositivo
+  (`origen_push_pedido_pospuesto`). Si niega el permiso del navegador, se
+  cierra y no insiste.
 - Base: `sql/push_notificaciones.sql` (tabla `push_suscripciones` sin
   policies, RPC `push_*`, trigger que manda **sólo el id** a `send-push`).
   Pruebas: `sql/PROBAR_push_notificaciones.sql`.

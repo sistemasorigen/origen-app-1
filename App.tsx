@@ -130,6 +130,7 @@ import { AudioProvider } from './contexts/AudioContext';
 import { ProveedorDeTema } from './contexts/TemaContext';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import ModalActualizacion from './components/ui/ModalActualizacion';
+import PedidoDeNotificaciones from './components/notifications/PedidoDeNotificaciones';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './pages/punto-informacion/context/ContextoToast';
@@ -518,6 +519,11 @@ const AppContent: React.FC = () => {
             las rutas para que acompañe a la persona esté donde esté, y se
             saca sola cuando el reintento lo logra. */}
         <AvisoConexion />
+
+        {/* El pedido de activar las notificaciones: con sesión y recién
+            cuando se fue el velo de entrada (el perfil incompleto ya cortó
+            más arriba). Él mismo decide si este dispositivo puede. */}
+        {user && faseEntrada === 'lista' && <PedidoDeNotificaciones />}
 
         {/* El velo de entrada, encima de todo. Mientras está en
             'hidratando' el árbol ni se monta: no tiene con qué decidir. */}
