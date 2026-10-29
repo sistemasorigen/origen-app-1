@@ -3,7 +3,7 @@
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set X-XSS-Protection "1; mode=block"
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
 
   # Sin esto, index.html no tenía NINGÚN Cache-Control explícito: sin
   # encabezado el navegador cachea por heurística propia (RFC 7234),
