@@ -1,7 +1,8 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- GESTIÓN DE NOTIFICACIONES · las programadas pueden abrir una dirección
 -- 2026-10-29 · pedido de Ignacio después del prompt 4
--- ⏳ PENDIENTE
+-- ✅ APLICADO el 2026-10-29 (23:01 UTC). PROBAR_ 13/13 contra producción;
+--    programadas 93/93, prueba 18/18, preferencias 36/36 y catálogo 77/77.
 --
 -- QUÉ CAMBIA
 --   Hasta ahora una programada sólo podía abrir una pantalla de la app ("un
