@@ -339,7 +339,7 @@ export const mensajeDeMotivo = (f: { motivo?: MotivoNotif; campo?: string; varia
         case 'variable_invalida': return f.variables?.length
             ? `Esta alerta no conoce ${f.variables.map(v => `{${v}}`).join(', ')}. Usá sólo las variables de la lista.`
             : 'Las alertas programadas llevan texto fijo: sacá lo que está entre llaves { }.';
-        case 'url_invalida': return 'Elegí una pantalla de la app para abrir al tocarla.';
+        case 'url_invalida': return 'Elegí una pantalla de la app, o escribí una sección que empiece con / o una dirección con https://.';
         case 'fechas_invalidas': return 'La fecha de fin tiene que ser igual o posterior al inicio.';
         case 'frecuencia_invalida': return 'Elegí cada cuántos días se repite: entre 1 y 365.';
         case 'horas_invalidas': return 'Elegí entre 1 y 5 horarios.';

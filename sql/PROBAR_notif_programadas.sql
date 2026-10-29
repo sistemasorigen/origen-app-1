@@ -219,8 +219,9 @@ PERFORM pg_temp.chk('V4', 'hasta antes que desde', 'fechas_invalidas',
     pg_temp.prog(gen_random_uuid(), '2026-11-10', '2026-11-09', 1, ARRAY['10:00']::time[], true, NULL, NULL)->>'motivo');
 PERFORM pg_temp.chk('V5', 'audiencia vacía', 'audiencia_vacia',
     pg_temp.prog(gen_random_uuid(), '2026-11-01', NULL, 1, ARRAY['10:00']::time[], false, ARRAY[]::text[], ARRAY[]::uuid[])->>'motivo');
-PERFORM pg_temp.chk('V6', 'url externa', 'url_invalida',
-    pg_temp.prog(gen_random_uuid(), '2026-11-01', NULL, 1, ARRAY['10:00']::time[], true, NULL, NULL, true, 'Hola', 'Mensaje', 'https://otro.com')->>'motivo');
+-- Desde sql/notif_destino_externo.sql, https:// se acepta; http:// sigue sin.
+PERFORM pg_temp.chk('V6', 'url http:// (sin cifrar)', 'url_invalida',
+    pg_temp.prog(gen_random_uuid(), '2026-11-01', NULL, 1, ARRAY['10:00']::time[], true, NULL, NULL, true, 'Hola', 'Mensaje', 'http://otro.com')->>'motivo');
 PERFORM pg_temp.chk('V7', 'url //dominio', 'url_invalida',
     pg_temp.prog(gen_random_uuid(), '2026-11-01', NULL, 1, ARRAY['10:00']::time[], true, NULL, NULL, true, 'Hola', 'Mensaje', '//otro.com')->>'motivo');
 PERFORM pg_temp.chk('V8', 'una variable en el texto', 'variable_invalida',

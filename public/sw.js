@@ -27,6 +27,21 @@ const rutaInterna = (url) => {
     return u;
 };
 
+/**
+ * Una página de afuera aceptable (desde el 2026-10-29 las programadas de
+ * Sistemas pueden abrir una). Sólo https://, con dominio, sin espacios ni
+ * barras invertidas: la misma regla que la base (notif_url_externa) y que
+ * send-push (armado.ts, urlExterna).
+ */
+const urlExterna = (url) => {
+    const u = typeof url === 'string' ? url.trim() : '';
+    if (u.length > 500 || u.includes('\\') || /[\u0000-\u001f\s]/.test(u)) return null;
+    return /^https:\/\/[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:[0-9]{1,5})?([/?#].*)?$/i.test(u) ? u : null;
+};
+
+/** A dónde lleva tocar el aviso: una página https:// o una ruta de la app. */
+const destinoDe = (url) => urlExterna(url) || rutaInterna(url);
+
 self.addEventListener('push', (event) => {
     let datos = {};
     try {
@@ -45,7 +60,7 @@ self.addEventListener('push', (event) => {
             badge: ICONO_CHICO,
             // El mismo aviso no se apila dos veces.
             tag: typeof datos.tag === 'string' && datos.tag ? datos.tag : undefined,
-            data: { url: rutaInterna(datos.url) },
+            data: { url: destinoDe(datos.url) },
         }),
     ];
 
@@ -60,7 +75,16 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const ruta = rutaInterna(event.notification.data && event.notification.data.url);
+    const url = event.notification.data && event.notification.data.url;
+
+    // Una página de afuera se abre en el navegador, aparte de la app.
+    const afuera = urlExterna(url);
+    if (afuera) {
+        event.waitUntil(self.clients.openWindow(afuera));
+        return;
+    }
+
+    const ruta = rutaInterna(url);
     // HashRouter: toda la ruta va después del #.
     const destino = new URL('/#' + ruta, self.location.origin).href;
 

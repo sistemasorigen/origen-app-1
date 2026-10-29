@@ -2699,6 +2699,14 @@ las RPC en `services/notificaciones.ts`, con el molde de `services/agenda.ts`.
   `crypto.randomUUID()` UNA vez al abrir), con límites 60/160, sin
   `{variables}` (la base las rechaza) y destino elegido de `PANTALLAS`
   (`piezas.tsx`), sólo rutas internas: **se sacó la URL externa del diseño**.
+  **Actualización 2026-10-29** (`sql/notif_destino_externo.sql`): a pedido de
+  Ignacio, el destino también puede ser "Una dirección" escrita a mano: una
+  ruta de la app (`/gcx`) o una página `https://` (nunca `http://`,
+  `javascript:` ni `//dominio`). La regla vive en `notif_url_externa` y está
+  repetida igual en `send-push` (`armado.ts`, `urlExterna`) y en `public/sw.js`
+  (`urlExterna`), que abre esas páginas en el navegador. Sólo la pueden poner
+  las programadas y "Enviarme una prueba": `crear_aviso` y el emisor de las
+  automáticas siguen aceptando sólo rutas internas.
   Automática → `notif_guardar_automatica` (texto 120/500 con chips de sus
   variables, no molestar, tope, activa); cuándo sale y a quién le llega se
   muestran fijos. La estimación de audiencia frena el guardado si pasa el tope.

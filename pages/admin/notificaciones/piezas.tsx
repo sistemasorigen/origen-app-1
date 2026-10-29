@@ -76,6 +76,23 @@ export const PANTALLAS: { ruta: string; nombre: string }[] = [
 export const nombreDePantalla = (ruta: string | null): string =>
     PANTALLAS.find(p => p.ruta === ruta)?.nombre ?? ruta ?? 'Inicio';
 
+/** Una ruta de la app escrita a mano ("/gcx"): la regla de notif_url_interna. */
+export const esRutaInterna = (url: string): boolean => {
+    const u = url.trim();
+    return u.startsWith('/') && !u.startsWith('//') && !/https?:/i.test(u)
+        && !/[\s\u0000-\u001f\\]/.test(u) && u.length <= 300;
+};
+
+/** Una página de afuera: sólo https://, con dominio. La regla de notif_url_externa. */
+export const esUrlExterna = (url: string): boolean => {
+    const u = url.trim();
+    return u.length <= 500 && !u.includes('\\') && !/[\u0000-\u001f\s]/.test(u)
+        && /^https:\/\/[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:[0-9]{1,5})?([/?#].*)?$/i.test(u);
+};
+
+/** Lo que acepta la base como destino de una programada (notif_url_destino). */
+export const destinoValido = (url: string): boolean => esRutaInterna(url) || esUrlExterna(url);
+
 /** El interruptor del diseño: pista negra con la perilla blanca. */
 export const Perilla: React.FC<{ on: boolean; chico?: boolean }> = ({ on, chico }) => (
     <span

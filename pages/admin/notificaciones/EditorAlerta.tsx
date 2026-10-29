@@ -8,7 +8,7 @@ import {
 } from '../../../services/notificaciones';
 import SelectorDeAudiencia, { type Elegida, type Estimacion } from './SelectorDeAudiencia';
 import {
-    Cargando, ErrorDeCampo, EJEMPLOS, PANTALLAS, Perilla, RotuloPaso, VistaPrevia, hoyAr,
+    Cargando, ErrorDeCampo, EJEMPLOS, PANTALLAS, Perilla, RotuloPaso, VistaPrevia, destinoValido, esUrlExterna, hoyAr,
 } from './piezas';
 
 /**
@@ -114,6 +114,10 @@ const EditorAlerta: React.FC<{
     const [errorBase, setErrorBase] = useState<{ campo: Campo; texto: string } | null>(null);
     const [estimacion, setEstimacion] = useState<Estimacion | null>(null);
     const [horaNueva, setHoraNueva] = useState('');
+    // Una pantalla de la lista, o una dirección escrita a mano ("/gcx" o
+    // "https://…"). Una que no está en la lista abre directo en "dirección".
+    const [modoDestino, setModoDestino] = useState<'pantalla' | 'direccion'>(
+        () => (PANTALLAS.some(p => p.ruta === inicial.url) ? 'pantalla' : 'direccion'));
     const [prueba, setPrueba] = useState<{ estado: 'mandando' } | { estado: 'listo'; ok: boolean; texto: string } | null>(null);
     const enviando = useRef(false);
     const panel = useRef<HTMLDivElement>(null);
@@ -148,13 +152,22 @@ const EditorAlerta: React.FC<{
     const eFrecuencia = prog && (!Number.isInteger(v.cada) || v.cada < 1 || v.cada > 365) ? 'Elegí cada cuántos días se repite: entre 1 y 365.' : null;
     const eHoras = prog && (v.horas.length < 1 || v.horas.length > 5) ? 'Elegí entre 1 y 5 horarios.' : null;
     const eAudiencia = prog && !v.todos && v.roles.length === 0 && v.personas.length === 0 ? 'Elegí a quién le llega: toda la iglesia, un rol o una persona.' : null;
-    const eNm = v.nm && (!v.nmDesde || !v.nmHasta || v.nmDesde === v.nmHasta) ? 'El horario de no molestar necesita un inicio y un fin distintos.' : null;
+    const eDestino = prog && !destinoValido(v.url)
+        ? (v.url.trim() ? 'Escribí una sección que empiece con / (por ejemplo, /gcx) o una dirección que empiece con https://.' : 'Escribí a dónde lleva al tocarla.')
+        : null;
+    const eNm = v.nm &&(!v.nmDesde || !v.nmHasta || v.nmDesde === v.nmHasta) ? 'El horario de no molestar necesita un inicio y un fin distintos.' : null;
     const pasaTope = prog && !!estimacion && estimacion.personas > estimacion.tope;
-    const invalido = !!(eNombre || eTitulo || eMensaje || eVigencia || eFrecuencia || eHoras || eAudiencia || eNm || pasaTope);
+    const invalido = !!(eNombre || eTitulo || eMensaje || eDestino || eVigencia || eFrecuencia || eHoras || eAudiencia || eNm || pasaTope);
     const hayCambios = JSON.stringify(v) !== JSON.stringify(inicial);
 
     const errorDe = (c: Campo, local: string | null) =>
         errorBase?.campo === c ? errorBase.texto : (tocado ? local : null);
+
+    /** Pasar a "pantalla" con una dirección que no está en la lista vuelve a Notificaciones. */
+    const elegirModoDestino = (m: 'pantalla' | 'direccion') => {
+        setModoDestino(m);
+        if (m === 'pantalla' && !PANTALLAS.some(p => p.ruta === v.url.trim())) cambiar({ url: '/notificaciones' });
+    };
 
     const intentarCerrar = () => {
         if (guardando) return;
@@ -210,7 +223,7 @@ const EditorAlerta: React.FC<{
         setErrorBase(null);
         const r = prog
             ? await guardarProgramada({
-                id, nombre: v.nombre.trim(), titulo: v.titulo.trim(), mensaje: v.mensaje.trim(), url: v.url,
+                id, nombre: v.nombre.trim(), titulo: v.titulo.trim(), mensaje: v.mensaje.trim(), url: v.url.trim(),
                 siempreActiva: v.siempre, desde: v.desde, hasta: v.siempre ? null : v.hasta, cadaNDias: v.cada,
                 horas: v.horas, todos: v.todos, roles: v.roles, usuarios: v.personas.map(p => p.id),
                 noMolestar: v.nm, nmDesde: v.nmDesde, nmHasta: v.nmHasta, maxPorDia: v.max, activa: v.activa,
@@ -242,7 +255,7 @@ const EditorAlerta: React.FC<{
             return;
         }
         setPrueba({ estado: 'mandando' });
-        const r = await probarTexto(v.titulo.trim(), v.mensaje.trim(), prog ? v.url : (alerta?.url ?? null), alerta?.id ?? null);
+        const r = await probarTexto(v.titulo.trim(), v.mensaje.trim(), prog ? v.url.trim() : (alerta?.url ?? null), alerta?.id ?? null);
         setPrueba(r.ok
             ? { estado: 'listo', ok: true, texto: `Te la mandamos a tus dispositivos. ${r.quedan === 1 ? 'Te queda 1 prueba' : `Te quedan ${r.quedan} pruebas`} hoy.` }
             : { estado: 'listo', ok: false, texto: mensajeDeMotivo(r) });
@@ -259,10 +272,9 @@ const EditorAlerta: React.FC<{
     const errAudiencia = errorDe('audiencia', eAudiencia);
     const errNm = errorDe('nm', eNm);
     const errMax = errorDe('max', null);
-    const errDestino = errorDe('destino', null);
+    const errDestino = errorDe('destino', eDestino);
     const rojo = (e: string | null) => (e ? ({ '--panel-campo-borde': '#b42318' } as React.CSSProperties) : undefined);
     const pasoTexto = prog ? 3 : 2;
-    const pantallas = PANTALLAS.some(p => p.ruta === v.url) ? PANTALLAS : [{ ruta: v.url, nombre: `${v.url} (la que tenía)` }, ...PANTALLAS];
 
     const contador = (n: number, max: number) => (
         <span className={`text-[12px] font-semibold ${n > max ? 'text-[#b42318]' : 'text-black/[.5]'}`}>{n}/{max}</span>
@@ -518,20 +530,57 @@ const EditorAlerta: React.FC<{
                         )}
 
                         {prog && (
-                            <label className="flex flex-col gap-1.5">
-                                <span className="text-[13px] font-bold text-black/[.62]">Al tocarla, abre…</span>
-                                <select
-                                    value={v.url}
-                                    onChange={e => cambiar({ url: e.target.value })}
-                                    aria-invalid={!!errDestino}
-                                    className="h-[50px] w-full px-3.5 text-[15px] font-semibold"
-                                    style={rojo(errDestino)}
-                                >
-                                    {pantallas.map(p => <option key={p.ruta} value={p.ruta}>{p.nombre}</option>)}
-                                </select>
-                                <span className="text-[12.5px] font-medium text-black/[.58]">Una pantalla de la app. Una notificación de Origen nunca abre un link de afuera.</span>
+                            <div className="flex flex-col gap-2">
+                                <span id="notif-destino" className="text-[13px] font-bold text-black/[.62]">Al tocarla, abre…</span>
+                                <div role="radiogroup" aria-labelledby="notif-destino" className="flex w-full gap-0.5 rounded-full bg-black/[.06] p-1 md:w-auto md:self-start">
+                                    {([['pantalla', 'Una pantalla de la app'], ['direccion', 'Una dirección']] as const).map(([k, t]) => (
+                                        <button
+                                            key={k}
+                                            type="button"
+                                            role="radio"
+                                            aria-checked={modoDestino === k}
+                                            onClick={() => elegirModoDestino(k)}
+                                            className={`h-10 flex-1 rounded-full px-3.5 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] md:flex-none ${modoDestino === k ? 'bg-white text-[#0a0a0a] shadow-[0_1px_2px_rgba(0,0,0,.08)]' : 'text-black/[.6] hover:text-[#0a0a0a]'}`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                                {modoDestino === 'pantalla' ? (
+                                    <select
+                                        value={v.url}
+                                        onChange={e => cambiar({ url: e.target.value })}
+                                        aria-label="Pantalla de la app"
+                                        aria-invalid={!!errDestino}
+                                        className="h-[50px] w-full px-3.5 text-[15px] font-semibold"
+                                        style={rojo(errDestino)}
+                                    >
+                                        {PANTALLAS.map(p => <option key={p.ruta} value={p.ruta}>{p.nombre}</option>)}
+                                    </select>
+                                ) : (
+                                    <>
+                                        <input
+                                            value={v.url}
+                                            onChange={e => cambiar({ url: e.target.value })}
+                                            placeholder="/gcx o https://…"
+                                            aria-label="Dirección que abre"
+                                            aria-invalid={!!errDestino}
+                                            autoCapitalize="off"
+                                            autoComplete="off"
+                                            spellCheck={false}
+                                            inputMode="url"
+                                            className="h-[50px] w-full px-4 text-[15px] font-semibold"
+                                            style={rojo(errDestino)}
+                                        />
+                                        <span className="text-[12.5px] font-medium leading-[1.5] text-black/[.58]">
+                                            {esUrlExterna(v.url)
+                                                ? 'Es una página de afuera: se abre en el navegador, fuera de la app.'
+                                                : 'Una sección de la app empieza con / (por ejemplo, /gcx o /eventos). Una página de afuera, con https://.'}
+                                        </span>
+                                    </>
+                                )}
                                 {errDestino && <ErrorDeCampo>{errDestino}</ErrorDeCampo>}
-                            </label>
+                            </div>
                         )}
 
                         <VistaPrevia titulo={v.titulo} mensaje={v.mensaje} />

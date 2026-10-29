@@ -45,6 +45,25 @@ export const urlInterna = (url: string | null | undefined): string => {
   return u.length > 500 ? "/" : u;
 };
 
+/**
+ * Una página de afuera aceptable: sólo https://, con dominio, sin espacios,
+ * barras invertidas ni caracteres de control, hasta 500. La misma regla que
+ * notif_url_externa (sql/notif_destino_externo.sql).
+ */
+export const urlExterna = (url: string | null | undefined): string | null => {
+  const u = String(url ?? "").trim();
+  if (u.length > 500 || u.includes("\\") || /[\u0000-\u001f\s]/.test(u)) return null;
+  return /^https:\/\/[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:[0-9]{1,5})?([/?#].*)?$/i.test(u) ? u : null;
+};
+
+/**
+ * A dónde lleva tocar el push: una ruta de la app o, desde el 2026-10-29, una
+ * página https:// (sólo la pueden poner las programadas de Sistemas; la base
+ * no deja que nadie más la escriba). Lo demás, al inicio.
+ */
+export const destinoDelPush = (url: string | null | undefined): string =>
+  urlExterna(url) ?? urlInterna(url);
+
 /** El número del ícono: cuántas sin leer, sin negativos ni decimales. */
 export const badge = (sinLeer: number | null | undefined): number => {
   const n = Math.floor(Number(sinLeer ?? 0));
@@ -54,7 +73,7 @@ export const badge = (sinLeer: number | null | undefined): number => {
 export const armarPayload = (n: NotificacionParaPush, sinLeer: number | null | undefined): PayloadPush => ({
   title: recortar(n.title, LARGO_TITULO) || "Origen",
   body: recortar(n.message, LARGO_CUERPO),
-  url: urlInterna(n.action_url),
+  url: destinoDelPush(n.action_url),
   // Mismo tag para el mismo aviso: si por un reintento llega dos veces, el
   // sistema reemplaza la primera en vez de apilarla.
   tag: `notif-${n.id}`,

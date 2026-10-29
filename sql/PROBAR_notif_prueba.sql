@@ -85,7 +85,8 @@ PERFORM pg_temp.chk('11', 'sin alerta (programada nueva): type PROGRAMADA', 'PRO
 -- ── Validaciones ──
 PERFORM pg_temp.chk('12', 'título vacío', 'texto_invalido', public.notif_probar_texto('  ', 'Mensaje')->>'motivo');
 PERFORM pg_temp.chk('13', 'mensaje de 501', 'texto_invalido', public.notif_probar_texto('Hola', repeat('m', 501))->>'motivo');
-PERFORM pg_temp.chk('14', 'url externa', 'url_invalida', public.notif_probar_texto('Hola', 'Mensaje', 'https://otro.com')->>'motivo');
+-- Desde sql/notif_destino_externo.sql, https:// se acepta; http:// sigue sin.
+PERFORM pg_temp.chk('14', 'url http:// (sin cifrar)', 'url_invalida', public.notif_probar_texto('Hola', 'Mensaje', 'http://otro.com')->>'motivo');
 PERFORM pg_temp.sesion(sol);
 PERFORM pg_temp.chk('15', 'sin dispositivos: no crea nada', 'sin_dispositivos · 0 avisos',
     (public.notif_probar_texto('Hola', 'Mensaje')->>'motivo') || ' · ' || (SELECT count(*) FROM public.app_notifications WHERE user_id = sol) || ' avisos');
