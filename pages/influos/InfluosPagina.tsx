@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
-import { InfluosAttendee } from '../../types';
-import { Plus, RefreshCw, Users, Star, Search, Edit2, Trash2, UserPlus, X } from 'lucide-react';
+import { InfluosAttendee, UserRole } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasRole } from '../../services/authUtils';
+import { Plus, RefreshCw, Users, Star, Search, Edit2, Trash2, UserPlus, X, Shield } from 'lucide-react';
 import { ToastProvider, useToast } from '../punto-informacion/context/ContextoToast';
 import InfluosNewModal from './InfluosModalNuevo';
 import InfluosEditModal from './InfluosModalEditar';
@@ -87,9 +89,19 @@ const isGarra = (tribe?: string) => {
     return t === 'naranja' || t === 'garra (naranja)';
 };
 
+/**
+ * Quién ve el acceso a Tribal Wars: los mismos roles que veían el sub-ítem
+ * "Tribal Wars" del menú, que salió de ahí (29-oct-2026). Es la única entrada
+ * que tiene INFLUOS: el Panel de eventos no es suyo.
+ */
+const ROLES_TRIBAL_WARS = [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.INFLUOS];
+
 // ── MAIN COMPONENT ────────────────────────────────────────────
 const InfluosContent: React.FC = () => {
     const toast = useToast();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const veTribalWars = hasRole(user, ROLES_TRIBAL_WARS);
     const [attendees, setAttendees] = useState<InfluosAttendee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -209,6 +221,15 @@ const InfluosContent: React.FC = () => {
                         >
                             <RefreshCw className={`w-4 h-4 text-slate-700 dark:text-neutral-300 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
+                        {veTribalWars && (
+                            <button
+                                onClick={() => navigate('/eventos/admin/tribal-wars')}
+                                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-slate-50 dark:hover:bg-neutral-800 text-slate-800 dark:text-neutral-200 font-bold text-xs uppercase rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black"
+                            >
+                                <Shield className="w-4 h-4" />
+                                Tribal Wars
+                            </button>
+                        )}
                         <button
                             onClick={() => setIsNewModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2.5 bg-black dark:bg-white text-white dark:text-black font-bold text-xs uppercase rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black"

@@ -432,6 +432,30 @@ separadores "Coordinación" y "Administración").
 La interfaz `MenuItem` soporta `requiresAuth?: boolean`
 para ocultar ítems a usuarios sin sesión aunque
 `roles: []` los haga visibles a todos los autenticados.
+
+**Grupos de Administración (desde el 29-oct-2026).** "General" va sin rótulo
+(Inicio, GCX, Eventos, Agenda Origen, Prode). "Administración" tiene cinco
+entradas: **GCX** (Panel GCX, Reportes GCX, Panel de anfitriones, Panel de
+coordinadores), **Panel de eventos**, **Personas** (Bienvenida, Influos,
+Niñez), **Organización** (Departamentos, Punto de información, Audiencia de
+servicios) y **Sistemas**. Reglas:
+- Un grupo es un `MenuItem` con `children` (cada hijo con su ícono, ruta,
+  roles y activePaths propios). El grupo no tiene roles: aparece si se ve
+  algún hijo (`puedeVer`, incluido el "cargando" de Departamentos); con un
+  solo hijo visible, ese hijo va suelto (`aplanar()`). Dos niveles nada más.
+- Lo abierto o cerrado se recuerda en el dispositivo
+  (`origen_menu_grupos_abiertos`); el grupo de la pantalla actual se abre
+  igual. Cerrado con la pantalla adentro, lleva un punto.
+- **Un solo ítem encendido**: el que reclama la ruta con el prefijo más largo
+  (`coincidencia()`). En `/eventos/admin/tribal-wars` gana Influos; quien no
+  ve Influos ve encendido Panel de eventos.
+- Barra contraída: tocar un grupo expande la barra y lo deja abierto (como ya
+  hacía el Prode con sus sub-ítems).
+- La marca de dónde estás es un fondo gris (`MARCA`), texto en 600. **Un ícono
+  distinto por fila**: antes de sumar un ítem, elegir uno que no esté en uso.
+- Tribal Wars y la Configuración de Niñez salieron del menú: se entra desde
+  `/influos` (botón, roles SUPER_ADMIN, PASTOR, ENCARGADO_EVENTOS, INFLUOS),
+  desde `/panel-eventos` y desde `/ninez`.
 ### 7.8 Rutas nuevas: su propio ToastProvider, y esperar antes de navegar
 Una ruta nueva **no hereda** el `ToastProvider` de la página que la enlaza.
 Usar el patrón Content + Provider (7.4) en cada página nueva.

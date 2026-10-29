@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useId } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
@@ -7,14 +7,11 @@ import {
     Home,
     BarChart,
     Info,
-    Book,
     Settings,
     Bell,
-    Heart,
     HeartHandshake,
     ChevronUp,
     ChevronDown,
-    ChevronRight,
     ChevronsLeft,
     LogOut,
     RotateCw,
@@ -22,13 +19,19 @@ import {
     Star,
     Trophy,
     CalendarDays,
-    CalendarRange,
-    CalendarCheck,
     LayoutDashboard,
     Users,
     UserCheck,
     Baby,
-    LayoutGrid
+    Compass,
+    PartyPopper,
+    Network,
+    ClipboardCheck,
+    Ticket,
+    DoorOpen,
+    Building2,
+    FolderTree,
+    ServerCog
 } from 'lucide-react';
 import { User, UserRole } from '../../types';
 import { hasRole } from '../../services/authUtils';
@@ -60,10 +63,29 @@ const LINEA = 'border-black/[0.06] dark:border-white/[0.07]';
 const GUIA = 'bg-black/10 dark:bg-white/10';
 const FOCO = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 dark:focus-visible:ring-white/25';
 
-/** Alto de cada nivel, en píxeles: la compu aprieta, el teléfono no. */
-const ALTO = { pc: [42, 38, 34], movil: [46, 44, 44] };
-/** Sangría de cada nivel. El nivel 1 arranca contra el borde. */
-const SANGRIA = [0, 36, 56];
+/**
+ * Alto de cada nivel, en píxeles: la fila y la de los sub-ítems del Prode.
+ * El teléfono no baja de 44 (el mínimo para el dedo); la compu, con mouse,
+ * aprieta un poco más.
+ */
+const ALTO = { pc: [40, 36], movil: [44, 44] };
+/** Sangría de los sub-ítems del Prode. El nivel 1 arranca contra el borde. */
+const SANGRIA = [0, 36];
+/** Sangría de los hijos de un grupo (Administración): llevan su ícono. */
+const SANGRIA_HIJO = 18;
+/** El fondo del ítem donde estás: gris suave, no la pastilla negra de antes. */
+const MARCA = 'bg-black/[0.06] dark:bg-white/[0.08]';
+/** Los grupos abiertos o cerrados a mano, en este dispositivo. */
+const CLAVE_GRUPOS = 'origen_menu_grupos_abiertos';
+
+const leerGruposAbiertos = (): string[] => {
+    try {
+        const v = JSON.parse(localStorage.getItem(CLAVE_GRUPOS) || '[]');
+        return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    } catch {
+        return [];
+    }
+};
 
 /**
  * La entrada en cascada de los ítems y el asomo del menú de cuenta.
@@ -206,14 +228,6 @@ interface SubMenuItem {
     activePaths?: string[];
 }
 
-interface SubGroup {
-    label: string;
-    path?: string;
-    roles?: UserRole[];
-    subItems?: SubMenuItem[];
-    separator?: boolean;
-}
-
 interface MenuItem {
     label: string;
     icon: React.ElementType;
@@ -234,11 +248,20 @@ interface MenuItem {
     roles?: UserRole[];
     requiresAuth?: boolean;
     subItems?: SubMenuItem[];
-    subGroups?: SubGroup[];
+    /**
+     * Un grupo de Administración (GCX, Personas, Organización): no navega,
+     * despliega estos ítems, cada uno con su ícono, su ruta y sus permisos.
+     * Dos niveles nada más: los hijos no tienen hijos. El grupo no tiene
+     * roles propios: aparece si se ve alguno de sus hijos, y si se ve uno
+     * solo, ese hijo va suelto (ver aplanar()).
+     */
+    children?: MenuItem[];
 }
 
 interface MenuSection {
     titulo: string;
+    /** "General" va sin rótulo: arranca directo. */
+    conRotulo: boolean;
     items: MenuItem[];
 }
 
@@ -275,15 +298,33 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const pop = usePop(sinLeer);
     /** De qué departamentos de Agenda Origen es encargado (para "Departamentos"). */
     const accesoAgenda = useAccesoAgenda();
+    /** Para los id de aria-controls: sidebar y cajón pueden estar montados a la vez. */
+    const uid = useId();
 
     /**
-     * La píldora negra que marca dónde estás, y que se desliza de un ítem a
-     * otro en vez de prenderse y apagarse.
+     * Los grupos de Administración abiertos.
+     *
+     * `gruposAbiertos` es lo que la persona abrió o cerró, y se recuerda en el
+     * dispositivo. El grupo de la pantalla donde estás se abre igual, sin
+     * guardarse; si lo cierra a mano, queda en `cerradosAMano` hasta que
+     * cambie de pantalla.
+     */
+    const [gruposAbiertos, setGruposAbiertos] = useState<string[]>(leerGruposAbiertos);
+    const [cerradosAMano, setCerradosAMano] = useState<string[]>([]);
+    const guardarGrupos = (abiertos: string[]) => {
+        setGruposAbiertos(abiertos);
+        try { localStorage.setItem(CLAVE_GRUPOS, JSON.stringify(abiertos)); } catch { /* queda hasta recargar */ }
+    };
+    useEffect(() => { setCerradosAMano([]); }, [location.pathname]);
+
+    /**
+     * La marca que dice dónde estás —un fondo gris suave—, y que se desliza de
+     * un ítem a otro en vez de prenderse y apagarse.
      *
      * Es un solo recuadro por detrás de la lista: se mide el botón activo y
-     * se la lleva a su caja. Cuando hay más de uno marcado —"Sistemas" y su
-     * "Configuración", por ejemplo— va sobre el más profundo, que es el
-     * lugar exacto; el de arriba se pinta igual, como hoy.
+     * se la lleva a su caja. Cuando hay más de uno marcado —"Prode Mundial" y
+     * su "Ranking", por ejemplo— va sobre el más profundo, que es el lugar
+     * exacto.
      *
      * Se mide con offset* y no con getBoundingClientRect porque los ítems
      * entran con un translateX: el rect devolvería la caja a mitad de la
@@ -317,8 +358,9 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     useBloqueoDeFondo(type === 'drawer' && isOpen);
 
     useEffect(() => {
-        // Al cerrarse, las secciones desplegadas vuelven a su lugar.
-        if (!shouldRender) setExpandedItems([]);
+        // Al cerrarse, los sub-ítems desplegados vuelven a su lugar. Los
+        // grupos no: esos se recuerdan.
+        if (!shouldRender) { setExpandedItems([]); setCerradosAMano([]); }
     }, [shouldRender]);
 
     // El desplegable de cuenta se cierra al tocar afuera o con Escape. Es un
@@ -417,7 +459,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         const lista = listaRef.current;
         if (!lista) return;
         {
-            const marcados = lista.querySelectorAll<HTMLElement>('[data-activo="true"]');
+            // Lo que está adentro de un grupo que se está cerrando no cuenta:
+            // si no, la marca quedaría colgada donde estaba el hijo.
+            const marcados = [...lista.querySelectorAll<HTMLElement>('[data-activo="true"]')]
+                .filter(e => !e.closest('[data-abierto="false"]'));
             const el = marcados[marcados.length - 1];
             if (!el) { setPildora(p => (p === null ? p : null)); return; }
             // Se suma la cadena de offsetParent hasta la lista: los sub-ítems
@@ -500,14 +545,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             // Un solo click al buscador público de grupos. La administración de
             // GCX se mudó entera a "Panel GCX", en la sección de abajo.
             label: 'GCX',
-            icon: BarChart,
+            icon: Compass,
             path: '/gcx',
             exact: true,
             roles: []
         },
         {
             label: 'Eventos',
-            icon: CalendarDays,
+            icon: PartyPopper,
             path: '/eventos',
             exact: true,
             roles: []
@@ -553,83 +598,67 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // ─────────────────────────────────────────────────────────────────────
     const menuAdmin: MenuItem[] = [
         {
-            // Agenda Origen. No va por roles: se ve según de qué departamento
-            // es encargado cada uno y qué sub-departamento dirige
-            // (agenda_mi_acceso). Ver puedeVer().
-            label: 'Departamentos',
-            icon: LayoutGrid,
-            path: '/departamentos',
-            requiresAuth: true,
+            // Agrupado por área (pedido de Ignacio, 29-oct-2026): doce
+            // entradas al mismo nivel se veían cargadas. Rutas, roles y
+            // condiciones de cada hijo son los mismos de antes.
+            label: 'GCX',
+            icon: Network,
+            children: [
+                {
+                    // Un solo click, sin desplegable: entra directo a "Gestión
+                    // de grupos" (pedido de Ignacio, 28-oct-2026). Lo demás
+                    // —anfitriones, coordinadores, temporadas, categorías,
+                    // etiquetas, página pública— está en el menú propio del
+                    // panel (AdminGCXLayout), y crear grupo, agregar y bajas,
+                    // en la pantalla de grupos.
+                    label: 'Panel GCX',
+                    icon: LayoutDashboard,
+                    path: '/admingcx/gestion-de-grupos',
+                    // Encendido en cualquier pantalla del panel, no sólo en grupos.
+                    activePaths: ['/admingcx'],
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
+                },
+                {
+                    // El tablero de GCX: el panel no lo enlaza, así que es su
+                    // única entrada. No es /reportes (Pastores.tsx), que sigue
+                    // en Punto de información.
+                    label: 'Reportes GCX',
+                    icon: BarChart,
+                    path: '/reportes/gcx',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
+                },
+                {
+                    // Los grupos que lleva el anfitrión. No comparte rutas ni
+                    // roles con Panel GCX (el /admingcx del encargado).
+                    label: 'Panel de anfitriones',
+                    icon: ClipboardCheck,
+                    path: '/mis-grupos',
+                    roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
+                },
+                {
+                    label: 'Panel de coordinadores',
+                    icon: UserCheck,
+                    // Con ?tab=dashboard, igual que antes: el módulo abre por
+                    // pestañas y entrar sin una deja al coordinador en la
+                    // pestaña que el componente elija por defecto.
+                    path: '/coordinators?tab=dashboard',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
+                    // El prefijo mantiene el ítem encendido en las demás pestañas.
+                    activePaths: ['/coordinators']
+                },
+            ],
         },
         {
-            label: 'Audiencia Servicios',
-            icon: HeartHandshake,
-            path: '/audiencia-servicios',
-            roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL],
-        },
-        {
-            label: 'Bienvenida',
-            icon: Heart,
-            path: '/bienvenida',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
-        },
-        {
-            // Un solo click, sin desplegable: entra directo a "Gestión de
-            // grupos" (pedido de Ignacio, 28-oct-2026). Lo demás —anfitriones,
-            // coordinadores, temporadas, categorías, etiquetas, página
-            // pública— está en el menú propio del panel (AdminGCXLayout), y
-            // crear grupo, agregar y bajas, en la pantalla de grupos.
-            label: 'Panel GCX',
-            icon: LayoutDashboard,
-            path: '/admingcx/gestion-de-grupos',
-            // Encendido en cualquier pantalla del panel, no sólo en grupos.
-            activePaths: ['/admingcx'],
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
-        },
-        {
-            // El tablero de GCX colgaba del desplegable de "Panel GCX" y era
-            // la única entrada que tenía: el panel no lo enlaza. Al dejar
-            // "Panel GCX" de un click, pasa a ser un ítem propio, con la
-            // misma visibilidad que tenía ahí (el desplegable entero era de
-            // estos tres roles). No es /reportes (Pastores.tsx), que sigue
-            // en Punto de información.
-            label: 'Reportes GCX',
-            icon: BarChart,
-            path: '/reportes/gcx',
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_GROUPS, UserRole.ENCARGADO_GRUPOS],
-        },
-        {
-            // Los grupos que lleva el anfitrión. Va suelto y no colgado de
-            // "Panel GCX": ese desplegable es el /admingcx del encargado de
-            // grupos, y estos dos ni comparten rutas ni roles.
-            label: 'Panel de Anfitrión',
-            icon: Users,
-            path: '/mis-grupos',
-            roles: [UserRole.ANFITRION, UserRole.CO_ANFITRION]
-        },
-        {
-            label: 'Coordinadores',
-            icon: UserCheck,
-            // Con ?tab=dashboard, igual que antes: el módulo abre por pestañas
-            // y entrar sin una deja al coordinador en la pestaña que el
-            // componente elija por defecto, que no tiene por qué ser esta.
-            path: '/coordinators?tab=dashboard',
-            roles: [UserRole.SUPER_ADMIN, UserRole.COORDINATOR],
-            // El prefijo mantiene el ítem encendido en las demás pestañas.
-            activePaths: ['/coordinators']
-        },
-        {
-            // Es un índice, no una pantalla suelta: adentro están Día del Padre,
-            // Día del Niño, Tribal Wars, General, Kahoot y la administración del
-            // Prode. Por eso va sin desplegable —duplicarlo acá sería mantener
-            // dos listas del mismo contenido.
+            // Es un índice, no una pantalla suelta: adentro están Nocturna,
+            // Día del Niño, Día del Padre, Tribal Wars, General, Kahoot y la
+            // administración del Prode. Por eso va sin desplegable.
             label: 'Panel de eventos',
-            icon: CalendarCheck,
+            icon: Ticket,
             path: '/panel-eventos',
             // Las pantallas que cuelgan del panel viven bajo otros prefijos.
-            // Sin esto, estar adentro de Día del Niño dejaba el menú entero
-            // apagado: "Eventos" (arriba, en General) ya no las reclama, y sin
-            // ningún ítem encendido se pierde de dónde se entró.
+            // En /eventos/admin/tribal-wars gana Influos, que la reclama con
+            // un prefijo más largo (ver coincidencia()); quien no ve Influos
+            // sigue viendo encendido este.
             activePaths: ['/eventos/admin', '/trivia/admin', '/panel-eventos/nocturna'],
             // ACREDITACION entra por Nocturna. Sin esto, quien sólo tiene ese
             // rol no veía NINGÚN ítem y la sección "Administración" entera
@@ -637,85 +666,79 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.ACREDITACION],
         },
         {
-            label: 'Influos',
-            icon: Star,
-            path: '/influos',
-            roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR],
-            subItems: [
+            label: 'Personas',
+            icon: Users,
+            children: [
                 {
-                    label: 'Panel Influos',
+                    label: 'Bienvenida',
+                    icon: DoorOpen,
+                    path: '/bienvenida',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ENCARGADO_BIENVENIDA, UserRole.VOLUNTARIO_BIENVENIDA],
+                },
+                {
+                    // Sin desplegable: Tribal Wars, que colgaba de acá, se abre
+                    // desde la pantalla de Influos (y desde Panel de eventos).
+                    label: 'Influos',
+                    icon: Star,
                     path: '/influos',
-                    roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR]
+                    activePaths: ['/eventos/admin/tribal-wars'],
+                    roles: [UserRole.INFLUOS, UserRole.SUPER_ADMIN, UserRole.PASTOR],
                 },
                 {
-                    label: 'Tribal Wars',
-                    path: '/eventos/admin/tribal-wars',
-                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ENCARGADO_EVENTOS, UserRole.INFLUOS]
-                },
-            ]
-        },
-        {
-            label: 'Niñez',
-            icon: Baby,
-            path: '/ninez',
-            activePaths: ['/admin-ninez'],
-            roles: [
-                UserRole.SUPER_ADMIN,
-                UserRole.PASTOR,
-                UserRole.ENCARGADO_NINEZ,
-            ],
-            subItems: [
-                {
-                    // Se repiten los roles en vez de heredarlos del padre: los
-                    // subItems se filtran por su cuenta, así que si mañana
-                    // alguien vuelve a abrir el ítem padre, este no queda
-                    // público por descuido.
-                    label: 'Panel Niñez',
+                    // Sin desplegable: la Configuración se abre desde /ninez.
+                    label: 'Niñez',
+                    icon: Baby,
                     path: '/ninez',
+                    activePaths: ['/admin-ninez'],
                     roles: [
                         UserRole.SUPER_ADMIN,
                         UserRole.PASTOR,
                         UserRole.ENCARGADO_NINEZ,
-                    ]
+                    ],
                 },
-                {
-                    label: 'Configuración',
-                    path: '/admin-ninez/configuracion',
-                    roles: [
-                        UserRole.SUPER_ADMIN,
-                        UserRole.PASTOR,
-                        UserRole.ENCARGADO_NINEZ,
-                    ]
-                },
-            ]
+            ],
         },
         {
-            label: 'Punto de información',
-            icon: Info,
-            // Sin desplegable y sin paradas intermedias: un toque y estás en el
-            // panel. Acá colgaba una copia de cada función del Punto —Anuncios,
-            // Bautismos, Inventario, Reportes…— que había que mantener al día a
-            // mano cada vez que el panel cambiaba; después quedaron dos puertas,
-            // "Inicio" y "Panel de administración", para una sola pantalla. El
-            // panel ya tiene su propio menú, con las funciones agrupadas y los
-            // permisos de cada una: esto lleva ahí y listo.
-            path: '/punto-de-informacion?view=PANEL',
-            // El ?view= es para navegar; para encenderse alcanza el pathname.
-            // Sin esto el ítem nunca quedaría activo —`location.pathname` no
-            // empieza con "/punto-de-informacion?view=PANEL"— y el menú abriría
-            // en el tope sin decir dónde estás. Mismo caso que Coordinadores.
-            activePaths: ['/punto-de-informacion'],
-            roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
+            label: 'Organización',
+            icon: Building2,
+            children: [
+                {
+                    // Agenda Origen. No va por roles: se ve según de qué
+                    // departamento es encargado cada uno y qué sub-departamento
+                    // dirige (agenda_mi_acceso). Ver puedeVer().
+                    label: 'Departamentos',
+                    icon: FolderTree,
+                    path: '/departamentos',
+                    requiresAuth: true,
+                },
+                {
+                    label: 'Punto de información',
+                    icon: Info,
+                    // Un toque y estás en el panel, que ya tiene su propio menú
+                    // con las funciones agrupadas y los permisos de cada una.
+                    path: '/punto-de-informacion?view=PANEL',
+                    // El ?view= es para navegar; para encenderse alcanza el
+                    // pathname. Mismo caso que Panel de coordinadores.
+                    activePaths: ['/punto-de-informacion'],
+                    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN_PUNTO, UserRole.ENCARGADO_PUNTO, UserRole.VOLUNTARIO_INFO],
+                },
+                {
+                    label: 'Audiencia de servicios',
+                    icon: HeartHandshake,
+                    path: '/audiencia-servicios',
+                    roles: [UserRole.SUPER_ADMIN, UserRole.PASTOR, UserRole.ADMIN_CUIDADO_PASTORAL],
+                },
+            ],
         },
         {
             // Un solo click, sin desplegable: entra directo a "Usuarios"
             // (pedido de Ignacio, 28-oct-2026). Configuración, Departamentos
             // y los logs están en el menú propio del panel.
             label: 'Sistemas',
-            icon: Settings,
+            icon: ServerCog,
             path: '/panel-admin?tab=users',
             // El ?tab= es para navegar; para encenderse alcanza el pathname,
-            // en cualquier sección del panel. Mismo caso que Coordinadores.
+            // en cualquier sección del panel.
             activePaths: ['/panel-admin'],
             roles: [UserRole.SUPER_ADMIN],
         },
@@ -753,10 +776,57 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         return true;
     };
 
+    /**
+     * Los grupos, ya filtrados: un grupo aparece si se ve alguno de sus
+     * hijos (con la misma puedeVer de cada ítem, incluido el "cargando" de
+     * Departamentos). Con un solo hijo visible no hay grupo: ese hijo va
+     * suelto, con su ícono —un anfitrión ve "Panel de anfitriones" sin
+     * tener que abrir "GCX"—.
+     */
+    const aplanar = (items: MenuItem[]): MenuItem[] => items.flatMap(item => {
+        if (!item.children) return puedeVer(item) ? [item] : [];
+        const hijos = item.children.filter(puedeVer);
+        if (hijos.length === 0) return [];
+        if (hijos.length === 1) return hijos;
+        return [{ ...item, children: hijos }];
+    });
+
     const secciones: MenuSection[] = [
-        { titulo: 'General', items: menuGeneral.filter(puedeVer) },
-        { titulo: 'Administración', items: menuAdmin.filter(puedeVer) },
+        { titulo: 'General', conRotulo: false, items: aplanar(menuGeneral) },
+        { titulo: 'Administración', conRotulo: true, items: aplanar(menuAdmin) },
     ].filter(seccion => seccion.items.length > 0);
+
+    /**
+     * Cuánto de la ruta actual reclama un ítem: el largo del prefijo que
+     * coincide, 0 si ninguno. Las rutas con ?query (Sistemas, Punto,
+     * coordinadores) no coinciden por `path`: se encienden por activePaths.
+     */
+    const coincidencia = (item: MenuItem): number => {
+        const ruta = location.pathname;
+        if (item.path === '/') return ruta === '/' ? 1 : 0;
+        let largo = 0;
+        if (item.path && (item.exact ? ruta === item.path : ruta.startsWith(item.path))) largo = item.path.length;
+        for (const p of item.activePaths ?? []) {
+            if (ruta.startsWith(p)) largo = Math.max(largo, p.length);
+        }
+        return largo;
+    };
+
+    /**
+     * El ítem donde estás: uno solo, el que reclama la ruta con el prefijo
+     * más largo. Hace falta desde que Tribal Wars salió del menú: la
+     * reclaman Influos (/eventos/admin/tribal-wars) y Panel de eventos
+     * (/eventos/admin), y se enciende Influos; quien no ve Influos ve
+     * encendido Panel de eventos, como antes.
+     */
+    let activo: MenuItem | null = null;
+    {
+        let mejor = 0;
+        for (const hoja of secciones.flatMap(sec => sec.items.flatMap(it => it.children ?? [it]))) {
+            const c = coincidencia(hoja);
+            if (c > mejor) { mejor = c; activo = hoja; }
+        }
+    }
 
     if (!shouldRender && type === 'drawer') return null;
 
@@ -798,15 +868,22 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
     // ── Un ítem de menú (con o sin hijos) ────────────────────────────────
     /**
-     * El lugar de cada ítem en la lista entera.
+     * El lugar de cada fila en la lista entera.
      *
      * Es para escalonar la entrada del cajón: cada fila entra 25 ms después
      * de la anterior, que es lo que hace que el menú se "despliegue" en vez
-     * de aparecer de golpe. Se cuenta sobre las secciones ya filtradas por
-     * rol, así que no quedan huecos de tiempo por ítems que no se ven.
+     * de aparecer de golpe. Se cuenta mientras se pinta, sobre lo que se ve,
+     * así que no quedan huecos de tiempo por ítems ocultos.
      */
-    const ordenDe = new Map<MenuItem, number>();
-    secciones.forEach(sec => sec.items.forEach(it => ordenDe.set(it, ordenDe.size)));
+    let orden = 0;
+    const entradaDe = () => {
+        const n = orden++;
+        // La cascada es del cajón del teléfono: en la compu la barra ya está
+        // puesta y no hay entrada que acompañar.
+        return !isSidebar && isOpen && !sinMovimiento
+            ? `mdEntra .32s cubic-bezier(.2,.8,.2,1) ${n * 25}ms both`
+            : undefined;
+    };
 
     /**
      * El despliegue de un grupo: la altura se abre y se cierra, no aparece.
@@ -822,7 +899,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         exit: { height: 0, opacity: 0 },
         transition: sinMovimiento
             ? { duration: 0 }
-            : { duration: 0.26, ease: [0.3, 0.7, 0.2, 1] as const },
+            : { duration: 0.22, ease: [0.3, 0.7, 0.2, 1] as const },
     };
 
     /** El alto de cada nivel: la compu aprieta, el teléfono no. */
@@ -847,17 +924,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         transition: sinMovimiento ? 'none' : (isCollapsed ? 'opacity .1s ease' : 'opacity .16s ease .2s'),
     };
 
-    const renderItem = (item: MenuItem, key: React.Key) => {
-        const isActive = item.path === '/'
-            ? location.pathname === '/'
-            : (
-                (item.path
-                    ? (item.exact
-                        ? location.pathname === item.path
-                        : location.pathname.startsWith(item.path))
-                    : false)
-                || (item.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
-            );
+    /** El ícono de cada fila: un poco más chico que antes, para aliviar. */
+    const ICONO = 'w-[17px] h-[17px] shrink-0';
+    /** Donde estás: tinta plena y 600. Lo demás, gris y 500. */
+    const textoDe = (marcado: boolean) => (marcado
+        ? `font-semibold ${TINTA}`
+        : `font-medium ${M66} ${ENCIMA}`);
+
+    /** Una hoja: navega. Suelta, o hija de un grupo (con sangría). */
+    const renderHoja = (item: MenuItem, key: React.Key, hijo = false) => {
+        const isActive = item === activo;
 
         const visibleSubItems = item.subItems?.filter(sub => {
             // Hay sub-ítems que sólo tienen sentido en el teléfono. Hoy no los
@@ -870,58 +946,34 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             return hasRole(currentUser, sub.roles);
         }) || [];
 
-        const visibleSubGroups = item.subGroups?.filter(group => {
-            if (!group.roles || group.roles.length === 0) return true;
-            if (!currentUser) return false;
-            return hasRole(currentUser, group.roles);
-        }) || [];
-
-        const hasSubItems = visibleSubItems.length > 0;
-        const hasSubGroups = visibleSubGroups.length > 0;
-        const hasChildren = hasSubItems || hasSubGroups;
+        const hasChildren = visibleSubItems.length > 0;
         const isExpanded = expandedItems.includes(item.label) || (isActive && !isCollapsed);
 
-        // ── Sólo apariencia de acá abajo ────────────────────────────────
-        //
-        // La píldora va sobre el marcado MÁS PROFUNDO que esté a la vista.
-        // Cuando estás en "Sistemas › Configuración" los dos cuentan como
-        // activos —eso no cambió—, pero pintar los dos de negro repetía el
-        // mismo dato dos veces: ahora el de arriba queda en tinta plena, que
-        // es el "estás acá adentro" del diseño, y la píldora marca el final
-        // del camino.
+        // La marca va sobre el marcado MÁS PROFUNDO que esté a la vista: en
+        // "Prode Mundial › Ranking" el de arriba queda en tinta plena y la
+        // marca se apoya en Ranking, el final del camino.
         const esSubActivo = (sub: SubMenuItem) => sub.path
             ? (location.pathname + location.search) === sub.path
             || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
             : false;
         const hijosALaVista = !isCollapsed && hasChildren && isExpanded;
-        const conHijoMarcado = hijosALaVista && (
-            visibleSubItems.some(sub => !sub.separator && esSubActivo(sub))
-            || visibleSubGroups.some(group => {
-                if (group.separator) return false;
-                const conItems = (group.subItems?.length ?? 0) > 0;
-                const grupoActivo = group.path
-                    ? (location.pathname + location.search).startsWith(group.path)
-                    : group.subItems?.some(s => (location.pathname + location.search) === s.path);
-                if (!conItems) return !!grupoActivo;
-                const abierto = expandedItems.includes(`${item.label}::${group.label}`) || !!grupoActivo;
-                return abierto && (group.subItems ?? []).some(esSubActivo);
-            })
-        );
-        const llevaPildora = isActive && !conHijoMarcado;
-
-        // La cascada es del cajón del teléfono: en la compu la barra ya está
-        // puesta y no hay entrada que acompañar.
-        const entrada = !isSidebar && isOpen && !sinMovimiento
-            ? `mdEntra .32s cubic-bezier(.2,.8,.2,1) ${(ordenDe.get(item) ?? 0) * 25}ms both`
-            : undefined;
+        const conHijoMarcado = hijosALaVista && visibleSubItems.some(sub => !sub.separator && esSubActivo(sub));
+        const llevaMarca = isActive && !conHijoMarcado;
 
         return (
-            <div key={key} title={isCollapsed ? item.label : undefined} style={{ animation: entrada }}>
+            <div
+                key={key}
+                title={isCollapsed ? item.label : undefined}
+                className={hijo ? 'relative' : undefined}
+                style={{ animation: entradaDe() }}
+            >
+                {/* El hilo que cuelga del ícono del grupo y junta a sus hijos. */}
+                {hijo && <span aria-hidden="true" className={`absolute left-[22px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />}
                 <button
                     // Sólo hay un activo por vez: es el ancla a la que el menú
                     // scrollea al abrirse.
                     ref={isActive ? itemActivoRef : undefined}
-                    data-activo={isActive ? 'true' : undefined}
+                    data-activo={llevaMarca ? 'true' : undefined}
                     onClick={() => {
                         if (hasChildren) {
                             // Tiene hijos: SOLO expande/colapsa, nunca navega.
@@ -940,17 +992,14 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     aria-current={isActive ? 'page' : undefined}
                     style={{
                         height: alto[0],
+                        marginLeft: hijo ? SANGRIA_HIJO : 0,
+                        width: hijo ? `calc(100% - ${SANGRIA_HIJO}px)` : '100%',
                         borderRadius: isCollapsed ? 14 : 999,
-                        fontSize: isSidebar ? 14.5 : 15.5,
+                        fontSize: hijo ? (isSidebar ? 14 : 15) : (isSidebar ? 14.5 : 15.5),
                     }}
-                    className={`relative z-[1] w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-[14px]'} text-left font-semibold transition-colors duration-150 ${FOCO} ${llevaPildora
-                        ? 'text-white dark:text-[#0a0a0a]'
-                        : isActive
-                            ? `${TINTA} ${ENCIMA}`
-                            : `${M66} ${ENCIMA}`
-                        }`}
+                    className={`relative z-[1] flex items-center ${isCollapsed ? 'justify-center px-0' : hijo ? 'px-3' : 'px-[14px]'} text-left transition-colors duration-150 ${FOCO} ${textoDe(isActive)}`}
                 >
-                    <item.icon className="w-[19px] h-[19px] shrink-0" strokeWidth={2} />
+                    <item.icon className={ICONO} strokeWidth={2} />
                     <span className={textoQueSeVa} style={estiloTexto}>{item.label}</span>
                     {hasChildren && !isCollapsed && (
                         <ChevronDown
@@ -963,121 +1012,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <AnimatePresence initial={false}>
                     {hijosALaVista && (
                     /* Sin borde ni sangría en el contenedor: cada fila trae su
-                       propia guía vertical, que es lo que deja los tres niveles
-                       alineados contra la misma columna. */
+                       propia guía vertical. */
                     <motion.div className="relative overflow-hidden" {...despliegue}>
-                        {/* SubGroups: secciones rotuladas, opcionalmente expandibles */}
-                        {visibleSubGroups.map((group, gi) => {
-                            if (group.separator) {
-                                return (
-                                    <div key={gi} className="relative flex items-end h-[38px] pb-2" style={{ paddingLeft: SANGRIA[1] + 12 }}>
-                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
-                                        <span className={`text-[11px] font-semibold uppercase tracking-[0.07em] ${M55} select-none`}>
-                                            {group.label}
-                                        </span>
-                                    </div>
-                                );
-                            }
-
-                            const groupKey = `${item.label}::${group.label}`;
-                            const hasGroupItems = (group.subItems?.length ?? 0) > 0;
-                            const isGroupActive = group.path
-                                ? (location.pathname + location.search).startsWith(group.path)
-                                : group.subItems?.some(s => (location.pathname + location.search) === s.path);
-                            const isGroupExpanded = expandedItems.includes(groupKey) || (!!isGroupActive && hasGroupItems);
-                            const grupoConPildora = !hasGroupItems && !!isGroupActive;
-
-                            return (
-                                <div key={gi}>
-                                    <div className="relative">
-                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
-                                        <button
-                                            data-activo={!hasGroupItems && isGroupActive ? 'true' : undefined}
-                                            onClick={() => {
-                                                if (hasGroupItems) toggleExpand(groupKey);
-                                                else if (group.path) handleNavigation(group.path);
-                                            }}
-                                            aria-expanded={hasGroupItems ? isGroupExpanded : undefined}
-                                            style={{
-                                                height: alto[1],
-                                                marginLeft: SANGRIA[1],
-                                                width: `calc(100% - ${SANGRIA[1]}px)`,
-                                                borderRadius: 999,
-                                                fontSize: 14,
-                                            }}
-                                            className={`relative z-[1] flex items-center gap-2 px-3 text-left transition-colors duration-150 ${FOCO} ${grupoConPildora
-                                                ? 'font-semibold text-white dark:text-[#0a0a0a]'
-                                                : isGroupActive
-                                                    ? `font-semibold ${TINTA} ${ENCIMA}`
-                                                    : `font-medium ${M66} ${ENCIMA}`
-                                                }`}
-                                        >
-                                            <span className="flex-1 min-w-0 truncate">{group.label}</span>
-                                            {hasGroupItems && (
-                                                <ChevronDown
-                                                    className="w-[15px] h-[15px] shrink-0 opacity-75 transition-transform duration-[250ms]"
-                                                    style={{ transform: isGroupExpanded ? 'rotate(180deg)' : 'none' }}
-                                                />
-                                            )}
-                                        </button>
-                                    </div>
-                                    <AnimatePresence initial={false}>
-                                        {hasGroupItems && isGroupExpanded && (
-                                        <motion.div className="overflow-hidden" {...despliegue}>
-                                            {group.subItems!.map((sub, si) => {
-                                                const isSubActive = (location.pathname + location.search) === sub.path
-                                                    || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false);
-                                                return (
-                                                    <div key={si} className="relative">
-                                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
-                                                        <span aria-hidden="true" className={`absolute left-[47px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
-                                                        <button
-                                                            data-activo={isSubActive ? 'true' : undefined}
-                                                            onClick={() => sub.path && handleNavigation(sub.path)}
-                                                            aria-current={isSubActive ? 'page' : undefined}
-                                                            style={{
-                                                                height: alto[2],
-                                                                marginLeft: SANGRIA[2],
-                                                                width: `calc(100% - ${SANGRIA[2]}px)`,
-                                                                borderRadius: 999,
-                                                                fontSize: 13,
-                                                            }}
-                                                            className={`relative z-[1] flex items-center px-3 text-left truncate transition-colors duration-150 ${FOCO} ${isSubActive
-                                                                ? 'font-semibold text-white dark:text-[#0a0a0a]'
-                                                                : `font-medium ${M55} ${ENCIMA}`
-                                                                }`}
-                                                        >
-                                                            {sub.label}
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            );
-                        })}
-
                         {/* subItems planos — con soporte de separadores */}
                         {visibleSubItems.map((sub, si) => {
                             if (sub.separator) {
                                 return (
                                     <div key={si} className="relative flex items-end h-[38px] pb-2" style={{ paddingLeft: SANGRIA[1] + 12 }}>
-                                        <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                        <span aria-hidden="true" className={`absolute left-[22px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
                                         <span className={`text-[11px] font-semibold uppercase tracking-[0.07em] ${M55} select-none`}>
                                             {sub.label}
                                         </span>
                                     </div>
                                 );
                             }
-                            const isSubActive = sub.path
-                                ? (location.pathname + location.search) === sub.path
-                                || (sub.activePaths?.some(p => location.pathname.startsWith(p)) ?? false)
-                                : false;
+                            const isSubActive = esSubActivo(sub);
                             return (
                                 <div key={si} className="relative">
-                                    <span aria-hidden="true" className={`absolute left-[23px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
+                                    <span aria-hidden="true" className={`absolute left-[22px] top-0 bottom-0 w-[1.5px] ${GUIA}`} />
                                     <button
                                         data-activo={isSubActive ? 'true' : undefined}
                                         onClick={() => sub.path && handleNavigation(sub.path)}
@@ -1089,10 +1041,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                             borderRadius: 999,
                                             fontSize: 14,
                                         }}
-                                        className={`relative z-[1] flex items-center px-3 text-left truncate transition-colors duration-150 ${FOCO} ${isSubActive
-                                            ? 'font-semibold text-white dark:text-[#0a0a0a]'
-                                            : `font-medium ${M66} ${ENCIMA}`
-                                            }`}
+                                        className={`relative z-[1] flex items-center px-3 text-left truncate transition-colors duration-150 ${FOCO} ${textoDe(isSubActive)}`}
                                     >
                                         {sub.label}
                                     </button>
@@ -1105,6 +1054,97 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             </div>
         );
     };
+
+    /**
+     * Un grupo de Administración: fila con ícono, nombre y chevron; al
+     * tocarla despliega sus hijos con sangría. Pueden quedar varios abiertos.
+     *
+     * Con la barra de la compu contraída, los hijos no entran en el riel de
+     * íconos: tocar el grupo expande la barra y lo deja abierto. Es lo mismo
+     * que ya hacía el menú con los ítems que tienen sub-ítems (el Prode), así
+     * que hay una sola manera de "abrir algo" contraído, y no un panel
+     * flotante que sólo existiría para estos tres.
+     */
+    const renderGrupo = (grupo: MenuItem, key: React.Key) => {
+        const hijos = grupo.children ?? [];
+        const conActivo = !!activo && hijos.includes(activo);
+        const abierto = !isCollapsed && (
+            gruposAbiertos.includes(grupo.label)
+            || (conActivo && !cerradosAMano.includes(grupo.label))
+        );
+        // Cerrado y con la pantalla actual adentro: una marca para que se sepa
+        // dónde estás sin abrirlo. Contraída la barra, es la marca de siempre.
+        const marcaDeAdentro = conActivo && !abierto;
+        const idHijos = `${uid}-grupo-${grupo.label}`;
+
+        const alternar = () => {
+            if (isCollapsed) {
+                if (!gruposAbiertos.includes(grupo.label)) guardarGrupos([...gruposAbiertos, grupo.label]);
+                setCerradosAMano(c => c.filter(l => l !== grupo.label));
+                onToggleCollapse?.();
+                return;
+            }
+            if (abierto) {
+                guardarGrupos(gruposAbiertos.filter(l => l !== grupo.label));
+                if (conActivo) setCerradosAMano(c => [...c, grupo.label]);
+            } else {
+                guardarGrupos([...gruposAbiertos, grupo.label]);
+                setCerradosAMano(c => c.filter(l => l !== grupo.label));
+            }
+        };
+
+        return (
+            <div key={key}>
+                <div title={isCollapsed ? grupo.label : undefined} style={{ animation: entradaDe() }}>
+                    <button
+                        ref={marcaDeAdentro ? itemActivoRef : undefined}
+                        data-activo={isCollapsed && conActivo ? 'true' : undefined}
+                        onClick={alternar}
+                        aria-expanded={abierto}
+                        aria-controls={idHijos}
+                        aria-label={isCollapsed ? grupo.label : undefined}
+                        style={{
+                            height: alto[0],
+                            borderRadius: isCollapsed ? 14 : 999,
+                            fontSize: isSidebar ? 14.5 : 15.5,
+                        }}
+                        className={`relative z-[1] w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-[14px]'} text-left transition-colors duration-150 ${FOCO} ${textoDe(conActivo)}`}
+                    >
+                        <grupo.icon className={ICONO} strokeWidth={2} />
+                        <span className={textoQueSeVa} style={estiloTexto}>
+                            {grupo.label}
+                            {marcaDeAdentro && <span className="sr-only">, acá está la pantalla actual</span>}
+                        </span>
+                        {!isCollapsed && (
+                            <>
+                                {marcaDeAdentro && (
+                                    <span aria-hidden="true" className="w-[6px] h-[6px] shrink-0 ml-2 rounded-full bg-[#0a0a0a] dark:bg-[#f4f4f2]" />
+                                )}
+                                <ChevronDown
+                                    className="w-4 h-4 shrink-0 ml-2 opacity-75 transition-transform duration-[250ms]"
+                                    style={{ transform: abierto ? 'rotate(180deg)' : 'none' }}
+                                />
+                            </>
+                        )}
+                    </button>
+                </div>
+                {/* data-abierto: mientras los hijos se van (la animación de
+                    cierre los deja montados un rato), la marca ya no los
+                    cuenta. Ver medirPildora. */}
+                <div id={idHijos} role="group" aria-label={grupo.label} data-abierto={abierto ? 'true' : 'false'}>
+                    <AnimatePresence initial={false}>
+                        {abierto && (
+                            <motion.div className="relative overflow-hidden" {...despliegue}>
+                                {hijos.map((hijo, hi) => renderHoja(hijo, `${grupo.label}-${hi}`, true))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        );
+    };
+
+    const renderItem = (item: MenuItem, key: React.Key) => (item.children ? renderGrupo(item, key) : renderHoja(item, key));
 
     const SidebarContent = (
         <div
@@ -1208,11 +1248,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 }}
             >
                 <div ref={listaRef} className="relative">
-                    {/* La píldora, por detrás de todo (z-0 contra el z-[1] de
+                    {/* La marca, por detrás de todo (z-0 contra el z-[1] de
                         los botones). Sin ítem activo no se dibuja. */}
                     <div
                         aria-hidden="true"
-                        className="absolute z-0 pointer-events-none bg-[#0a0a0a] dark:bg-white"
+                        className={`absolute z-0 pointer-events-none ${MARCA}`}
                         style={{
                             left: pildora?.l ?? 0,
                             top: pildora?.t ?? 0,
@@ -1225,14 +1265,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                 : 'opacity .2s',
                         }}
                     />
-                    {secciones.map((seccion, si) => (
+                    {secciones.map(seccion => (
                         <div key={seccion.titulo}>
-                            {/* Contraído el rótulo no entra, y en su lugar queda
+                            {/* "General" arranca directo, sin rótulo: es lo de
+                                todos y no necesita nombre. Contraído, el rótulo
+                                de Administración no entra, y en su lugar queda
                                 un guión centrado: la marca de corte entre
                                 bloques, que es lo único que hace falta ahí. */}
+                            {!seccion.conRotulo ? <div className="h-1.5" /> : (
                             <div
                                 className="relative flex items-end px-[14px] pb-2"
-                                style={{ height: si === 0 ? 30 : 46 }}
+                                style={{ height: 46 }}
                             >
                                 <span
                                     className={`text-[12px] font-semibold uppercase tracking-[0.07em] whitespace-nowrap ${M55} select-none`}
@@ -1246,6 +1289,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                                     style={{ opacity: isCollapsed ? 1 : 0 }}
                                 />
                             </div>
+                            )}
                             {seccion.items.map((item, ii) => renderItem(item, `${seccion.titulo}-${ii}`))}
                         </div>
                     ))}
