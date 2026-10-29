@@ -1,7 +1,8 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- GESTIÓN DE NOTIFICACIONES · las alertas PROGRAMADAS (las que crea Sistemas)
 -- 2026-10-29 · prompt 2 de 4 (diseño: design-claude/Sistemas - Gestion de notificaciones.dc.html)
--- ⏳ PENDIENTE
+-- ✅ APLICADO el 2026-10-29 (19:29 UTC). PROBAR_ 93/93 y PROBAR_notif_catalogo
+--    77/77 contra producción; send-push v4 (modo lote) desplegado a las 19:30.
 --
 -- LO QUE AGREGA
 --   1 · notif_alertas: baja lógica (eliminada_at / eliminada_por), reloj_desde
