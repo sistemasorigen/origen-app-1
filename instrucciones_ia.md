@@ -2109,8 +2109,39 @@ contacto (marcados `// TODO`), y el texto "En la puerta · texto provisorio"
 del email. Abiertas con datos de ejemplo, una familia transferiría a una cuenta
 que no existe.
 
+### Códigos de descuento (`sql/nocturna_codigos_descuento.sql`, 2026-10-30)
+- Dos códigos fijos en `nocturna_codigos_descuento`: `NOC40` ($40.000 cada
+  entrada) y `NOCTURNA50` ($50.000). **Sin SELECT para anon ni
+  authenticated**: sólo los leen funciones SECURITY DEFINER. No hay pantalla
+  para administrarlos; `activo = false` lo apaga para inscripciones nuevas.
+- **Decide la base.** El formulario manda `p_payload.codigo_descuento` tal
+  cual lo escribió la persona; `nocturna_alta` lo normaliza (mayúsculas, sin
+  espacios), y si no existe devuelve `{ok:false, motivo:'codigo_invalido'}`
+  **sin crear nada** (nunca se ignora en silencio). Cada chico paga
+  `least(precio sin código, precio del código)`: un código nunca sube un precio.
+- Columnas: `nocturna_inscripciones.codigo_descuento` (NO es `codigo_entrada`,
+  ese es el del QR), `descuento_total` (= suma de `nocturna_jovenes.descuento`)
+  y `precio_sin_codigo`. **Con código, `precio_unitario` es el precio CON el
+  código**: así el hermano que se suma (`nocturna_precio_sumado`) y el que
+  agrega el panel lo pagan sin tocar nada más.
+- Sumar hermanos: si la familia tiene código, lo paga igual y no se pregunta.
+  Si no tiene, puede poner uno: vale para los que se suman y la inscripción
+  queda con él. Otro código distinto → `motivo:'codigo_ya_usado'`.
+- `admin_editar_nocturna` no toca el código; recalcula `descuento_total`.
+- `nocturna_probar_codigo(p_codigo)` (anon): para mostrar el total antes de
+  transferir. `nocturna_reporte_codigos()` (staff): la tarjeta de Reportes,
+  una fila por código aunque tenga 0 usos, más "Sin código".
+- Formulario (paso 7): "¿Tenés un código de descuento?" antes del total; no se
+  sube el comprobante hasta contestar; si el total cambia después de subirlo,
+  avisa. La ficha del staff y el email muestran el código junto al total.
+- El email lee `codigo_descuento` en una consulta aparte que no frena el envío:
+  el orden de deploy entre la base y `send-nocturna-entrada` no lo rompe.
+
 ### Pruebas
-`sql/PROBAR_nocturna*.sql` (suites SQL). Hay una verificación de punta a punta
+`sql/PROBAR_nocturna*.sql` (suites SQL). Al 2026-10-30, `PROBAR_nocturna.sql`
+llama a `set_nocturna_acreditacion` con la firma vieja y
+`PROBAR_nocturna_promo_12.sql` supone que el aumento del martes no pasó:
+fallan por eso, no por la base. Hay una verificación de punta a punta
 pendiente, que incluye **dos personas del staff acreditando a la misma familia
 a la vez** (por el estado exacto de `set_nocturna_acreditacion`).
 

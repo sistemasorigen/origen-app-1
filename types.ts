@@ -1864,9 +1864,17 @@ export interface NocturnaInscripcion {
     declaracionesVersion: string;
     declaracionesAceptadasAt: string;
 
-    /** Foto del precio al inscribirse: no sigue al precio actual. */
+    /**
+     * Foto del precio al inscribirse: no sigue al precio actual. Con código
+     * de descuento, es el precio CON el código (lo que paga un hermano que se
+     * suma). Ver sql/nocturna_codigos_descuento.sql.
+     */
     precioUnitario: number;
     total: number;
+    /** El código de descuento que usó la familia. null = sin código. No es `codigoEntrada`. */
+    codigoDescuento: string | null;
+    /** Cuánto se ahorró la familia con el código. 0 sin código. */
+    descuentoTotal: number;
 
     /** Ruta dentro del bucket privado. La URL se pide firmada y aparte. */
     comprobantePath: string | null;
@@ -1948,6 +1956,12 @@ export interface NocturnaPayload {
     declaracionesVersion: string;
     /** Obligatorio en la inscripción pública; opcional en el alta del panel. */
     comprobantePath?: string;
+    /**
+     * El código de descuento tal cual lo escribió la persona. Lo valida y lo
+     * aplica la base: si no existe, no se crea nada y vuelve
+     * motivo 'codigo_invalido'.
+     */
+    codigo_descuento?: string;
 }
 
 /** Lo que devuelve admin_editar_nocturna. */
@@ -1968,6 +1982,10 @@ export interface NocturnaAltaResultado {
     inscripcionId?: string;
     codigoEntrada?: string;
     total?: number;
+    /** El código de descuento que quedó aplicado, si hay. */
+    codigoDescuento?: string | null;
+    /** 'codigo_invalido' (o 'codigo_ya_usado' al sumar): el error es del campo del código. */
+    motivo?: string;
     error?: string;
 }
 
@@ -1996,7 +2014,10 @@ export interface NocturnaGrupo {
     verificado?: boolean;
     inscripcionId?: string;
     adultoNombre?: string;
+    /** Lo que pagó cada entrada de la familia, con su código si usó uno. */
     precioUnitario?: number;
+    /** El código de descuento de la familia: los que se suman lo pagan igual. */
+    codigoDescuento?: string | null;
     chicos?: NocturnaChicoDelGrupo[];
 }
 
@@ -2025,5 +2046,8 @@ export interface NocturnaAgregadoResultado {
     aPagar?: number;
     /** El total de la inscripción ya con ellos adentro. */
     total?: number;
+    /** El código de descuento de la inscripción, si tiene. */
+    codigoDescuento?: string | null;
+    motivo?: string;
     error?: string;
 }

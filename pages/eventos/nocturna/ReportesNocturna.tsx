@@ -30,6 +30,7 @@ import {
     horarios, ordenarHorarios, horaDelMinuto, horaCorta, horaExacta,
     AZUL_SERIE, AMBAR_SERIE, GRIS_SERIE,
     BaseNocturna, PuntoPorMinuto, FilaDePrecio, FilaDeRetiro, FilaDeHorario, OrdenDeHorarios,
+    getCodigosNocturna, FilaDeCodigo, ReporteDeCodigos,
 } from '../../../services/reportesNocturna';
 import { haciaLaFicha, SeccionDeReportes } from './compartido/volver';
 import { User } from '../../../types';
@@ -507,6 +508,38 @@ const FilaDeVenta: React.FC<{ fila: FilaDePrecio; primera: boolean }> = ({ fila,
     </div>
 );
 
+/**
+ * Las columnas de la tarjeta de códigos. El código se lleva lo que sobra;
+ * los números van a la derecha y en cifras parejas para compararlos de
+ * arriba abajo. Entra en 390 px sin scroll de costado.
+ */
+const GRILLA_CODIGOS = 'minmax(0,1fr) 40px 44px minmax(74px,auto) minmax(70px,auto)';
+
+const FilaDeCodigoDescuento: React.FC<{ fila: FilaDeCodigo; aparte?: boolean }> = ({ fila, aparte }) => (
+    <div
+        role="row"
+        className="grid items-baseline gap-x-2.5 py-[9px] text-[13px] tabular-nums"
+        style={{ gridTemplateColumns: GRILLA_CODIGOS, borderTop: `1px solid ${aparte ? C.borde : C.bordeSuave}` }}
+    >
+        <span role="cell" className="min-w-0">
+            <span className="block truncate font-semibold" style={{ color: fila.codigo ? C.tinta : C.apagado }}>
+                {fila.codigo ?? 'Sin código'}
+            </span>
+            {fila.precio != null && (
+                <span className="block text-[11.5px] font-medium" style={{ color: C.apagado }}>
+                    {pesos(fila.precio)} c/u{fila.activo ? '' : ' · apagado'}
+                </span>
+            )}
+        </span>
+        <span role="cell" className="text-right font-semibold" style={{ color: C.tinta }}>{fila.usos}</span>
+        <span role="cell" className="text-right font-medium" style={{ color: C.apagado }}>{fila.adolescentes}</span>
+        <span role="cell" className="text-right font-semibold" style={{ color: C.tinta }}>{pesos(fila.recaudado)}</span>
+        <span role="cell" className="text-right font-medium" style={{ color: C.apagado }}>
+            {fila.codigo ? pesos(fila.descontado) : '—'}
+        </span>
+    </div>
+);
+
 // ── Esqueletos ──────────────────────────────────────────────────────────
 
 const EsqueletoDelTablero: React.FC = () => (
@@ -555,6 +588,9 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
     const [base, setBase] = useState<BaseNocturna | null>(null);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
+    /** null mientras carga o si falló: la tarjeta de códigos dice cuál, el resto del tablero sigue. */
+    const [codigos, setCodigos] = useState<ReporteDeCodigos | null>(null);
+    const [errorCodigos, setErrorCodigos] = useState(false);
 
     /**
      * El orden y la página de la tabla de horarios viven en la URL, no en un
@@ -583,7 +619,10 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
     const pedir = useCallback(async () => {
         setCargando(true);
         setError(false);
-        const datos = await getBaseNocturna();
+        setErrorCodigos(false);
+        const [datos, deCodigos] = await Promise.all([getBaseNocturna(), getCodigosNocturna()]);
+        setCodigos(deCodigos);
+        setErrorCodigos(!deCodigos);
         if (!datos) { setError(true); setCargando(false); return; }
         setBase(datos);
         setCargando(false);
@@ -762,6 +801,44 @@ const ReportesNocturna: React.FC<Props> = ({ currentUser }) => {
                                     {venta.sinComprobante > 0 && (
                                         ` ${venta.sinComprobante} ${plural(venta.sinComprobante, 'inscripción no tiene', 'inscripciones no tienen')} comprobante cargado.`
                                     )}
+                                </NotaCobertura>
+                            </Tarjeta>
+
+                            {/* Los códigos de descuento: una fila por código,
+                                aunque nadie lo haya usado, y "Sin código" abajo
+                                para comparar. Lo cuenta la base. */}
+                            <Tarjeta className="p-5 mt-3">
+                                <TituloTarjeta
+                                    titulo="Códigos de descuento"
+                                    detalle="Cuántas inscripciones usaron cada código y cuánto se descontó"
+                                />
+                                {errorCodigos ? (
+                                    <p className="mt-4 m-0 text-[13px] font-medium" style={{ color: C.apagado }}>
+                                        No pudimos traer los códigos. Los demás números del tablero no dependen de esto.
+                                    </p>
+                                ) : !codigos ? (
+                                    <Esqueleto alto={120} className="mt-4" />
+                                ) : (
+                                    <div role="table" aria-label="Uso de los códigos de descuento" className="mt-4 w-full sm:max-w-[620px]">
+                                        <div
+                                            role="row"
+                                            className="grid gap-x-2.5 pb-2 text-[11.5px] font-semibold"
+                                            style={{ gridTemplateColumns: GRILLA_CODIGOS, color: C.apagado }}
+                                        >
+                                            <span role="columnheader">Código</span>
+                                            <span role="columnheader" className="text-right">Usos</span>
+                                            <span role="columnheader" className="text-right" title="Adolescentes">Adol.</span>
+                                            <span role="columnheader" className="text-right">Recaudado</span>
+                                            <span role="columnheader" className="text-right">Descuento</span>
+                                        </div>
+                                        {codigos.codigos.map(f => <FilaDeCodigoDescuento key={f.codigo} fila={f} />)}
+                                        <FilaDeCodigoDescuento fila={codigos.sinCodigo} aparte />
+                                    </div>
+                                )}
+                                <NotaCobertura>
+                                    Usos son inscripciones: el código vale para todos los adolescentes de cada una.
+                                    Recaudado es lo que pagaron esas familias; el descuento, cuánto menos pagaron
+                                    contra el precio sin código.
                                 </NotaCobertura>
                             </Tarjeta>
 

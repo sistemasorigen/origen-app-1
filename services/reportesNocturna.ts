@@ -300,6 +300,58 @@ export const entradasVendidas = (base: BaseNocturna): EntradasVendidas => {
     };
 };
 
+// ── Los códigos de descuento ────────────────────────────────────────────
+
+export interface FilaDeCodigo {
+    /** null en la fila de "Sin código". */
+    codigo: string | null;
+    /** Lo que paga cada entrada con el código. null en "Sin código". */
+    precio: number | null;
+    activo: boolean;
+    /** Inscripciones que lo usaron. */
+    usos: number;
+    adolescentes: number;
+    /** La suma de los totales de esas inscripciones. */
+    recaudado: number;
+    /** Cuánto se les descontó, contra el precio sin código. */
+    descontado: number;
+}
+
+export interface ReporteDeCodigos {
+    /** Una fila por código, también los que nadie usó. */
+    codigos: FilaDeCodigo[];
+    sinCodigo: FilaDeCodigo;
+}
+
+/**
+ * Cuántas veces se usó cada código, de nocturna_reporte_codigos().
+ *
+ * Es la única cuenta de este tablero que no sale de la base de arriba: la
+ * lista de códigos no se puede leer desde la app (la tabla no tiene SELECT
+ * para nadie), y sin ella un código que nadie usó no aparecería. Así que la
+ * base cuenta todo y la pantalla sólo lo muestra.
+ */
+export const getCodigosNocturna = async (): Promise<ReporteDeCodigos | null> => {
+    const { data, error } = await supabase.rpc('nocturna_reporte_codigos');
+    if (error || data?.ok !== true) {
+        aviso('getCodigosNocturna', error ?? data?.error ?? 'respuesta sin ok');
+        return null;
+    }
+    const fila = (f: any, codigo: string | null): FilaDeCodigo => ({
+        codigo,
+        precio: f?.precio != null ? Number(f.precio) : null,
+        activo: f?.activo !== false,
+        usos: Number(f?.usos ?? 0),
+        adolescentes: Number(f?.adolescentes ?? 0),
+        recaudado: Number(f?.recaudado ?? 0),
+        descontado: Number(f?.descontado ?? 0),
+    });
+    return {
+        codigos: (data.codigos || []).map((f: any) => fila(f, String(f.codigo))),
+        sinCodigo: fila(data.sin_codigo, null),
+    };
+};
+
 /** "$ 2.560.000", como se escribe la plata en los reportes de todas las áreas. */
 const PESOS_AR = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
 export const pesos = (n: number): string => `$ ${PESOS_AR.format(Math.round(n || 0))}`;

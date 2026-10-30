@@ -130,6 +130,22 @@ const VERSION_BORRADOR = 3;
 interface Comprobante {
     path: string;
     nombre: string;
+    /**
+     * El total que decía la pantalla cuando lo subió. Si después cambia (puso
+     * o sacó un código, sumó a alguien), se le avisa que revise lo que
+     * transfirió. Un borrador anterior a los códigos no lo trae.
+     */
+    total?: number;
+}
+
+/** Un código de descuento que la base confirmó (nocturna_probar_codigo). */
+interface CodigoAplicado {
+    /** Lo que escribió la persona: es lo que viaja a la base al enviar. */
+    texto: string;
+    /** Como lo guarda la base: 'NOC40'. */
+    codigo: string;
+    /** Lo que paga cada entrada con el código (o menos, si ya pagaba menos). */
+    precio: number;
 }
 
 // 6 es la de comida y 7 la del pago; la 8 es el final. Si se agrega una
@@ -150,6 +166,8 @@ interface Borrador {
     fotos: boolean | null;
     restriccion: NocturnaRestriccion | null;
     comprobante: Comprobante | null;
+    /** "¿Tenés un código de descuento?": la respuesta, lo escrito y lo aplicado. */
+    codigo?: { respuesta: 'si' | 'no' | null; texto: string; aplicado: CodigoAplicado | null };
     /**
      * La inscripción a la que se le están sumando chicos, si es ese el caso.
      *
@@ -278,6 +296,19 @@ const InscripcionNocturna: React.FC = () => {
     const [restriccion, setRestriccion] = useState<NocturnaRestriccion | null>(null);
     const [comprobante, setComprobante] = useState<Comprobante | null>(null);
 
+    /**
+     * El código de descuento del último paso. La pregunta se contesta antes
+     * de subir el comprobante: el código cambia el monto a transferir. Lo que
+     * vale lo decide la base (nocturna_probar_codigo para mostrarlo,
+     * register_nocturna al enviar); acá no hay ningún código escrito.
+     */
+    const [codigoRespuesta, setCodigoRespuesta] = useState<'si' | 'no' | null>(null);
+    const [codigoTexto, setCodigoTexto] = useState('');
+    const [codigoAplicado, setCodigoAplicado] = useState<CodigoAplicado | null>(null);
+    const [codigoError, setCodigoError] = useState<string | null>(null);
+    const [probandoCodigo, setProbandoCodigo] = useState(false);
+    const campoCodigoRef = useRef<HTMLInputElement>(null);
+
     const [intento, setIntento] = useState(false);
     const [modalSalir, setModalSalir] = useState(false);
     const [copiado, setCopiado] = useState<string | null>(null);
@@ -397,6 +428,9 @@ const InscripcionNocturna: React.FC = () => {
                         setFotos(b.fotos ?? null);
                         setRestriccion(b.restriccion ?? null);
                         setComprobante(b.comprobante ?? null);
+                        setCodigoRespuesta(b.codigo?.respuesta ?? null);
+                        setCodigoTexto(b.codigo?.texto ?? '');
+                        setCodigoAplicado(b.codigo?.aplicado ?? null);
                         if (b.grupo?.verificado) setGrupo(b.grupo);
                         const paso = Math.min(7, Math.max(1, Number(b.paso) || 1));
                         setPantalla(paso as Pantalla);
@@ -437,10 +471,12 @@ const InscripcionNocturna: React.FC = () => {
             fotos,
             restriccion,
             comprobante,
+            codigo: { respuesta: codigoRespuesta, texto: codigoTexto, aplicado: codigoAplicado },
             grupo,
         };
         try { sessionStorage.setItem(CLAVE_BORRADOR, JSON.stringify(b)); } catch { /* sin storage */ }
-    }, [cargando, config, pantalla, adulto, chicos, retiro, retiroQuien, otro, autoriza, fotos, restriccion, comprobante]);
+    }, [cargando, config, pantalla, adulto, chicos, retiro, retiroQuien, otro, autoriza, fotos, restriccion, comprobante,
+        codigoRespuesta, codigoTexto, codigoAplicado]);
 
     // ── Autocompletado desde la cuenta ────────────────────────────────────
     const cuenta = useMemo(() => {
@@ -515,12 +551,27 @@ const InscripcionNocturna: React.FC = () => {
         { general: config?.precioEntrada ?? 0, promo: config?.promo },
         agregando ? (grupo?.precioUnitario ?? 0) : null,
     );
+    /**
+     * El código de descuento que vale para esta inscripción. Sumando a una
+     * familia que ya usó uno, es el suyo: precioUnitario ya lo trae aplicado
+     * y no se pregunta de nuevo. Si no, el que la persona aplicó acá.
+     */
+    const codigoDeLaFamilia = agregando ? (grupo?.codigoDescuento ?? null) : null;
+    const codigoVigente = codigoDeLaFamilia ? null : codigoAplicado;
+    // El menor entre el precio del código y el que le toca sin código: un
+    // código nunca sube un precio. Es la misma cuenta que hace la base.
+    const precioFinal = (c: ChicoForm) => (codigoVigente ? Math.min(precioDe(c), codigoVigente.precio) : precioDe(c));
     const cantidad = chicos.length;
-    const total = chicos.reduce((suma, c) => suma + precioDe(c), 0);
+    const total = chicos.reduce((suma, c) => suma + precioFinal(c), 0);
+    const ahorro = chicos.reduce((suma, c) => suma + precioDe(c) - precioFinal(c), 0);
+    // Contestó la pregunta del código: con "No", o con un código que la base
+    // confirmó. Hasta entonces no se sube el comprobante.
+    const codigoRespondido = !!codigoDeLaFamilia || codigoRespuesta === 'no' || (codigoRespuesta === 'si' && !!codigoAplicado);
+    const totalCambio = !!comprobante && comprobante.total != null && comprobante.total !== total;
     /** "2 adolescentes × $50.000", o "1 × $40.000 + 1 × $50.000" si no pagan lo mismo. */
     const detalleDelTotal = (sustantivo: (n: number) => string): string => {
         const porPrecio = new Map<number, number>();
-        chicos.forEach(c => { const p = precioDe(c); porPrecio.set(p, (porPrecio.get(p) || 0) + 1); });
+        chicos.forEach(c => { const p = precioFinal(c); porPrecio.set(p, (porPrecio.get(p) || 0) + 1); });
         const grupos = [...porPrecio.entries()].sort((a, b) => a[0] - b[0]);
         if (grupos.length <= 1) return `${cantidad} ${sustantivo(cantidad)} × ${plata(grupos[0]?.[0] ?? 0)}`;
         return grupos.map(([p, n]) => `${n} × ${plata(p)}`).join(' + ');
@@ -552,7 +603,7 @@ const InscripcionNocturna: React.FC = () => {
             case 4: return autoriza === true;
             case 5: return fotos !== null;
             case 6: return ok6;
-            case 7: return !!comprobante && !subiendo;
+            case 7: return codigoRespondido && !!comprobante && !subiendo;
             default: return false;
         }
     })();
@@ -618,6 +669,10 @@ const InscripcionNocturna: React.FC = () => {
         setAutoriza(null);
         setFotos(null);
         setComprobante(null);
+        setCodigoRespuesta(null);
+        setCodigoTexto('');
+        setCodigoAplicado(null);
+        setCodigoError(null);
         setVistaPrevia(null);
         await signOut();
         irA(0);
@@ -686,7 +741,68 @@ const InscripcionNocturna: React.FC = () => {
             if (prev) URL.revokeObjectURL(prev);
             return previa;
         });
-        setComprobante({ path: res.path, nombre: file.name });
+        setComprobante({ path: res.path, nombre: file.name, total });
+    };
+
+    // ── El código de descuento ────────────────────────────────────────────
+    /**
+     * Antes de que el código cambie el total: si ya subió el comprobante y no
+     * se sabía con qué total (borrador de antes de los códigos), se anota el
+     * de ahora, para poder avisarle que cambió.
+     */
+    const anotarTotalDelComprobante = () => {
+        setComprobante(c => (c && c.total == null ? { ...c, total } : c));
+    };
+
+    const responderCodigo = (r: 'si' | 'no') => {
+        if (r === codigoRespuesta) return;
+        anotarTotalDelComprobante();
+        setCodigoRespuesta(r);
+        setCodigoError(null);
+        // "No" saca el que estuviera aplicado: no se cobra un descuento que la
+        // persona dijo que no tiene.
+        if (r === 'no') setCodigoAplicado(null);
+        if (r === 'si') setTimeout(() => campoCodigoRef.current?.focus(), 60);
+    };
+
+    const aplicarCodigo = async () => {
+        const texto = codigoTexto;
+        if (!texto.trim()) {
+            setCodigoError('Escribí el código para aplicarlo.');
+            campoCodigoRef.current?.focus();
+            return;
+        }
+        setProbandoCodigo(true);
+        setCodigoError(null);
+        const res = await supabaseService.probarCodigoNocturna(texto);
+        setProbandoCodigo(false);
+        if (!res.ok) {
+            setCodigoError(res.motivo === 'sin_respuesta'
+                ? 'No pudimos revisar el código. Revisá tu conexión y volvé a tocar Aplicar.'
+                : 'Ese código no existe. Revisalo o seguí sin código.');
+            return;
+        }
+        anotarTotalDelComprobante();
+        setCodigoAplicado({ texto, codigo: res.codigo, precio: res.precio });
+    };
+
+    const quitarCodigo = () => {
+        anotarTotalDelComprobante();
+        setCodigoAplicado(null);
+        setCodigoError(null);
+        setTimeout(() => campoCodigoRef.current?.focus(), 60);
+    };
+
+    /** La base no lo aceptó al enviar: de vuelta al campo, con el motivo. */
+    const volverAlCampoDelCodigo = (mensaje: string) => {
+        anotarTotalDelComprobante();
+        setCodigoAplicado(null);
+        setCodigoRespuesta('si');
+        setCodigoError(mensaje);
+        setTimeout(() => {
+            campoCodigoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            campoCodigoRef.current?.focus({ preventScroll: true });
+        }, 60);
     };
 
     /**
@@ -759,10 +875,25 @@ const InscripcionNocturna: React.FC = () => {
             aceptaFotos: fotos === true,
             comprobantePath: comprobante.path,
         });
+        // Tal cual lo escribió: la base lo normaliza, lo valida y calcula.
+        // Sumando a una familia que ya tiene código no se manda nada: lo pone
+        // la base.
+        if (codigoVigente) payload.codigo_descuento = codigoVigente.texto;
 
         const res = agregando
             ? await supabaseService.agregarJovenesNocturna(payload)
             : await supabaseService.registerNocturna(payload);
+
+        if (!res.ok && (res.motivo === 'codigo_invalido' || res.motivo === 'codigo_ya_usado')) {
+            // El problema es el código, no la inscripción: se vuelve al campo
+            // y no se muestra el error general. No se creó nada.
+            volverAlCampoDelCodigo(res.motivo === 'codigo_invalido'
+                ? 'Ese código no existe. Revisalo o seguí sin código.'
+                : res.error || 'Esta inscripción ya tiene un código. Va uno solo por inscripción.');
+            enviandoRef.current = false;
+            setEnviando(false);
+            return;
+        }
 
         if (!res.ok) {
             // Un corte de conexión y un rechazo de la inscripción se arreglan
@@ -1050,7 +1181,14 @@ const InscripcionNocturna: React.FC = () => {
         if (pantalla === 4) return 'Elegí Autorizo o No autorizo.';
         if (pantalla === 5) return 'Elegí una de las dos respuestas. Cualquiera te deja seguir.';
         if (pantalla === 6) return restriccion === null ? 'Elegí una opción.' : 'Marcá quién tiene esa restricción.';
-        if (pantalla === 7) return subiendo ? 'Esperá a que termine de subir el comprobante.' : 'Falta subir el comprobante.';
+        if (pantalla === 7) {
+            if (!codigoRespondido) {
+                return codigoRespuesta === 'si'
+                    ? 'Aplicá el código, o tocá No para seguir sin código.'
+                    : 'Contestá si tenés un código de descuento.';
+            }
+            return subiendo ? 'Esperá a que termine de subir el comprobante.' : 'Falta subir el comprobante.';
+        }
         return '';
     })();
     const mostrarFalta = intento && !puedeSeguir && !(pantalla === 1 && adultoEsMenor);
@@ -1079,6 +1217,8 @@ const InscripcionNocturna: React.FC = () => {
         }
     })();
     const ocupado = enviando || buscandoGrupo;
+    /** El código que quedó en la inscripción, para la entrada del final. */
+    const codigoFinal = resultado?.codigoDescuento ?? codigoDeLaFamilia ?? codigoVigente?.codigo ?? null;
     const etiquetaSeguir = enviando ? 'Guardando…'
         : buscandoGrupo ? 'Revisando…'
             : pantalla === 7 ? (errorEnvio?.conexion ? 'Reintentar' : 'Listo')
@@ -1806,19 +1946,119 @@ const InscripcionNocturna: React.FC = () => {
                 {pantalla === 7 && (
                     <div>
                         <TituloLetras texto="¡Último paso!" />
-                        <div style={{ marginTop: 16, borderRadius: 30, background: NEGRO, padding: '20px 22px' }}>
+
+                        {/* El código de descuento va ANTES del total: cambia lo
+                            que hay que transferir. Lo valida la base; acá no
+                            hay ningún código escrito. */}
+                        <div style={{ marginTop: 16, borderRadius: 30, background: LIMA, boxShadow: anillo(), padding: '18px 20px' }}>
+                            {codigoDeLaFamilia ? (
+                                <>
+                                    <p style={{ margin: 0, ...arch(900, '13px'), letterSpacing: '-.01em', textTransform: 'uppercase' }}>
+                                        <Corchetes>Código de descuento</Corchetes>
+                                    </p>
+                                    <p style={{ margin: '8px 0 0', ...arch(900, '22px', '1.1'), letterSpacing: '-.04em', textTransform: 'uppercase', overflowWrap: 'anywhere' }}>
+                                        {codigoDeLaFamilia}
+                                    </p>
+                                    <p style={{ margin: '6px 0 0', ...arch(600, '14px', '1.45') }}>
+                                        Tu inscripción ya tiene este código: {cantidad === 1 ? 'el que sumás paga' : 'los que sumás pagan'} lo mismo que el resto.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p id="noc-codigo-pregunta" style={{ margin: 0, ...arch(900, '17px', '1.2'), letterSpacing: '-.03em', textTransform: 'uppercase' }}>
+                                        <Corchetes>¿Tenés un código de descuento?</Corchetes>
+                                    </p>
+                                    <div className="noc-grilla fija" role="group" aria-labelledby="noc-codigo-pregunta" style={{ marginTop: 14 }}>
+                                        <OpcionGrande elegida={codigoRespuesta === 'si'} onClick={() => responderCodigo('si')}>Sí</OpcionGrande>
+                                        <OpcionGrande elegida={codigoRespuesta === 'no'} onClick={() => responderCodigo('no')}>No</OpcionGrande>
+                                    </div>
+
+                                    {codigoRespuesta === 'si' && (codigoAplicado ? (
+                                        <div
+                                            role="status"
+                                            style={{ marginTop: 14, borderRadius: 22, background: NEGRO, color: LIMA, padding: '12px 12px 12px 18px', display: 'flex', alignItems: 'center', gap: 12, transform: 'rotate(-1deg)', animation: 'nocChasquido .45s cubic-bezier(.2,.8,.2,1)' }}
+                                        >
+                                            <span style={{ flex: 1, minWidth: 0 }}>
+                                                <span style={{ display: 'block', ...arch(900, '16px', '1.2'), letterSpacing: '-.03em', textTransform: 'uppercase', overflowWrap: 'anywhere' }}>
+                                                    {codigoAplicado.codigo} aplicado
+                                                </span>
+                                                <span style={{ display: 'block', marginTop: 2, ...arch(700, '13.5px', '1.35') }}>
+                                                    Cada entrada a {plata(codigoAplicado.precio)}
+                                                </span>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={quitarCodigo}
+                                                className="noc-boton noc-sobre-negro"
+                                                style={{ flex: 'none', height: 44, padding: '0 14px', border: 0, borderRadius: 999, background: 'transparent', color: LIMA, boxShadow: anillo(2, LIMA), ...arch(900, '12.5px'), textTransform: 'uppercase', cursor: 'pointer' }}
+                                            >
+                                                <Corchetes>Quitar</Corchetes>
+                                                <span className="sr-only"> el código {codigoAplicado.codigo}</span>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginTop: 14 }}>
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                <input
+                                                    ref={campoCodigoRef}
+                                                    className="noc-campo"
+                                                    value={codigoTexto}
+                                                    placeholder="Tu código"
+                                                    aria-label="Código de descuento"
+                                                    aria-invalid={!!codigoError}
+                                                    aria-describedby={codigoError ? 'noc-codigo-error' : undefined}
+                                                    autoComplete="off"
+                                                    autoCapitalize="characters"
+                                                    autoCorrect="off"
+                                                    spellCheck={false}
+                                                    enterKeyHint="done"
+                                                    maxLength={40}
+                                                    style={{ flex: 1, textTransform: 'uppercase' }}
+                                                    onChange={e => { setCodigoTexto(e.target.value); setCodigoError(null); }}
+                                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void aplicarCodigo(); } }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void aplicarCodigo()}
+                                                    disabled={probandoCodigo}
+                                                    aria-busy={probandoCodigo}
+                                                    className="noc-boton noc-sobre-negro"
+                                                    style={{ flex: 'none', height: 58, minWidth: 108, padding: '0 14px', border: 0, borderRadius: 999, background: NEGRO, color: LIMA, ...arch(900, '13.5px'), textTransform: 'uppercase', cursor: probandoCodigo ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                                                >
+                                                    {probandoCodigo ? <><Loader2 size={16} className="animate-spin" aria-hidden="true" /> Revisando</> : <Corchetes>Aplicar</Corchetes>}
+                                                </button>
+                                            </div>
+                                            {codigoError && (
+                                                <p id="noc-codigo-error" role="alert" style={{ margin: '10px 4px 0', ...arch(800, '14px', '1.4') }}>
+                                                    {codigoError}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+
+                        <div style={{ marginTop: 12, borderRadius: 30, background: NEGRO, padding: '20px 22px' }}>
                             <p style={{ margin: 0, ...arch(800, '11.5px'), letterSpacing: '.05em', color: LIMA, textTransform: 'uppercase' }}>Total a transferir</p>
                             <p className="noc-total">{plata(total)}</p>
                             <p style={{ margin: '10px 0 0', ...arch(700, '13.5px', '1.4'), color: LIMA }}>
                                 {detalleDelTotal(n => (n === 1 ? 'adolescente' : 'adolescentes'))}
                             </p>
+                            {(codigoVigente || codigoDeLaFamilia) && (
+                                <p style={{ margin: '4px 0 0', ...arch(700, '13.5px', '1.4'), color: LIMA, overflowWrap: 'anywhere' }}>
+                                    Con el código {codigoVigente?.codigo ?? codigoDeLaFamilia}{ahorro > 0 ? ` // ahorrás ${plata(ahorro)}` : ''}
+                                </p>
+                            )}
                             {/* Sumando, el monto es sólo por los nuevos y al precio
                                 que pagó esta familia. Sin esta línea, quien ya pagó
                                 tres entradas ve un número y no sabe si le están
                                 cobrando todo de nuevo. */}
                             {agregando && (
                                 <p style={{ margin: '10px 0 0', ...arch(600, '13px', '1.5'), color: LIMA }}>
-                                    Es sólo por {cantidad === 1 ? 'el que suma' : 'los que suma'}s ahora, al mismo precio que pagaste al inscribirte{config?.promo ? ' (o el de la promo, si tiene ' + config.promo.edad + ' años)' : ''}. Lo que ya pagaste no se vuelve a cobrar.
+                                    {codigoVigente
+                                        ? `Es sólo por ${cantidad === 1 ? 'el que sumás' : 'los que sumás'} ahora, con el código. Lo que ya pagaste no se vuelve a cobrar.`
+                                        : <>Es sólo por {cantidad === 1 ? 'el que suma' : 'los que suma'}s ahora, al mismo precio que pagaste al inscribirte{config?.promo ? ' (o el de la promo, si tiene ' + config.promo.edad + ' años)' : ''}. Lo que ya pagaste no se vuelve a cobrar.</>}
                                 </p>
                             )}
                         </div>
@@ -1880,7 +2120,34 @@ const InscripcionNocturna: React.FC = () => {
                         </div>
 
                         <p style={{ margin: '22px 0 10px', ...arch(800, '12px'), letterSpacing: '.03em', textTransform: 'uppercase' }}>Comprobante</p>
-                        {subiendo ? (
+                        {/* Cambió el total después de subir la captura (puso o
+                            sacó un código): la transferencia puede no
+                            coincidir. Se avisa; no se borra nada. */}
+                        {totalCambio && comprobante && (
+                            <div role="alert" style={{ marginBottom: 10, borderRadius: 26, background: LIMA, boxShadow: anillo(4), padding: '16px 20px' }}>
+                                <p style={{ margin: 0, ...arch(900, '16px'), letterSpacing: '-.03em', textTransform: 'uppercase' }}>El total cambió</p>
+                                <p style={{ margin: '6px 0 0', ...arch(600, '14px', '1.5') }}>
+                                    Subiste el comprobante cuando el total era {plata(comprobante.total ?? 0)}. Ahora es {plata(total)}: revisá que lo que transferiste coincida.
+                                </p>
+                            </div>
+                        )}
+                        {!codigoRespondido && !comprobante && !subiendo ? (
+                            // Sin responder lo del código no se sube nada: el
+                            // código cambia cuánto hay que transferir.
+                            <div
+                                aria-disabled="true"
+                                style={{ borderRadius: 26, border: `3px dashed ${NEGRO}`, background: LIMA, padding: '22px 20px', textAlign: 'center', opacity: 0.6 }}
+                            >
+                                <span style={{ display: 'block', ...arch(900, '18px'), letterSpacing: '-.04em', textTransform: 'uppercase' }}>
+                                    <Corchetes>+ Subir la captura</Corchetes>
+                                </span>
+                                <span style={{ display: 'block', marginTop: 8, ...arch(700, '14px', '1.45') }}>
+                                    {codigoRespuesta === 'si'
+                                        ? 'Primero aplicá el código, o tocá No para seguir sin código.'
+                                        : 'Primero contestá arriba si tenés un código de descuento: puede cambiar el total.'}
+                                </span>
+                            </div>
+                        ) : subiendo ? (
                             <div aria-live="polite" style={{ borderRadius: 26, background: LIMA, boxShadow: anillo(), padding: '18px 20px' }}>
                                 <p style={{ margin: 0, ...arch(900, '15px'), letterSpacing: '-.02em', textTransform: 'uppercase' }}>Subiendo la captura…</p>
                                 <p style={{ margin: '4px 0 0', ...arch(600, '13.5px', '1.45') }}>La achicamos y la subimos. No cierres esta pantalla.</p>
@@ -2025,6 +2292,7 @@ const InscripcionNocturna: React.FC = () => {
                                         ['Retiro 6 AM', retiroTexto],
                                         ...(textoRestricciones ? [['Comida', textoRestricciones] as [string, string]] : []),
                                         ['Pagado', plata(resultado.total ?? total)],
+                                        ...(codigoFinal ? [['Código de descuento', codigoFinal] as [string, string]] : []),
                                     ] as [string, string][]).map(([k, v]) => (
                                         <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderTop: `2px solid ${NEGRO}` }}>
                                             <span style={{ ...arch(700, '13.5px'), flex: 'none' }}>{k}</span>

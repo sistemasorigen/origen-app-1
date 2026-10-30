@@ -9644,6 +9644,9 @@ export const supabaseService = {
       declaracionesAceptadasAt: row.declaraciones_aceptadas_at,
       precioUnitario: Number(row.precio_unitario),
       total: Number(row.total),
+      // Sin sql/nocturna_codigos_descuento.sql aplicado no vienen: sin código.
+      codigoDescuento: row.codigo_descuento ?? null,
+      descuentoTotal: Number(row.descuento_total ?? 0),
       comprobantePath: row.comprobante_path,
       cargadoPorAdmin: row.cargado_por_admin,
       adultoAcreditadoAt: row.adulto_acreditado_at,
@@ -9722,6 +9725,8 @@ export const supabaseService = {
         inscripcionId: data?.inscripcion_id,
         codigoEntrada: data?.codigo_entrada,
         total: data?.total !== undefined ? Number(data.total) : undefined,
+        codigoDescuento: data?.codigo_descuento ?? null,
+        motivo: data?.motivo,
         error: data?.error,
       };
     } catch (err) {
@@ -9756,6 +9761,7 @@ export const supabaseService = {
         inscripcionId: data?.inscripcionId,
         adultoNombre: data?.adultoNombre,
         precioUnitario: data?.precioUnitario !== undefined ? Number(data.precioUnitario) : undefined,
+        codigoDescuento: data?.codigoDescuento ?? null,
         chicos: data?.chicos || [],
       };
     } catch (err) {
@@ -9784,11 +9790,38 @@ export const supabaseService = {
         agregados: data?.agregados !== undefined ? Number(data.agregados) : undefined,
         aPagar: data?.aPagar !== undefined ? Number(data.aPagar) : undefined,
         total: data?.total !== undefined ? Number(data.total) : undefined,
+        codigoDescuento: data?.codigoDescuento ?? null,
+        motivo: data?.motivo,
         error: data?.error,
       };
     } catch (err) {
       console.error('[Nocturna] agregarJovenesNocturna:', err);
       return { ok: false, error: 'No pudimos agregar a los jóvenes. Probá de nuevo.' };
+    }
+  },
+
+  /**
+   * ¿Este código de descuento existe? Para mostrar el total nuevo ANTES de
+   * transferir. Devuelve el precio del código; el formulario aplica el menor
+   * entre ese y el de cada chico, igual que la base al inscribir. La base
+   * vuelve a validarlo al enviar: esto es sólo para la pantalla.
+   *
+   * 'sin_respuesta' es un corte de red o la función todavía sin aplicar: no
+   * es lo mismo que "ese código no existe", y la pantalla lo dice distinto.
+   */
+  async probarCodigoNocturna(codigo: string): Promise<
+    // motivo?: undefined en la rama buena: sin `strict`, TypeScript no achica
+    // la unión por `ok` y no deja leer `motivo` después del `if (!res.ok)`.
+    { ok: true; codigo: string; precio: number; motivo?: undefined } | { ok: false; motivo: 'codigo_invalido' | 'sin_respuesta' }
+  > {
+    try {
+      const { data, error } = await supabase.rpc('nocturna_probar_codigo', { p_codigo: codigo });
+      if (error) throw error;
+      if (data?.ok === true) return { ok: true, codigo: String(data.codigo), precio: Number(data.precio) };
+      return { ok: false, motivo: 'codigo_invalido' };
+    } catch (err) {
+      console.error('[Nocturna] probarCodigoNocturna:', err);
+      return { ok: false, motivo: 'sin_respuesta' };
     }
   },
 

@@ -117,6 +117,16 @@ serve(async (req: Request) => {
       });
     }
 
+    // El código de descuento, aparte y sin frenar nada: si la columna todavía
+    // no existe (sql/nocturna_codigos_descuento.sql sin aplicar) o la consulta
+    // falla, el email sale igual, sin la línea del código.
+    const { data: conCodigo } = await supabase
+      .from("nocturna_inscripciones")
+      .select("codigo_descuento")
+      .eq("id", inscripcionId)
+      .maybeSingle();
+    insc.codigo_descuento = (conCodigo as { codigo_descuento?: string | null } | null)?.codigo_descuento ?? null;
+
     const html = armarHtml(insc);
     const qr = await qrEnBase64(insc.id);
 

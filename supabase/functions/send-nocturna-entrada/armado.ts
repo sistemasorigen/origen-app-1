@@ -25,6 +25,8 @@ export interface Inscripcion {
   adulto_apellido: string;
   adulto_email: string;
   total: string | number;
+  /** El código de descuento que usó la familia, si usó uno. */
+  codigo_descuento?: string | null;
   email_intentos: number;
   jovenes: Joven[];
 }
@@ -88,7 +90,8 @@ export function armarHtml(insc: Inscripcion): string {
     codigoEntrada: escaparHtml(insc.codigo_entrada),
     cantidadChicos: String(cantidad),
     palabraEntradas: cantidad === 1 ? "entrada" : "entradas",
-    totalPagado: escaparHtml(enPesos(insc.total)),
+    // Con código, va al lado del total: "2 entradas // $80.000 // código NOC40".
+    totalPagado: escaparHtml(enPesos(insc.total) + (insc.codigo_descuento ? ` // código ${insc.codigo_descuento}` : "")),
     // El adjunto incrustado, no una URL.
     qrUrl: `cid:${CID_QR}`,
   });

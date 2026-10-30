@@ -631,6 +631,16 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                         })()}
                                     />
                                     <Fila k="Total" v={plata(insc.total)} />
+                                    {/* El código va junto al total: explica por qué la
+                                        entrada vale menos que la de hoy. */}
+                                    {insc.codigoDescuento && (
+                                        <Fila
+                                            k="Código de descuento"
+                                            v={insc.descuentoTotal > 0
+                                                ? `${insc.codigoDescuento} · ahorró ${plata(insc.descuentoTotal)}`
+                                                : insc.codigoDescuento}
+                                        />
+                                    )}
                                     <Fila
                                         k="Comprobante"
                                         ultima={(insc.comprobantes || []).length === 0}

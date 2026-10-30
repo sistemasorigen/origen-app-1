@@ -50,10 +50,10 @@ DECLARE
         'tribu', 'Trueno', 'retiroTipo', 'adulto');
     v_adulto_a CONSTANT JSONB := jsonb_build_object(
         'nombre', 'Adulto', 'apellido', 'PRUEBA', 'dni', '94000001',
-        'email', 'prueba-a@origen.test', 'fechaNacimiento', '1985-03-20');
+        'email', 'prueba-a@origen.test', 'telefono', '1155550100', 'fechaNacimiento', '1985-03-20');
     v_adulto_b CONSTANT JSONB := jsonb_build_object(
         'nombre', 'Otro', 'apellido', 'PRUEBA', 'dni', '94000002',
-        'email', 'prueba-b@origen.test', 'fechaNacimiento', '1983-07-11');
+        'email', 'prueba-b@origen.test', 'telefono', '1155550100', 'fechaNacimiento', '1983-07-11');
 BEGIN
     SELECT edicion INTO v_ed FROM public.nocturna_config LIMIT 1;
 
