@@ -2,7 +2,6 @@ import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useId
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
-    X,
     Menu,
     Home,
     BarChart,
@@ -355,6 +354,17 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // overflow:hidden, que en iOS Safari no alcanza: el fondo se seguía
     // moviendo con el dedo. Ahora comparte el hook con el resto.
     useBloqueoDeFondo(type === 'drawer' && isOpen);
+
+    // Sin la X a la vista, Escape cierra el cajón. Si el menú de la cuenta
+    // está abierto, Escape cierra primero ése (lo maneja su propio efecto).
+    useEffect(() => {
+        if (type !== 'drawer' || !isOpen) return;
+        const alEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !cuentaAbierta) onClose();
+        };
+        document.addEventListener('keydown', alEscape);
+        return () => document.removeEventListener('keydown', alEscape);
+    }, [type, isOpen, cuentaAbierta, onClose]);
 
     useEffect(() => {
         // Al cerrarse, los sub-ítems desplegados vuelven a su lugar. Los
@@ -1314,22 +1324,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 Sin sesión, el ingreso va suelto y a la vista. Contraída la
                 barra, queda la foto y el menú desborda a la derecha. */}
             <div className="shrink-0">
-                <div className={`flex items-center gap-2 pt-5 pb-2.5 ${isCollapsed ? 'justify-center px-2' : isSidebar ? 'px-4' : 'pl-3 pr-4'}`}>
+                <div className={`flex items-center gap-2 pt-5 pb-2.5 ${isCollapsed ? 'justify-center px-2' : isSidebar ? 'px-4' : 'px-3'}`}>
                     <div ref={cuentaRef} className="relative flex-1 min-w-0">
                         {currentUser ? chipCuenta : botonIngresar}
                         {menuCuenta(isCollapsed ? 'left-0 w-60 top-[calc(100%+0.5rem)]' : 'left-0 right-0 top-[calc(100%+0.5rem)]')}
                     </div>
-
-                    {!isSidebar && (
-                        <button
-                            onClick={onClose}
-                            aria-label="Cerrar menú"
-                            className={`w-11 h-11 shrink-0 ml-auto rounded-full ${PASTILLA} ${TINTA} flex items-center justify-center transition-colors group ${FOCO}`}
-                        >
-                            <X className="w-[17px] h-[17px] group-hover:rotate-90 transition-transform duration-300" />
-                        </button>
-                    )}
                 </div>
+                {/* El cajón ya no lleva la X a la vista: la tarjeta de la
+                    cuenta ocupa todo el ancho, y se cierra tocando afuera o con
+                    Escape. Para el lector de pantalla y el teclado queda este
+                    cierre, invisible hasta que recibe el foco. */}
+                {!isSidebar && (
+                    <button
+                        onClick={onClose}
+                        className={`sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-3 focus:z-50 focus:px-3 focus:py-1.5 focus:rounded-full ${PASTILLA} ${TINTA} text-[13px] font-semibold ${FOCO}`}
+                    >
+                        Cerrar menú
+                    </button>
+                )}
             </div>
 
             {/* ── SECCIONES ───────────────────────────────────────────────
@@ -1416,8 +1428,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         {marca}
                     </button>
                 ) : (
-                    <div className="flex items-center h-[52px] px-1.5">
-                        {marca}
+                    // Centrada en el cajón: es la firma del menú, no un botón.
+                    // Va armada aparte y no con `marca`: el nombre de ahí se
+                    // estira (estiloTexto, flex 1) y no se podría centrar.
+                    <div className="flex items-center justify-center gap-2.5 h-[52px]" data-marca-cajon="">
+                        <img src="/favicon.png" alt="" aria-hidden="true" className="w-8 h-8 object-contain shrink-0 dark:invert" />
+                        <span className={`text-[17px] font-semibold tracking-[-0.01em] ${TINTA}`}>Origen</span>
                     </div>
                 )}
             </div>
