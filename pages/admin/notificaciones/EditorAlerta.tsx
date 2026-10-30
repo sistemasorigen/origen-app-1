@@ -52,6 +52,12 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 interface Valores {
     nombre: string; titulo: string; mensaje: string; url: string;
     siempre: boolean; desde: string; hasta: string; cada: number; horas: string[];
+    /**
+     * Sale un solo día, el de `desde`. Se guarda como desde = hasta, cada 1
+     * día y sin "siempre activa": la base no tiene otro modo y no le hace
+     * falta (sql/notif_un_solo_dia.sql sólo cambia cómo se lee).
+     */
+    unDia: boolean;
     todos: boolean; roles: string[]; personas: Elegida[];
     nm: boolean; nmDesde: string; nmHasta: string; max: number | null; activa: boolean;
     permiteApagar: boolean;
@@ -61,7 +67,7 @@ const iniciales = (modo: ModoEditor): Valores => {
     if (modo.tipo === 'crear') {
         return {
             nombre: '', titulo: '', mensaje: '', url: '/notificaciones',
-            siempre: true, desde: hoyAr(), hasta: '', cada: 7, horas: ['10:00'],
+            siempre: true, desde: hoyAr(), hasta: '', cada: 7, horas: ['10:00'], unDia: false,
             todos: false, roles: [], personas: [],
             nm: true, nmDesde: '23:00', nmHasta: '08:00', max: null, activa: true,
             permiteApagar: true,
@@ -72,6 +78,7 @@ const iniciales = (modo: ModoEditor): Valores => {
         nombre: a.nombre, titulo: a.titulo, mensaje: a.mensaje, url: a.url || '/notificaciones',
         siempre: a.siempreActiva ?? true, desde: a.desde || hoyAr(), hasta: a.hasta || '',
         cada: a.cadaNDias ?? 7, horas: a.horas.length ? a.horas : ['10:00'],
+        unDia: a.siempreActiva === false && !!a.hasta && a.hasta === a.desde,
         todos: a.audienciaTodos, roles: a.audienciaRoles,
         personas: a.audienciaDetalle.map(p => ({ id: p.id, nombre: p.nombre })),
         nm: a.noMolestar, nmDesde: a.nmDesde || '23:00', nmHasta: a.nmHasta || '08:00',
@@ -85,6 +92,11 @@ const horasTxt = (h: string[]) => (h.length === 1 ? `a las ${h[0]}` : `a las ${h
 
 /** El resumen de la programación mientras se edita ("Sale todos los domingos a las 10:00…"). */
 const resumen = (v: Valores): string => {
+    if (v.unDia) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v.desde)) return `Sale un solo día ${horasTxt(v.horas)}.`;
+        const [y, m, d] = v.desde.split('-').map(Number);
+        return `Sale una sola vez: el ${DIAS[new Date(y, m - 1, d).getDay()]} ${dm(v.desde)} ${horasTxt(v.horas)}.`;
+    }
     let base: string;
     if (v.cada === 1) base = 'Sale todos los días';
     else if (v.cada === 7 && /^\d{4}-\d{2}-\d{2}$/.test(v.desde)) {
@@ -148,8 +160,15 @@ const EditorAlerta: React.FC<{
     const eMensaje = !v.mensaje.trim() ? 'Escribí el mensaje.'
         : v.mensaje.trim().length > largo.mensaje ? `El mensaje tiene más de ${largo.mensaje} letras.`
             : prog && llaves.test(v.mensaje) ? 'Las programadas llevan texto fijo: sacá lo que está entre llaves.' : null;
-    const eVigencia = prog && !v.siempre && (!v.hasta || v.hasta < v.desde) ? 'La fecha de fin tiene que ser igual o posterior al inicio.' : null;
-    const eFrecuencia = prog && (!Number.isInteger(v.cada) || v.cada < 1 || v.cada > 365) ? 'Elegí cada cuántos días se repite: entre 1 y 365.' : null;
+    // Un solo día: que haya día y que no sea uno que ya pasó. Si se edita una
+    // que ya salió y no se toca la fecha, se puede guardar igual (pausarla,
+    // cambiarle el texto).
+    const eVigencia = !prog ? null
+        : v.unDia
+            ? (!v.desde ? 'Elegí el día.'
+                : v.desde < hoyAr() && v.desde !== inicial.desde ? 'Elegí hoy o un día que venga.' : null)
+            : !v.siempre && (!v.hasta || v.hasta < v.desde) ? 'La fecha de fin tiene que ser igual o posterior al inicio.' : null;
+    const eFrecuencia = prog && !v.unDia && (!Number.isInteger(v.cada) || v.cada < 1 || v.cada > 365) ? 'Elegí cada cuántos días se repite: entre 1 y 365.' : null;
     const eHoras = prog && (v.horas.length < 1 || v.horas.length > 5) ? 'Elegí entre 1 y 5 horarios.' : null;
     const eAudiencia = prog && !v.todos && v.roles.length === 0 && v.personas.length === 0 ? 'Elegí a quién le llega: toda la iglesia, un rol o una persona.' : null;
     const eDestino = prog && !destinoValido(v.url)
@@ -224,7 +243,9 @@ const EditorAlerta: React.FC<{
         const r = prog
             ? await guardarProgramada({
                 id, nombre: v.nombre.trim(), titulo: v.titulo.trim(), mensaje: v.mensaje.trim(), url: v.url.trim(),
-                siempreActiva: v.siempre, desde: v.desde, hasta: v.siempre ? null : v.hasta, cadaNDias: v.cada,
+                ...(v.unDia
+                    ? { siempreActiva: false, desde: v.desde, hasta: v.desde, cadaNDias: 1 }
+                    : { siempreActiva: v.siempre, desde: v.desde, hasta: v.siempre ? null : v.hasta, cadaNDias: v.cada }),
                 horas: v.horas, todos: v.todos, roles: v.roles, usuarios: v.personas.map(p => p.id),
                 noMolestar: v.nm, nmDesde: v.nmDesde, nmHasta: v.nmHasta, maxPorDia: v.max, activa: v.activa,
                 permiteApagar: v.permiteApagar,
@@ -408,7 +429,28 @@ const EditorAlerta: React.FC<{
                     {/* 2 · Cuándo se repite (programada) */}
                     {prog && (
                         <div className="flex flex-col gap-3">
-                            <RotuloPaso>2 · Cuándo se repite</RotuloPaso>
+                            <RotuloPaso id="notif-repite">2 · Cuándo sale</RotuloPaso>
+                            <div role="radiogroup" aria-labelledby="notif-repite" className="flex w-full gap-0.5 rounded-full bg-black/[.06] p-1 md:w-auto md:self-start">
+                                {([[false, 'Se repite'], [true, 'Un solo día']] as const).map(([k, t]) => (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={v.unDia === k}
+                                        onClick={() => cambiar({ unDia: k })}
+                                        className={`h-10 flex-1 rounded-full px-3.5 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] md:flex-none ${v.unDia === k ? 'bg-white text-[#0a0a0a] shadow-[0_1px_2px_rgba(0,0,0,.08)]' : 'text-black/[.6] hover:text-[#0a0a0a]'}`}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                            {v.unDia ? (
+                                <label className="flex min-w-0 flex-col gap-1.5">
+                                    <span className="text-[13px] font-bold text-black/[.62]">El día</span>
+                                    <input type="date" value={v.desde} min={v.desde < hoyAr() ? undefined : hoyAr()} onChange={e => cambiar({ desde: e.target.value })} className="h-[48px] w-full px-3.5 text-[15px] font-semibold" aria-invalid={!!errVigencia} style={rojo(errVigencia)} />
+                                    <span className="text-[12.5px] font-medium text-black/[.58]">Sale ese día, en los horarios que elijas más abajo, y no vuelve a salir.</span>
+                                </label>
+                            ) : (<>
                             <button
                                 type="button"
                                 role="switch"
@@ -463,6 +505,8 @@ const EditorAlerta: React.FC<{
                                 ))}
                             </div>
                             {errFrecuencia && <ErrorDeCampo>{errFrecuencia}</ErrorDeCampo>}
+                            </>)}
+                            {v.unDia && errVigencia && <ErrorDeCampo>{errVigencia}</ErrorDeCampo>}
                         </div>
                     )}
 

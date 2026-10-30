@@ -2711,6 +2711,13 @@ generada (`prog_` + 12). Texto fijo: título ≤ 60, mensaje ≤ 160, sin
   `notif_alertas_admin()` deja afuera las eliminadas y, en las programadas,
   suma `alcance`, `alcance_detalle`, `audiencia_personas`,
   `audiencia_con_push`, `audiencia_detalle` y `proximo_envio`.
+- **Un solo día** (2026-10-30): en el editor, "Cuándo sale" → "Un solo día".
+  No hay columna nueva: se guarda `desde = hasta = ese día`, `cada_n_dias = 1`,
+  `siempre_activa = false`, y el editor reconoce ese caso al abrirla. No deja
+  elegir un día que ya pasó (salvo que la fecha no se toque al editar).
+  `sql/notif_un_solo_dia.sql` sólo cambia cómo se lee en
+  `notif_alcance_programada`: "Un solo día · El 30/10" en vez de
+  "Todos los días · Del 30/10 al 30/10".
 - Toda alta, edición, pausa y baja de `notif_alertas` queda en `audit_logs`
   (trigger `audit_notif_alertas_changes`, el mismo de users y groups).
 
