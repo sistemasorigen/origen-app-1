@@ -42,8 +42,21 @@ const ESTILOS = `
   -webkit-appearance: none; appearance: none; display: block;
   min-width: 0; max-width: 100%; text-align: left;
 }
+/* Y el valor, al MEDIO: sin la apariencia nativa, en el Safari del iPhone
+   ::-webkit-date-and-time-value se apoya arriba del campo y la fecha queda
+   alta. Chrome y el WebKit de Playwright lo centran solos (no se ve en las
+   pruebas, se ve en el teléfono). Misma receta que Departamentos
+   (pages/departamentos/equipo/piezas.tsx): flex para las versiones que lo
+   respetan y altura de línea para las que no. La altura de línea es la del
+   campo menos 1,5px de borde arriba y abajo (#admin-general en index.html):
+   la fecha mide 48px y las horas 46px en EditorAlerta; si cambian, cambia esto. */
 #notif-editor input[type="date"]::-webkit-date-and-time-value,
-#notif-editor input[type="time"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+#notif-editor input[type="time"]::-webkit-date-and-time-value {
+  text-align: left; margin: 0;
+  display: flex; align-items: center; height: 100%;
+}
+#notif-editor input[type="date"]::-webkit-date-and-time-value { line-height: 45px; }
+#notif-editor input[type="time"]::-webkit-date-and-time-value { line-height: 43px; }
 @keyframes notifFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes notifBrillo { 0% { opacity: .55 } 50% { opacity: 1 } 100% { opacity: .55 } }
 `;
