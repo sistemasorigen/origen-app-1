@@ -33,6 +33,17 @@ const ESTILOS = `
   box-shadow: none !important; outline: none !important; padding: 0 !important; color: #0a0a0a !important;
 }
 #notificaciones-admin .notif-pastilla:focus-within { outline: 2px solid #0a0a0a; outline-offset: 2px; }
+/* Fechas y horas en el iPhone: Safari les da un ancho mínimo propio y no
+   respetan el w-full, así que estiraban el editor y se podía desplazar de
+   costado. Sin la apariencia nativa se achican como los demás campos; tocarlos
+   sigue abriendo el selector del sistema. Misma receta que #punto-formulario
+   en index.html. */
+#notif-editor input[type="date"], #notif-editor input[type="time"] {
+  -webkit-appearance: none; appearance: none; display: block;
+  min-width: 0; max-width: 100%; text-align: left;
+}
+#notif-editor input[type="date"]::-webkit-date-and-time-value,
+#notif-editor input[type="time"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
 @keyframes notifFade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes notifBrillo { 0% { opacity: .55 } 50% { opacity: 1 } 100% { opacity: .55 } }
 `;

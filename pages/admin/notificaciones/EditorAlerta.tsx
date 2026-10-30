@@ -376,7 +376,7 @@ const EditorAlerta: React.FC<{
                     </button>
                 </div>
 
-                <div className="flex min-h-0 flex-1 flex-col gap-[26px] overflow-y-auto overscroll-contain px-[22px] pb-5 pt-3">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[26px] overflow-y-auto overflow-x-hidden overscroll-contain px-[22px] pb-5 pt-3">
                     {/* 1 · Nombre (programada) o el evento fijo (automática) */}
                     {prog ? (
                         <label className="flex flex-col gap-2">
@@ -420,12 +420,12 @@ const EditorAlerta: React.FC<{
                                 <Perilla on={v.siempre} />
                             </button>
                             <div className="flex flex-wrap gap-2.5">
-                                <label className="flex min-w-[150px] flex-1 flex-col gap-1.5">
+                                <label className="flex min-w-0 basis-[150px] flex-1 flex-col gap-1.5">
                                     <span className="text-[13px] font-bold text-black/[.62]">{v.siempre ? 'Desde' : 'Del'}</span>
                                     <input type="date" value={v.desde} onChange={e => cambiar({ desde: e.target.value })} className="h-[48px] w-full px-3.5 text-[15px] font-semibold" aria-invalid={!!errVigencia} style={rojo(errVigencia)} />
                                 </label>
                                 {!v.siempre && (
-                                    <label className="flex min-w-[150px] flex-1 flex-col gap-1.5">
+                                    <label className="flex min-w-0 basis-[150px] flex-1 flex-col gap-1.5">
                                         <span className="text-[13px] font-bold text-black/[.62]">Al</span>
                                         <input type="date" value={v.hasta} min={v.desde} onChange={e => cambiar({ hasta: e.target.value })} className="h-[48px] w-full px-3.5 text-[15px] font-semibold" aria-invalid={!!errVigencia} style={rojo(errVigencia)} />
                                     </label>
