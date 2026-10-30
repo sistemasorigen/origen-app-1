@@ -1,0 +1,209 @@
+{
+  "super": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Agenda Origen": "/agenda?vista=lista&fecha=2026-10-30",
+      "4:Inicio": "/prode",
+      "5:Ranking": "/prode/ranking",
+      "6:Predicciones y resultados": "/prode/resultados",
+      "7:Panel GCX": "/admingcx/gestion-de-grupos",
+      "8:Reportes GCX": "/reportes/gcx",
+      "9:Panel de anfitriones": "/mis-grupos",
+      "10:Panel de coordinadores": "/coordinators?tab=dashboard",
+      "11:Panel de eventos": "/panel-eventos",
+      "12:Bienvenida": "/bienvenida",
+      "13:Influos": "/influos",
+      "14:Niñez": "/ninez",
+      "15:Departamentos": "/departamentos",
+      "16:Punto de información": "/punto-de-informacion?view=PANEL",
+      "17:Audiencia de servicios": "/audiencia-servicios",
+      "18:Sistemas": "/panel-admin?tab=users"
+    },
+    "saltos": {
+      "/panel-eventos → Tribal Wars": "/eventos/admin/tribal-wars",
+      "/influos → Tribal Wars": "/eventos/admin/tribal-wars",
+      "/ninez → Configuración": "/admin-ninez/configuracion"
+    },
+    "rutas": [
+      "/",
+      "/admin-ninez/configuracion",
+      "/admingcx/gestion-de-grupos",
+      "/agenda?vista=lista&fecha=2026-10-30",
+      "/audiencia-servicios",
+      "/bienvenida",
+      "/coordinators?tab=dashboard",
+      "/departamentos",
+      "/eventos",
+      "/eventos/admin/tribal-wars",
+      "/gcx",
+      "/influos",
+      "/mis-grupos",
+      "/ninez",
+      "/panel-admin?tab=users",
+      "/panel-eventos",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados",
+      "/punto-de-informacion?view=PANEL",
+      "/reportes/gcx"
+    ]
+  },
+  "anfitrion": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados",
+      "6:Panel de anfitriones": "/mis-grupos"
+    },
+    "saltos": {},
+    "rutas": [
+      "/",
+      "/eventos",
+      "/gcx",
+      "/mis-grupos",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "influos": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados",
+      "6:Influos": "/influos"
+    },
+    "saltos": {
+      "/influos → Tribal Wars": "/eventos/admin/tribal-wars"
+    },
+    "rutas": [
+      "/",
+      "/eventos",
+      "/eventos/admin/tribal-wars",
+      "/gcx",
+      "/influos",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "eventos": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados",
+      "6:Panel de eventos": "/panel-eventos"
+    },
+    "saltos": {
+      "/panel-eventos → Tribal Wars": "/eventos/admin/tribal-wars"
+    },
+    "rutas": [
+      "/",
+      "/eventos",
+      "/eventos/admin/tribal-wars",
+      "/gcx",
+      "/panel-eventos",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "ninez": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados",
+      "6:Niñez": "/ninez"
+    },
+    "saltos": {
+      "/ninez → Configuración": "/admin-ninez/configuracion"
+    },
+    "rutas": [
+      "/",
+      "/admin-ninez/configuracion",
+      "/eventos",
+      "/gcx",
+      "/ninez",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "bienvenida": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados",
+      "6:Bienvenida": "/bienvenida"
+    },
+    "saltos": {},
+    "rutas": [
+      "/",
+      "/bienvenida",
+      "/eventos",
+      "/gcx",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "departamento": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Agenda Origen": "/agenda?vista=lista&fecha=2026-10-30",
+      "4:Inicio": "/prode",
+      "5:Ranking": "/prode/ranking",
+      "6:Predicciones y resultados": "/prode/resultados",
+      "7:Departamentos": "/departamentos"
+    },
+    "saltos": {},
+    "rutas": [
+      "/",
+      "/agenda?vista=lista&fecha=2026-10-30",
+      "/departamentos",
+      "/eventos",
+      "/gcx",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  },
+  "comun": {
+    "menu": {
+      "0:Inicio": "/",
+      "1:GCX": "/gcx",
+      "2:Eventos": "/eventos",
+      "3:Inicio": "/prode",
+      "4:Ranking": "/prode/ranking",
+      "5:Predicciones y resultados": "/prode/resultados"
+    },
+    "saltos": {},
+    "rutas": [
+      "/",
+      "/eventos",
+      "/gcx",
+      "/prode",
+      "/prode/ranking",
+      "/prode/resultados"
+    ]
+  }
+}
