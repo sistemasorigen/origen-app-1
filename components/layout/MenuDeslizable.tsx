@@ -10,7 +10,6 @@ import {
     Settings,
     Bell,
     HeartHandshake,
-    ChevronUp,
     ChevronDown,
     ChevronsLeft,
     LogOut,
@@ -1146,6 +1145,156 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
     const renderItem = (item: MenuItem, key: React.Key) => (item.children ? renderGrupo(item, key) : renderHoja(item, key));
 
+    // ── La cuenta y la marca ──────────────────────────────────────────────
+    // Como el menú de Facebook: la cuenta arriba de todo —donde el pulgar llega
+    // sin estirarse en el teléfono— con su menú abriendo hacia ABAJO, y la
+    // marca al pie. Igual en la computadora y en el teléfono.
+    const chipCuenta = currentUser ? (
+        <button
+            onClick={() => setCuentaAbierta(v => !v)}
+            aria-haspopup="menu"
+            aria-expanded={cuentaAbierta}
+            /* Contraída la tarjeta es sólo la foto, así que
+               siempre lleva nombre. Con algo sin leer lo lleva
+               también expandida, para que el lector de pantalla
+               diga el número que se ve en rojo. */
+            aria-label={sinLeer > 0
+                ? `Cuenta de ${currentUser.name}, ${sinLeer} ${sinLeer === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
+                : isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
+            title={isCollapsed ? currentUser.name : undefined}
+            className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1 pl-1 pr-2.5'
+                }`}
+        >
+            {/* La marca va afuera del círculo: adentro la
+                recortaría el overflow-hidden de la foto. */}
+            <div className="relative shrink-0">
+                <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
+                    {currentUser.avatarUrl ? (
+                        <img
+                            src={currentUser.avatarUrl}
+                            alt=""
+                            aria-hidden="true"
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
+                            {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                        </div>
+                    )}
+                </div>
+                {sinLeer > 0 && (
+                    <MarcaSinLeer key={pop} n={sinLeer} quieto={!!sinMovimiento} />
+                )}
+            </div>
+            <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
+                <span className={`max-w-full text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
+                <span className={`max-w-full text-[12px] leading-[1.25] font-medium truncate ${M55}`}>{currentUser.email}</span>
+            </div>
+            {!isCollapsed && (
+                <ChevronDown
+                    className={`w-4 h-4 shrink-0 ml-2 ${M55} transition-transform duration-[250ms] ${cuentaAbierta ? 'rotate-180' : ''}`}
+                />
+            )}
+        </button>
+    ) : null;
+
+    const menuCuenta = (posicion: string) => (cuentaAbierta && currentUser ? (
+        <div
+            role="menu"
+            /* Contraído el pie mide 80px: si el panel se
+               ajustara al contenedor saldría de 64px de
+               ancho y ninguna etiqueta entraría. Se le fija
+               un ancho propio y desborda sobre el contenido,
+               que es lo que hace cualquier menú de un rail
+               angosto. */
+            className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${posicion}`}
+            style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
+        >
+            {/* Notificaciones primero: es lo que se viene a
+                hacer acá cuando la foto tiene la marca roja,
+                y la pastilla de la fila es la misma cuenta
+                que esa marca — así se ve CUÁNTAS son antes
+                de entrar, y desaparece sola cuando se leen.
+                El modo oscuro sigue viviendo en Mi cuenta.
+                handleNavigation ya cierra el panel de la
+                cuenta y el menú. */}
+            <FilaCuenta
+                icon={Bell}
+                label="Notificaciones"
+                insignia={sinLeer}
+                etiqueta={sinLeer > 0
+                    ? `Notificaciones, ${sinLeer} sin leer`
+                    : undefined}
+                onClick={() => handleNavigation('/notificaciones')}
+            />
+            <FilaCuenta
+                icon={Settings}
+                label="Configuración"
+                onClick={() => handleNavigation('/perfil')}
+            />
+            {/* Sólo con la app instalada: ahí no hay barra
+                del navegador ni botón de recargar. */}
+            {estaInstalada() && (
+                <FilaCuenta
+                    icon={RotateCw}
+                    label="Recargar app"
+                    onClick={() => recargarApp('el menú')}
+                />
+            )}
+            <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
+            <FilaCuenta
+                icon={LogOut}
+                label="Cerrar sesión"
+                danger
+                onClick={() => { setCuentaAbierta(false); onLogout(); onClose(); }}
+            />
+        </div>
+    ) : null);
+
+    const botonIngresar = (
+        <button
+            onClick={() => { handleNavigation('/auth'); onClose(); }}
+            className={`w-full flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[15px] font-semibold transition-transform active:scale-[.98] ${FOCO}`}
+            style={{
+                height: isSidebar ? 46 : 52,
+                borderRadius: isCollapsed ? 14 : 999,
+            }}
+            title={isCollapsed ? 'Iniciar Sesión' : undefined}
+        >
+            <LogIn className="w-[18px] h-[18px] shrink-0" />
+            <span
+                className="overflow-hidden"
+                style={{
+                    opacity: isCollapsed ? 0 : 1,
+                    maxWidth: isCollapsed ? 0 : 200,
+                    transition: sinMovimiento ? 'none' : 'opacity .16s ease .2s, max-width .2s',
+                }}
+            >Iniciar Sesión</span>
+        </button>
+    );
+
+    const marca = (
+            <>
+                {/* El isotipo solo, sin pastilla detrás.
+                    favicon.png ya viene negro sobre transparente, así
+                    que en claro va tal cual: negro sobre el blanco del
+                    menú. En oscuro el fondo es zinc-950 y un logo negro
+                    ahí no se vería, por eso `dark:invert` lo pasa a
+                    blanco — es el único caso donde se toca el color. */}
+                <img
+                    src="/favicon.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="w-9 h-9 object-contain shrink-0 dark:invert"
+                />
+                <span className={`${textoQueSeVa} text-[17px] font-semibold tracking-[-0.01em] ${TINTA}`} style={estiloTexto}>
+                    Origen
+                </span>
+                {isSidebar && !isCollapsed && (
+                    <ChevronsLeft className={`w-[18px] h-[18px] shrink-0 ml-auto ${M55}`} />
+                )}
+            </>
+    );
     const SidebarContent = (
         <div
             className={`md-menu flex flex-col h-full ${PANEL} ${isSidebar ? (isCollapsed ? 'w-20' : 'w-64') : 'w-full'}`}
@@ -1159,65 +1308,18 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             }}
         >
             <style>{ANIMACIONES}</style>
-            {/* ── MARCA ────────────────────────────────────────────────────
-                Ocupa el lugar de la hamburguesa y hereda su único trabajo:
-                contraer y expandir el panel. Un solo control, en los dos
-                sentidos — contraído queda el isotipo y vuelve a abrir de un
-                toque, así contraer nunca es un camino sin vuelta.
-                Sin chevron: la flecha significa "acá se despliega algo", y lo
-                que se despliega es el menú de cuenta, abajo. */}
+            {/* ── CUENTA ───────────────────────────────────────────────────
+                Arriba de todo: quién sos y qué podés hacer con esa sesión, en
+                un solo control. El menú abre hacia ABAJO, sobre la lista.
+                Sin sesión, el ingreso va suelto y a la vista. Contraída la
+                barra, queda la foto y el menú desborda a la derecha. */}
             <div className="shrink-0">
-                <div className={`flex items-center gap-1 pt-5 pb-2.5 ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
-                    {(() => {
-                        const marca = (
-                            <>
-                                {/* El isotipo solo, sin pastilla detrás.
-                                    favicon.png ya viene negro sobre transparente, así
-                                    que en claro va tal cual: negro sobre el blanco del
-                                    menú. En oscuro el fondo es zinc-950 y un logo negro
-                                    ahí no se vería, por eso `dark:invert` lo pasa a
-                                    blanco — es el único caso donde se toca el color. */}
-                                <img
-                                    src="/favicon.png"
-                                    alt=""
-                                    aria-hidden="true"
-                                    className="w-9 h-9 object-contain shrink-0 dark:invert"
-                                />
-                                <span className={`${textoQueSeVa} text-[17px] font-semibold tracking-[-0.01em] ${TINTA}`} style={estiloTexto}>
-                                    Origen
-                                </span>
-                                {isSidebar && !isCollapsed && (
-                                    <ChevronsLeft className={`w-[18px] h-[18px] shrink-0 ml-auto ${M55}`} />
-                                )}
-                            </>
-                        );
+                <div className={`flex items-center gap-2 pt-5 pb-2.5 ${isCollapsed ? 'justify-center px-2' : isSidebar ? 'px-4' : 'pl-3 pr-4'}`}>
+                    <div ref={cuentaRef} className="relative flex-1 min-w-0">
+                        {currentUser ? chipCuenta : botonIngresar}
+                        {menuCuenta(isCollapsed ? 'left-0 w-60 top-[calc(100%+0.5rem)]' : 'left-0 right-0 top-[calc(100%+0.5rem)]')}
+                    </div>
 
-                        // En el drawer mobile no hay nada que contraer, así que
-                        // la marca no finge ser un botón: es solo el rótulo.
-                        if (!isSidebar) {
-                            return (
-                                <div className="flex flex-1 min-w-0 items-center px-1.5 py-2">
-                                    {marca}
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <button
-                                onClick={() => onToggleCollapse?.()}
-                                aria-label={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
-                                title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
-                                aria-expanded={!isCollapsed}
-                                className={`h-[52px] flex items-center rounded-[18px] transition-colors duration-150 ${ENCIMA} ${FOCO} ${isCollapsed ? 'justify-center w-full px-0' : 'flex-1 min-w-0 px-1.5'
-                                    }`}
-                            >
-                                {marca}
-                            </button>
-                        );
-                    })()}
-
-                    {/* El drawer mobile conserva su cierre explícito: ahí el
-                        menú tapa la pantalla y hay que poder salir. */}
                     {!isSidebar && (
                         <button
                             onClick={onClose}
@@ -1296,142 +1398,27 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </div>
             </nav>
 
-            {/* ── PIE / CUENTA ────────────────────────────────────────────
-                El chip del usuario es el disparador del menú de cuenta: quién
-                sos y qué podés hacer con esa sesión viven en el mismo control,
-                que es donde uno los va a buscar.
-                El panel abre hacia ARRIBA. Es lo último de la columna: hacia
-                abajo no hay lugar y quedaría cortado contra el borde de la
-                ventana.
-                Sin sesión el chip no existe, así que el ingreso va suelto y a
-                la vista — nadie abre un desplegable para buscar cómo entrar. */}
-            <div
-                ref={cuentaRef}
-                className={`relative shrink-0 border-t ${LINEA} ${isSidebar ? 'px-4 pt-3 pb-[18px]' : 'px-3 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]'} ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}
-            >
-                {currentUser ? (
-                    <>
-                        <button
-                            onClick={() => setCuentaAbierta(v => !v)}
-                            aria-haspopup="menu"
-                            aria-expanded={cuentaAbierta}
-                            /* Contraída la tarjeta es sólo la foto, así que
-                               siempre lleva nombre. Con algo sin leer lo lleva
-                               también expandida, para que el lector de pantalla
-                               diga el número que se ve en rojo. */
-                            aria-label={sinLeer > 0
-                                ? `Cuenta de ${currentUser.name}, ${sinLeer} ${sinLeer === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
-                                : isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
-                            title={isCollapsed ? currentUser.name : undefined}
-                            className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1 pl-1 pr-2.5'
-                                }`}
-                        >
-                            {/* La marca va afuera del círculo: adentro la
-                                recortaría el overflow-hidden de la foto. */}
-                            <div className="relative shrink-0">
-                                <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
-                                    {currentUser.avatarUrl ? (
-                                        <img
-                                            src={currentUser.avatarUrl}
-                                            alt=""
-                                            aria-hidden="true"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
-                                            {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
-                                        </div>
-                                    )}
-                                </div>
-                                {sinLeer > 0 && (
-                                    <MarcaSinLeer key={pop} n={sinLeer} quieto={!!sinMovimiento} />
-                                )}
-                            </div>
-                            <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
-                                <span className={`max-w-full text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
-                                <span className={`max-w-full text-[12px] leading-[1.25] font-medium truncate ${M55}`}>{currentUser.email}</span>
-                            </div>
-                            {!isCollapsed && (
-                                <ChevronUp
-                                    className={`w-4 h-4 shrink-0 ml-2 ${M55} transition-transform duration-[250ms] ${cuentaAbierta ? '' : 'rotate-180'}`}
-                                />
-                            )}
-                        </button>
-
-                        {cuentaAbierta && (
-                            <div
-                                role="menu"
-                                /* Contraído el pie mide 80px: si el panel se
-                                   ajustara al contenedor saldría de 64px de
-                                   ancho y ninguna etiqueta entraría. Se le fija
-                                   un ancho propio y desborda sobre el contenido,
-                                   que es lo que hace cualquier menú de un rail
-                                   angosto. */
-                                className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${isCollapsed ? 'left-2 w-60 bottom-2' : 'left-4 right-4 bottom-[calc(100%-0.5rem)]'
-                                    }`}
-                                style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
-                            >
-                                {/* Notificaciones primero: es lo que se viene a
-                                    hacer acá cuando la foto tiene la marca roja,
-                                    y la pastilla de la fila es la misma cuenta
-                                    que esa marca — así se ve CUÁNTAS son antes
-                                    de entrar, y desaparece sola cuando se leen.
-                                    El modo oscuro sigue viviendo en Mi cuenta.
-                                    handleNavigation ya cierra el panel de la
-                                    cuenta y el menú. */}
-                                <FilaCuenta
-                                    icon={Bell}
-                                    label="Notificaciones"
-                                    insignia={sinLeer}
-                                    etiqueta={sinLeer > 0
-                                        ? `Notificaciones, ${sinLeer} sin leer`
-                                        : undefined}
-                                    onClick={() => handleNavigation('/notificaciones')}
-                                />
-                                <FilaCuenta
-                                    icon={Settings}
-                                    label="Configuración"
-                                    onClick={() => handleNavigation('/perfil')}
-                                />
-                                {/* Sólo con la app instalada: ahí no hay barra
-                                    del navegador ni botón de recargar. */}
-                                {estaInstalada() && (
-                                    <FilaCuenta
-                                        icon={RotateCw}
-                                        label="Recargar app"
-                                        onClick={() => recargarApp('el menú')}
-                                    />
-                                )}
-                                <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
-                                <FilaCuenta
-                                    icon={LogOut}
-                                    label="Cerrar sesión"
-                                    danger
-                                    onClick={() => { setCuentaAbierta(false); onLogout(); onClose(); }}
-                                />
-                            </div>
-                        )}
-                    </>
-                ) : (
+            {/* ── MARCA ────────────────────────────────────────────────────
+                Al pie. En la computadora sigue siendo el control de contraer y
+                expandir la barra (contraída queda el isotipo y vuelve a abrir
+                de un toque); en el teléfono no hay nada que contraer y es
+                sólo el rótulo. */}
+            <div className={`shrink-0 border-t ${LINEA} ${isSidebar ? 'pt-2 pb-3' : 'pt-2 pb-[max(10px,env(safe-area-inset-bottom))]'} ${isCollapsed ? 'flex justify-center px-2' : 'px-4'}`}>
+                {isSidebar ? (
                     <button
-                        onClick={() => { handleNavigation('/auth'); onClose(); }}
-                        className={`w-full flex items-center justify-center gap-2 overflow-hidden whitespace-nowrap bg-[#0a0a0a] dark:bg-white text-white dark:text-[#0a0a0a] text-[15px] font-semibold transition-transform active:scale-[.98] ${FOCO}`}
-                        style={{
-                            height: isSidebar ? 46 : 52,
-                            borderRadius: isCollapsed ? 14 : 999,
-                        }}
-                        title={isCollapsed ? 'Iniciar Sesión' : undefined}
+                        onClick={() => onToggleCollapse?.()}
+                        aria-label={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
+                        title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
+                        aria-expanded={!isCollapsed}
+                        className={`h-[52px] flex items-center rounded-[18px] transition-colors duration-150 ${ENCIMA} ${FOCO} ${isCollapsed ? 'justify-center w-full px-0' : 'w-full min-w-0 px-1.5'
+                            }`}
                     >
-                        <LogIn className="w-[18px] h-[18px] shrink-0" />
-                        <span
-                            className="overflow-hidden"
-                            style={{
-                                opacity: isCollapsed ? 0 : 1,
-                                maxWidth: isCollapsed ? 0 : 200,
-                                transition: sinMovimiento ? 'none' : 'opacity .16s ease .2s, max-width .2s',
-                            }}
-                        >Iniciar Sesión</span>
+                        {marca}
                     </button>
+                ) : (
+                    <div className="flex items-center h-[52px] px-1.5">
+                        {marca}
+                    </div>
                 )}
             </div>
         </div>
