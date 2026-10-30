@@ -2718,6 +2718,12 @@ generada (`prog_` + 12). Texto fijo: título ≤ 60, mensaje ≤ 160, sin
   `sql/notif_un_solo_dia.sql` sólo cambia cómo se lee en
   `notif_alcance_programada`: "Un solo día · El 30/10" en vez de
   "Todos los días · Del 30/10 al 30/10".
+- **Roles en lista desplegable** (2026-10-30): "O por roles" es un `select`
+  con TODOS los roles de `notif_roles_validos()` (también los que tienen 0
+  personas, desde `sql/notif_roles_todos.sql`), por nombre y con su cantidad;
+  el elegido baja como pastilla con X. Los nombres repetidos (roles viejos
+  que conviven: VIEWER/USUARIO, PASTOR/REPORTES, ADMIN_*/ENCARGADO_*) llevan
+  la clave al lado.
 - Toda alta, edición, pausa y baja de `notif_alertas` queda en `audit_logs`
   (trigger `audit_notif_alertas_changes`, el mismo de users y groups).
 

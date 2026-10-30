@@ -330,9 +330,11 @@ PERFORM pg_temp.chk('A7', 'una persona inactiva elegida a mano', '0',
     public.notif_estimar_audiencia(false, NULL, ARRAY[ina])->>'personas');
 PERFORM pg_temp.chk('A8', 'roles para los chips: ADMIN_STORE con 2', '2',
     (SELECT x->>'personas' FROM jsonb_array_elements(public.notif_roles_disponibles()->'roles') x WHERE x->>'rol' = 'ADMIN_STORE'));
-PERFORM pg_temp.chk('A9', 'los chips no traen roles sin nadie', 'ninguno en 0',
-    CASE WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(public.notif_roles_disponibles()->'roles') x WHERE (x->>'personas')::int = 0)
-         THEN 'hay en 0' ELSE 'ninguno en 0' END);
+-- Desde sql/notif_roles_todos.sql la lista trae TODOS los roles válidos,
+-- también los que no tienen a nadie (van con 0).
+PERFORM pg_temp.chk('A9', 'la lista trae todos los roles válidos', 'todos',
+    CASE WHEN jsonb_array_length(public.notif_roles_disponibles()->'roles') = cardinality(public.notif_roles_validos())
+         THEN 'todos' ELSE jsonb_array_length(public.notif_roles_disponibles()->'roles')::text END);
 
 -- Emitir de verdad (en la transacción) y comparar con la estimación.
 v_j := pg_temp.prog(p_mix, '2026-11-15', '2026-11-15', 1, ARRAY['10:00']::time[], false, ARRAY['REPORTES'], ARRAY[dani, beto]);

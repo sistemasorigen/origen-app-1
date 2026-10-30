@@ -76,8 +76,26 @@ const SelectorDeAudiencia: React.FC<{
         return () => window.clearTimeout(t);
     }, [clave]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const alternarRol = (rol: string) =>
-        onCambiar({ roles: roles.includes(rol) ? roles.filter(r => r !== rol) : [...roles, rol] });
+    const sumarRol = (rol: string) => {
+        if (!roles.includes(rol)) onCambiar({ roles: [...roles, rol] });
+    };
+    const personasDe = (rol: string) => disponibles?.find(d => d.rol === rol)?.personas ?? 0;
+    // Por nombre, como se buscan en una lista larga. Un rol ya elegido que no
+    // viene de la base (no debería pasar) igual aparece, para poder sacarlo.
+    const opciones = [
+        ...(disponibles ?? []),
+        ...roles.filter(r => !(disponibles ?? []).some(d => d.rol === r)).map(r => ({ rol: r, personas: 0 })),
+    ]
+        .map(d => ({ ...d, nombre: nombreDeRol(d.rol as UserRole) }))
+        .sort((x, y) => x.nombre.localeCompare(y.nombre, 'es') || x.rol.localeCompare(y.rol));
+    // Hay roles viejos que conviven con los nuevos y se llaman igual (VIEWER y
+    // USUARIO son "Usuario"; PASTOR y REPORTES, "Reportes"). Con el nombre
+    // solo no se sabe cuál es cuál: a esos se les suma la clave.
+    const repetidos = new Set(opciones.map(o => o.nombre).filter((n, i, a) => a.indexOf(n) !== i));
+    const etiquetaDe = (rol: string) => {
+        const nombre = nombreDeRol(rol as UserRole);
+        return repetidos.has(nombre) ? `${nombre} — ${rol}` : nombre;
+    };
 
     const sumar = (p: PersonaBuscada) => {
         if (!personas.some(x => x.id === p.id)) onCambiar({ personas: [...personas, { id: p.id, nombre: p.nombre }] });
@@ -115,35 +133,46 @@ const SelectorDeAudiencia: React.FC<{
                         )}
                         {falloRoles && <span className="text-[12.5px] font-semibold text-black/[.6]">No pudimos traer los roles. Cerrá y volvé a abrir el editor.</span>}
                         {disponibles && (
-                            <div role="group" aria-labelledby="notif-roles" className="flex flex-wrap gap-1.5">
-                                {disponibles.map(r => {
-                                    const on = roles.includes(r.rol);
-                                    return (
-                                        <button
-                                            key={r.rol}
-                                            type="button"
-                                            aria-pressed={on}
-                                            onClick={() => alternarRol(r.rol)}
-                                            className={`flex min-h-[40px] items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'bg-[#0a0a0a] text-white' : 'bg-[#f2f2f0] text-[#0a0a0a] hover:bg-[#eaeae7]'}`}
-                                        >
-                                            {nombreDeRol(r.rol as UserRole)}
-                                            <span className={`text-[11.5px] font-bold ${on ? 'text-white/65' : 'text-black/45'}`}>{r.personas}</span>
-                                        </button>
-                                    );
-                                })}
-                                {/* Un rol elegido que hoy no tiene a nadie (no viene en la lista). */}
-                                {roles.filter(r => !disponibles.some(d => d.rol === r)).map(r => (
-                                    <button
-                                        key={r}
-                                        type="button"
-                                        aria-pressed
-                                        onClick={() => alternarRol(r)}
-                                        className="flex min-h-[40px] items-center gap-1.5 rounded-full bg-[#0a0a0a] px-3.5 text-[13px] font-semibold text-white"
-                                    >
-                                        {nombreDeRol(r as UserRole)} <span className="text-[11.5px] font-bold text-white/65">0</span>
-                                    </button>
-                                ))}
-                            </div>
+                            <>
+                                {/* Una lista con TODOS los roles (también los que hoy
+                                    no tienen a nadie), de a uno: el elegido baja
+                                    como pastilla y se puede sumar otro. Un select
+                                    nativo abre la rueda del sistema en el iPhone. */}
+                                <select
+                                    value=""
+                                    onChange={e => { if (e.target.value) sumarRol(e.target.value); }}
+                                    aria-labelledby="notif-roles"
+                                    className="h-[50px] w-full px-3.5 text-[15px] font-semibold"
+                                >
+                                    <option value="">{roles.length ? 'Sumar otro rol…' : 'Elegí un rol…'}</option>
+                                    {opciones.map(o => (
+                                        <option key={o.rol} value={o.rol} disabled={roles.includes(o.rol)}>
+                                            {etiquetaDe(o.rol)} ({o.personas}){roles.includes(o.rol) ? ' · ya elegido' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {roles.length > 0 && (
+                                    <ul aria-label="Roles elegidos" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+                                        {roles.map(r => {
+                                            const nombre = etiquetaDe(r);
+                                            return (
+                                                <li key={r} className="flex h-9 items-center gap-1.5 rounded-full bg-[#0a0a0a] pl-3.5 pr-1.5 text-white">
+                                                    <span className="max-w-[200px] truncate text-[13px] font-semibold">{nombre}</span>
+                                                    <span className="text-[11.5px] font-bold text-white/65">{personasDe(r)}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onCambiar({ roles: roles.filter(x => x !== r) })}
+                                                        aria-label={`Sacar el rol ${nombre}`}
+                                                        className="flex h-7 w-7 items-center justify-center rounded-full text-white/70 hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                                    >
+                                                        <X size={14} strokeWidth={2.4} aria-hidden="true" />
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </>
                         )}
                     </div>
 

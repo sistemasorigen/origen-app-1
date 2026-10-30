@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- NOTIFICACIONES — una programada para un solo día
--- 2026-10-30 · ⏳ PENDIENTE
+-- 2026-10-30 · ✅ APLICADO el 2026-10-30 (PROBAR_ 6/6 contra producción)
 --
 -- El editor suma, en "Cuándo se repite", la opción "Un solo día": guarda
 -- desde = hasta = ese día, cada 1 día y sin "siempre activa". La base ya lo
