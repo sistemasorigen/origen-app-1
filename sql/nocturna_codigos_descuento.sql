@@ -1,6 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- NOCTURNA — códigos de descuento en la inscripción
--- 2026-10-30 · ⏳ PENDIENTE
+-- 2026-10-30 · ✅ APLICADO el 2026-10-30 (PROBAR_ 25/25 contra producción;
+--               las 50 inscripciones previas no cambiaron)
 --
 -- LO QUE SE PIDIÓ (2026-10-30, el día del evento)
 --   · Dos códigos fijos: NOC40 (cada entrada a $40.000) y NOCTURNA50 (cada
