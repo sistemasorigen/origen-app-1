@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- NOTIFICACIONES — la lista de roles trae TODOS los roles
--- 2026-10-30 · ⏳ PENDIENTE
+-- 2026-10-30 · ✅ APLICADO el 2026-10-30 (PROBAR_notif_programadas 93/93 contra producción)
 --
 -- "4 · A quién le llega → O por roles" pasó de chips a una lista desplegable
 -- con todas las opciones. notif_roles_disponibles dejaba afuera los roles sin
