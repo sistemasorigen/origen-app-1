@@ -105,6 +105,16 @@ interface VistaComprobante {
 }
 
 /** Dónde estaba el scroll de la planilla, mientras dura la sesión. */
+/**
+ * Cuántos adolescentes hay en un puñado de filas.
+ *
+ * La planilla muestra una fila por familia, pero lo que se cuenta arriba de
+ * cada bloque son los adolescentes: son los que entran, los que comen y los
+ * que se reparten en las tribus.
+ */
+const chicosDe = (filas: { insc: NocturnaInscripcion }[]): number =>
+    filas.reduce((a, f) => a + (f.insc.jovenes?.length || 0), 0);
+
 const CLAVE_SCROLL = 'nocturna.planilla';
 
 const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
@@ -203,15 +213,22 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const grupos = useMemo(() => {
         const aprobadas = filtradas.filter(f => estadoInscripcion(f.insc) === 'Aprobado');
         const inscriptas = filtradas.filter(f => estadoInscripcion(f.insc) !== 'Aprobado');
+        // Los títulos cuentan ADOLESCENTES, no familias: son los que entran
+        // esa noche, los que comen y los que se reparten en las tribus. Una
+        // familia puede traer tres. Las filas siguen siendo una por familia.
         const salida: { titulo: string; filas: typeof filtradas }[] = [];
-        if (aprobadas.length) salida.push({ titulo: `APROBADOS · ${aprobadas.length}`, filas: aprobadas });
-        if (inscriptas.length) salida.push({ titulo: `INSCRIPTOS · ${inscriptas.length}`, filas: inscriptas });
+        if (aprobadas.length) salida.push({ titulo: `APROBADOS · ${chicosDe(aprobadas)}`, filas: aprobadas });
+        if (inscriptas.length) salida.push({ titulo: `INSCRIPTOS · ${chicosDe(inscriptas)}`, filas: inscriptas });
         return salida;
     }, [filtradas]);
 
     const resumen = useMemo(() => {
         const chicos = inscripciones.reduce((a, i) => a + (i.jovenes?.length || 0), 0);
-        const aprobadas = inscripciones.filter(i => estadoInscripcion(i) === 'Aprobado').length;
+        // Aprobados, también en adolescentes: es el número que se usa para
+        // saber cuántos entran.
+        const aprobados = inscripciones
+            .filter(i => estadoInscripcion(i) === 'Aprobado')
+            .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinFotos = inscripciones.filter(i => !i.aceptaFotos)
             .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinEmail = inscripciones.filter(i => !i.emailEnviadoAt).length;
@@ -224,7 +241,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                 tribus[j.tribu === 'Garra' || j.tribu === 'Trueno' ? j.tribu : 'Sin tribu'] += 1;
             }
         }
-        return { chicos, aprobadas, sinFotos, sinEmail, tribus, familias: inscripciones.length };
+        return { chicos, aprobados, sinFotos, sinEmail, tribus, familias: inscripciones.length };
     }, [inscripciones]);
 
     // ── Acciones ──────────────────────────────────────────────────────────
@@ -789,7 +806,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                         </span>
                         <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VERDE }}>
                             <span style={{ width: 7, height: 7, borderRadius: 999, background: '#16a34a' }} />
-                            {resumen.aprobadas} {resumen.aprobadas === 1 ? 'aprobada' : 'aprobadas'}
+                            {resumen.aprobados} {resumen.aprobados === 1 ? 'aprobado' : 'aprobados'}
                         </span>
                         {resumen.sinFotos > 0 && (
                             <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: AMBAR_INK }}>
