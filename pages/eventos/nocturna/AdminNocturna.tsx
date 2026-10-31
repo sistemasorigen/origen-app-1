@@ -249,11 +249,6 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const resumen = useMemo(() => {
         const chicos = inscripciones.reduce((a, i) => a + (i.jovenes?.length || 0), 0);
-        // Aprobados, también en adolescentes: es el número que se usa para
-        // saber cuántos entran.
-        const aprobados = inscripciones
-            .filter(i => estadoInscripcion(i) === 'Aprobado')
-            .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinFotos = inscripciones.filter(i => !i.aceptaFotos)
             .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinEmail = inscripciones.filter(i => !i.emailEnviadoAt).length;
@@ -261,6 +256,11 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
         // mano desde la ficha). La misma marca que cuenta Reportes.
         const retirados = inscripciones
             .reduce((a, i) => a + (i.jovenes || []).filter(j => j.retiradoAt).length, 0);
+        // Ingresaron: adolescentes con el ingreso marcado en la puerta, uno por
+        // uno. No es contar familias aprobadas: eso suma a todos los chicos de una familia
+        // aprobada, aunque alguno no haya entrado.
+        const ingresaron = inscripciones
+            .reduce((a, i) => a + (i.jovenes || []).filter(j => j.acreditadoAt).length, 0);
         // Adolescentes por tribu, de todas las inscripciones. Una tribu que no
         // sea ninguna de las dos cuenta como "Sin tribu": así las tres suman
         // siempre lo mismo que `chicos`.
@@ -270,7 +270,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                 tribus[j.tribu === 'Garra' || j.tribu === 'Trueno' ? j.tribu : 'Sin tribu'] += 1;
             }
         }
-        return { chicos, aprobados, retirados, sinFotos, sinEmail, tribus, familias: inscripciones.length };
+        return { chicos, ingresaron, retirados, sinFotos, sinEmail, tribus, familias: inscripciones.length };
     }, [inscripciones]);
 
     // ── Acciones ──────────────────────────────────────────────────────────
@@ -586,15 +586,17 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             Acreditar
                         </button>
 
+                        {/* Las tribus y, abajo, la noche: cuántos entraron y
+                            cuántos salieron. Teléfono: debajo de Acreditar, a todo
+                            el ancho. Compu: en el hueco entre el título y los
+                            botones. */}
+                        <div className="col-span-2 mt-1.5 flex flex-col gap-2 lg:mt-0 lg:order-1 lg:ml-6 lg:mr-auto lg:w-[360px]">
                         {/* Adolescentes por tribu. Los tres números y, abajo, una
                             sola barra partida en los colores de cada tribu: de un
-                            vistazo se ve si están parejas. Teléfono: debajo de
-                            Acreditar, a todo el ancho. Compu: en el hueco entre
-                            el título y los botones. */}
+                            vistazo se ve si están parejas. */}
                         <div
                             role="group"
                             aria-label="Adolescentes por tribu"
-                            className="col-span-2 mt-1.5 lg:mt-0 lg:order-1 lg:ml-6 lg:mr-auto lg:w-[360px]"
                             style={{ borderRadius: 22, background: CAMPO, padding: '12px 16px 14px' }}
                         >
                             <div className="grid grid-cols-3">
@@ -627,6 +629,33 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                         <span key={t} style={{ flexGrow: resumen.tribus[t], flexBasis: 0, background: COLOR_TRIBU[t] }} />
                                     ))}
                             </div>
+                        </div>
+
+                        {/* La noche, en adolescentes: los que pasaron por la puerta
+                            y, de ésos, los que ya se fueron. */}
+                        <div
+                            role="group"
+                            aria-label="Ingresos y egresos"
+                            className="grid grid-cols-2"
+                            style={{ borderRadius: 22, background: CAMPO, padding: '12px 16px 13px' }}
+                        >
+                            {([
+                                ['Ingresaron', resumen.ingresaron, `de ${resumen.chicos}`],
+                                ['Egresaron', resumen.retirados, `de ${resumen.ingresaron}`],
+                            ] as [string, number, string][]).map(([k, n, de], i) => (
+                                <div
+                                    key={k}
+                                    className="min-w-0"
+                                    style={{ paddingLeft: i === 0 ? 0 : 14, borderLeft: i === 0 ? 'none' : '1px solid rgba(0,0,0,.08)' }}
+                                >
+                                    <span className="block truncate" style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.62)' }}>{k}</span>
+                                    <span className="flex items-baseline gap-1.5" style={{ marginTop: 3 }}>
+                                        <span style={{ ...fuente(600, '24px', '1.15'), color: INK, letterSpacing: '-.02em', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                                        <span className="truncate" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.5)', fontVariantNumeric: 'tabular-nums' }}>{de}</span>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                         </div>
                     </div>
 
@@ -832,14 +861,6 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                     <div className="flex gap-4 mt-3 flex-wrap">
                         <span style={{ ...fuente(600, '12.5px'), color: INK }}>
                             {resumen.familias} {resumen.familias === 1 ? 'familia' : 'familias'} · {resumen.chicos} {resumen.chicos === 1 ? 'adolescente' : 'adolescentes'}
-                        </span>
-                        <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VERDE }}>
-                            <span style={{ width: 7, height: 7, borderRadius: 999, background: '#16a34a' }} />
-                            {resumen.aprobados} {resumen.aprobados === 1 ? 'aprobado' : 'aprobados'}
-                        </span>
-                        <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: INK }}>
-                            <span style={{ width: 7, height: 7, borderRadius: 999, background: INK }} />
-                            {resumen.retirados} {resumen.retirados === 1 ? 'retirado' : 'retirados'}
                         </span>
                         {resumen.sinFotos > 0 && (
                             <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: AMBAR_INK }}>
