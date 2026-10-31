@@ -898,11 +898,13 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
     /**
      * El adulto que inscribió, entero.
      *
-     * Antes el panel decía sólo su nombre. En la puerta hacen falta las tres
-     * cosas: el DNI para cotejarlo con lo que muestra, el celular para
-     * llamarlo si algo no cierra, y el email, que es donde le llegó la
-     * entrada y con lo que se la busca. El celular y el email se tocan: abren
-     * el teléfono y el correo.
+     * Antes el panel decía sólo su nombre, en gris y chico, arriba de todo.
+     * No se acredita, pero es a quien hay que mirar cuando algo no cierra:
+     * su nombre va en la ficha como una fila más, con el mismo peso que el
+     * DNI. Y las tres cosas que hacen falta en la puerta: el DNI para
+     * cotejarlo con lo que muestra, el celular para llamarlo, y el email,
+     * que es donde le llegó la entrada. El celular y el email se tocan:
+     * abren el teléfono y el correo.
      *
      * La última fila es el permiso de fotos. Cuando es "no" también sale el
      * cartel ámbar de arriba, que es el que hay que ver sin buscarlo; esta
@@ -913,6 +915,10 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         const tel = (insc.adulto_telefono || '').trim();
         const email = (insc.adulto_email || '').trim();
         const filas: { rotulo: string; valor: string; href?: string; ambar?: boolean }[] = [
+            {
+                rotulo: 'A cargo',
+                valor: `${insc.adulto_nombre || ''} ${insc.adulto_apellido || ''}`.trim() || 'Sin nombre',
+            },
             { rotulo: 'DNI', valor: (insc.adulto_dni || '').trim() || 'No figura' },
             {
                 rotulo: 'Celular',
@@ -1641,13 +1647,6 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                         <h2 style={{ ...fuente(600, '22px', '1.2'), color: INK, letterSpacing: '-.02em', margin: '4px 0 0' }}>
                                             Familia {familia.insc.adulto_apellido}
                                         </h2>
-                                        {/* El adulto no se acredita, pero sigue a la
-                                            vista: es con su apellido que se busca la
-                                            entrada, y es a quien hay que llamar si
-                                            algo no cierra. */}
-                                        <p style={{ ...fuente(500, '13px', '1.4'), color: 'rgba(0,0,0,.6)', margin: '2px 0 0' }}>
-                                            A cargo: {familia.insc.adulto_nombre} {familia.insc.adulto_apellido}
-                                        </p>
                                     </div>
                                     <button
                                         type="button"
