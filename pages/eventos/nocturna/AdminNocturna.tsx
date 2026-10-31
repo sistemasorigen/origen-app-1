@@ -56,6 +56,31 @@ const fechaYHora = (iso: string | null): string => {
     return `${dia} · ${hora}`;
 };
 
+/**
+ * La salida de una familia, para mostrarla debajo del ingreso.
+ *
+ * La salida se registra por adolescente: en una familia pueden irse a horas
+ * distintas, o irse uno y quedarse el otro. Se muestra la ÚLTIMA hora, y si
+ * todavía no salieron todos los que entraron, cuántos ("Egresó 1/2 · …").
+ * Sin ninguna salida, nada.
+ */
+const textoEgreso = (insc: NocturnaInscripcion): string | null => {
+    const chicos = insc.jovenes || [];
+    const salidas = chicos.map(j => j.retiradoAt).filter((t): t is string => !!t).sort();
+    if (!salidas.length) return null;
+    const entraron = chicos.filter(j => j.acreditadoAt).length;
+    const cuantos = salidas.length < entraron ? `${salidas.length}/${entraron} · ` : '';
+    return `Egresó ${cuantos}${fechaYHora(salidas[salidas.length - 1])}`;
+};
+
+/** Una flecha saliendo de la puerta, en el violeta del chip "Retirado". */
+const VIOLETA = '#3730a3';
+const IconoEgreso: React.FC<{ tam: number }> = ({ tam }) => (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4" /><path d="M10 16l-4-4 4-4" /><path d="M6 12h10" />
+    </svg>
+);
+
 type Overlay =
     | { tipo: 'eliminar'; insc: NocturnaInscripcion }
     | { tipo: 'comprobante'; insc: NocturnaInscripcion; vistas: VistaComprobante[] }
@@ -912,6 +937,12 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                                 Ingresó {fechaYHora(insc.aprobadoAt)}
                                                             </span>
                                                         )}
+                                                        {textoEgreso(insc) && (
+                                                            <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VIOLETA }}>
+                                                                <IconoEgreso tam={13} />
+                                                                {textoEgreso(insc)}
+                                                            </span>
+                                                        )}
                                                         <AvisoEmail insc={insc} ancho />
                                                     </div>
 
@@ -965,6 +996,12 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                         <p className="flex items-center gap-1.5" style={{ ...fuente(600, '12px'), color: VERDE, margin: '4px 0 0' }}>
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 6.5" /></svg>
                                                             {fechaYHora(insc.aprobadoAt)}
+                                                        </p>
+                                                    )}
+                                                    {textoEgreso(insc) && (
+                                                        <p className="flex items-center gap-1.5" style={{ ...fuente(600, '12px'), color: VIOLETA, margin: '4px 0 0' }}>
+                                                            <IconoEgreso tam={12} />
+                                                            {textoEgreso(insc)}
                                                         </p>
                                                     )}
                                                 </div>
