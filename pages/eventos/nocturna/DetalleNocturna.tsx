@@ -83,6 +83,34 @@ const quienRetira = (j: NocturnaJoven, adulto: string): string => {
     return n ? `Lo retira ${n}` : 'Lo retira otra persona';
 };
 
+// ── Piezas ────────────────────────────────────────────────────────────
+// AFUERA del componente a propósito. Declaradas adentro, cada toque
+// creaba funciones nuevas: React las veía como otro componente y volvía a
+// montar todas las tarjetas, así que lo que estuviera abierto se perdía en
+// el medio. No usan nada del estado: sólo sus props.
+const Carta: React.FC<{ titulo?: string; extra?: React.ReactNode; destacada?: boolean; children: React.ReactNode }> =
+    ({ titulo, extra, destacada, children }) => (
+        <div
+            className="rounded-[22px]"
+            style={{ background: CARTA, padding: 20, boxShadow: destacada ? `0 0 0 2px ${ROSA} inset` : 'none' }}
+        >
+            {(titulo || extra) && (
+                <div className="flex items-baseline justify-between gap-2.5">
+                    {titulo && <p style={{ ...fuente(600, '16px'), color: INK, margin: 0 }}>{titulo}</p>}
+                    {extra}
+                </div>
+            )}
+            {children}
+        </div>
+    );
+
+const Fila: React.FC<{ k: string; v: React.ReactNode; ultima?: boolean }> = ({ k, v, ultima }) => (
+    <div className="flex justify-between gap-3" style={{ padding: '10px 0', borderBottom: ultima ? 'none' : `1px solid ${CAMPO}` }}>
+        <span style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)' }}>{k}</span>
+        <span className="text-right" style={{ ...fuente(600, '13px'), color: INK, overflowWrap: 'anywhere' }}>{v}</span>
+    </div>
+);
+
 const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -112,7 +140,14 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const [salidaPendiente, setSalidaPendiente] = useState<null | (() => void)>(null);
 
-    useBloqueoDeFondo(confirmando || !!comprobanteUrl || !!salidaPendiente);
+    // La salida de las 6 AM, a mano. Arranca sin nadie marcado: marcar acá no
+    // es decir "este está adentro" sino "este se va ahora".
+    const [salidaMarcada, setSalidaMarcada] = useState<Record<string, boolean>>({});
+    const [confirmandoSalida, setConfirmandoSalida] = useState(false);
+    const [guardandoSalida, setGuardandoSalida] = useState(false);
+    const [errorSalida, setErrorSalida] = useState<{ conexion: boolean; texto: string } | null>(null);
+
+    useBloqueoDeFondo(confirmando || confirmandoSalida || !!comprobanteUrl || !!salidaPendiente);
 
     // ── Carga ─────────────────────────────────────────────────────────────
     const cargar = useCallback(async () => {
@@ -127,6 +162,7 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         const i = res.inscripcion;
         setInsc(i);
         setChicosMarcados(Object.fromEntries((i.jovenes || []).map(j => [j.id, !!j.acreditadoAt])));
+        setSalidaMarcada({});
         if (i.cargadoPorAdmin) {
             const nombres = await supabaseService.nombresDeUsuarios([i.cargadoPorAdmin]);
             setNombreAdmin(nombres[i.cargadoPorAdmin] || null);
@@ -153,6 +189,11 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
 
     const marcados = jovenes.filter(j => chicosMarcados[j.id]).length;
     const totalPersonas = jovenes.length;
+
+    // Quiénes pueden retirarse: los que entraron y todavía no salieron.
+    const adentro = jovenes.filter(j => j.acreditadoAt && !j.retiradoAt);
+    const yaSeFueron = jovenes.filter(j => j.retiradoAt);
+    const seVan = adentro.filter(j => salidaMarcada[j.id]);
 
     // Un `beforeunload` para cerrar la pestaña, y un aviso propio para
     // navegar dentro de la app: el navegador no avisa de lo segundo.
@@ -234,6 +275,39 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         await cargar();
     };
 
+    /**
+     * La salida, a mano, desde la ficha.
+     *
+     * Es la misma RPC que usa el escáner de la puerta (set_nocturna_retiro),
+     * con los mismos chequeos de la base: sólo staff, sólo adolescentes de
+     * esta entrada, y sólo los que entraron. **No se puede deshacer**: la
+     * hora de quien ya se había retirado no se pisa.
+     */
+    const guardarSalida = async () => {
+        if (!insc || guardandoSalida || !seVan.length) return;
+        setGuardandoSalida(true);
+        setErrorSalida(null);
+
+        const cuantos = seVan.length;
+        const res = await supabaseService.setNocturnaRetiro(insc.id, seVan.map(j => j.id));
+
+        if (!res.ok) {
+            // Igual que el ingreso: sin confirmación de la base no se da por
+            // registrada una salida.
+            const hayBase = await probarConexionBase();
+            setErrorSalida(hayBase
+                ? { conexion: false, texto: res.error || 'No pudimos registrar la salida.' }
+                : { conexion: true, texto: 'Se cortó la conexión y no se guardó nada. Lo que marcaste sigue acá: probá de nuevo.' });
+            setGuardandoSalida(false);
+            return;
+        }
+
+        setGuardandoSalida(false);
+        setConfirmandoSalida(false);
+        setAviso(`Salida registrada · se ${cuantos === 1 ? 'retiró 1 adolescente' : `retiraron ${cuantos} adolescentes`}`);
+        await cargar();
+    };
+
     const verComprobanteDe = async (path: string) => {
         setOcupado('comprobante');
         // La URL se pide al tocar: vence a los 5 minutos.
@@ -257,30 +331,6 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
         setAviso('Se pidió el reenvío. En unos segundos se actualiza el estado.');
         setTimeout(() => { cargar(); }, 8000);
     };
-
-    // ── Piezas ────────────────────────────────────────────────────────────
-    const Carta: React.FC<{ titulo?: string; extra?: React.ReactNode; destacada?: boolean; children: React.ReactNode }> =
-        ({ titulo, extra, destacada, children }) => (
-            <div
-                className="rounded-[22px]"
-                style={{ background: CARTA, padding: 20, boxShadow: destacada ? `0 0 0 2px ${ROSA} inset` : 'none' }}
-            >
-                {(titulo || extra) && (
-                    <div className="flex items-baseline justify-between gap-2.5">
-                        {titulo && <p style={{ ...fuente(600, '16px'), color: INK, margin: 0 }}>{titulo}</p>}
-                        {extra}
-                    </div>
-                )}
-                {children}
-            </div>
-        );
-
-    const Fila: React.FC<{ k: string; v: React.ReactNode; ultima?: boolean }> = ({ k, v, ultima }) => (
-        <div className="flex justify-between gap-3" style={{ padding: '10px 0', borderBottom: ultima ? 'none' : `1px solid ${CAMPO}` }}>
-            <span style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.6)' }}>{k}</span>
-            <span className="text-right" style={{ ...fuente(600, '13px'), color: INK, overflowWrap: 'anywhere' }}>{v}</span>
-        </div>
-    );
 
     // ── Pantallas completas ───────────────────────────────────────────────
     if (cargando) {
@@ -550,6 +600,135 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                                     Guardar cambios
                                 </button>
                             </Carta>
+
+                            {/* ── Salida ─────────────────────────── */}
+                            {/* Sólo si alguien entró: antes de eso no hay de
+                                quién registrar una salida. Es la misma RPC que
+                                usa el escáner a las 6 AM; esto es para cuando
+                                alguien se va antes, o el QR no se deja leer. */}
+                            {(adentro.length > 0 || yaSeFueron.length > 0) && (
+                                <Carta
+                                    titulo="Salida"
+                                    extra={
+                                        <span style={{ ...fuente(600, '13px'), color: yaSeFueron.length ? '#3730a3' : 'rgba(0,0,0,.6)' }}>
+                                            {yaSeFueron.length}/{yaSeFueron.length + adentro.length} se {yaSeFueron.length === 1 ? 'retiró' : 'retiraron'}
+                                        </span>
+                                    }
+                                >
+                                    <p style={{ ...fuente(500, '13px', '1.5'), color: 'rgba(0,0,0,.6)', margin: '5px 0 0' }}>
+                                        {adentro.length
+                                            ? 'Tocá a cada adolescente que se va. Se guarda con la hora de ahora y no se puede deshacer.'
+                                            : 'Ya se retiraron todos.'}
+                                    </p>
+
+                                    <div className="flex flex-col gap-2 mt-3.5">
+                                        {adentro.map(j => {
+                                            const marcado = !!salidaMarcada[j.id];
+                                            return (
+                                                <button
+                                                    key={j.id}
+                                                    type="button"
+                                                    onClick={() => setSalidaMarcada(m => ({ ...m, [j.id]: !m[j.id] }))}
+                                                    aria-pressed={marcado}
+                                                    className="w-full border-0 flex items-center gap-3 cursor-pointer"
+                                                    style={{
+                                                        minHeight: 62,
+                                                        padding: '10px 14px',
+                                                        borderRadius: 16,
+                                                        background: marcado ? '#eef0ff' : '#f7f7f5',
+                                                        boxShadow: marcado ? '0 0 0 1.5px #c3c8f5 inset' : 'none',
+                                                    }}
+                                                >
+                                                    <span
+                                                        className="flex items-center justify-center flex-none"
+                                                        style={{
+                                                            width: 30, height: 30, borderRadius: 999,
+                                                            background: marcado ? '#3730a3' : CARTA,
+                                                            boxShadow: marcado ? 'none' : '0 0 0 1.5px #d6d5d1 inset',
+                                                        }}
+                                                    >
+                                                        {marcado && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                                                    </span>
+                                                    <span className="flex-1 min-w-0 text-left">
+                                                        <span className="block truncate" style={{ ...fuente(600, '15px'), color: INK }}>
+                                                            {j.nombre} {j.apellido}
+                                                        </span>
+                                                        <span className="block" style={{ ...fuente(500, '12.5px'), color: 'rgba(0,0,0,.58)', marginTop: 2 }}>
+                                                            Entró {hora(j.acreditadoAt)}
+                                                        </span>
+                                                    </span>
+                                                    <span className="flex-none text-right" style={{ ...fuente(600, '12.5px'), color: marcado ? '#3730a3' : 'rgba(0,0,0,.45)' }}>
+                                                        {marcado ? 'Se va' : 'Adentro'}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+
+                                        {yaSeFueron.map(j => (
+                                            <div
+                                                key={j.id}
+                                                className="w-full flex items-center gap-3"
+                                                style={{ minHeight: 62, padding: '10px 14px', borderRadius: 16, background: '#f4f4f2' }}
+                                            >
+                                                <span
+                                                    className="flex items-center justify-center flex-none"
+                                                    style={{ width: 30, height: 30, borderRadius: 999, background: '#3730a3' }}
+                                                >
+                                                    <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                                                </span>
+                                                <span className="flex-1 min-w-0">
+                                                    <span className="block truncate" style={{ ...fuente(600, '15px'), color: 'rgba(0,0,0,.55)' }}>
+                                                        {j.nombre} {j.apellido}
+                                                    </span>
+                                                </span>
+                                                <span className="flex-none text-right" style={{ ...fuente(600, '12.5px'), color: '#3730a3' }}>
+                                                    Se retiró {hora(j.retiradoAt)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Con quién se va cada uno está arriba, en la
+                                        tarjeta rosa: es lo que hay que chequear
+                                        antes de dejar salir a nadie. */}
+                                    {adentro.length > 0 && (
+                                        <p style={{ ...fuente(500, '12.5px', '1.5'), color: 'rgba(0,0,0,.58)', margin: '14px 2px 0' }}>
+                                            Antes de marcar la salida, mirá arriba con quién se va cada uno.
+                                        </p>
+                                    )}
+
+                                    {errorSalida && (
+                                        <div className="rounded-[14px] mt-3" style={{ background: errorSalida.conexion ? AMBAR : '#fdecea', padding: '12px 14px' }}>
+                                            <p style={{ ...fuente(600, '13.5px'), color: errorSalida.conexion ? INK : ROJO, margin: 0 }}>
+                                                {errorSalida.conexion ? 'No se guardó' : 'No se pudo guardar'}
+                                            </p>
+                                            <p style={{ ...fuente(500, '13px', '1.5'), color: errorSalida.conexion ? '#5c3b0b' : 'rgba(0,0,0,.66)', margin: '4px 0 0' }}>
+                                                {errorSalida.texto}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {adentro.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmandoSalida(true)}
+                                            disabled={!seVan.length}
+                                            className="w-full border-0 rounded-full mt-3"
+                                            style={{
+                                                height: 54,
+                                                background: seVan.length ? '#3730a3' : '#e6e5e1',
+                                                color: seVan.length ? '#fff' : 'rgba(0,0,0,.4)',
+                                                ...fuente(600, '15px'),
+                                                cursor: seVan.length ? 'pointer' : 'not-allowed',
+                                            }}
+                                        >
+                                            {seVan.length
+                                                ? `Registrar la salida de ${seVan.length}`
+                                                : 'Registrar la salida'}
+                                        </button>
+                                    )}
+                                </Carta>
+                            )}
                         </div>
 
                         {/* ── Columna de datos ───────────────────────────── */}
@@ -800,6 +979,75 @@ const DetalleNocturna: React.FC<Props> = ({ currentUser }) => {
                             <button
                                 type="button"
                                 onClick={() => { setConfirmando(false); setErrorGuardar(null); }}
+                                className="border-0 rounded-full cursor-pointer"
+                                style={{ height: 52, background: CAMPO, color: INK, ...fuente(600, '15px') }}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmar la salida. Con su propia pregunta y no con la del
+                ingreso: una salida no se puede deshacer desde ninguna
+                pantalla, así que el cartel lo dice y nombra a cada uno. */}
+            {confirmandoSalida && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center"
+                    style={{ background: 'rgba(10,10,10,.42)' }}
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div
+                        className="w-full lg:max-w-[440px] lg:m-4"
+                        style={{
+                            background: CARTA,
+                            borderRadius: '28px 28px 0 0',
+                            padding: '14px 18px 22px',
+                            maxHeight: '90%',
+                            overflow: 'auto',
+                        }}
+                    >
+                        <div className="lg:hidden mx-auto mb-3.5" style={{ width: 44, height: 5, borderRadius: 999, background: '#dddcd8' }} />
+                        <p style={{ ...fuente(600, '19px', '1.3'), color: INK, margin: 0 }}>
+                            {seVan.length === 1 ? '¿Registrar la salida?' : `¿Registrar la salida de ${seVan.length}?`}
+                        </p>
+                        <p style={{ ...fuente(500, '14px', '1.6'), color: 'rgba(0,0,0,.64)', margin: '10px 0 0' }}>
+                            Se guarda con la hora de ahora y <strong>no se puede deshacer</strong>. Confirmá que quien los retira es el que figura en la ficha.
+                        </p>
+
+                        <div className="rounded-[16px] mt-4" style={{ background: '#f7f7f5', padding: '4px 14px' }}>
+                            {seVan.map(j => (
+                                <div key={j.id} className="flex justify-between gap-3" style={{ padding: '10px 0' }}>
+                                    <span style={{ ...fuente(600, '13.5px'), color: INK }}>{j.nombre} {j.apellido}</span>
+                                    <span style={{ ...fuente(600, '13px'), color: '#3730a3' }}>Se retira</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {errorSalida && (
+                            <div className="rounded-[14px] mt-3" style={{ background: errorSalida.conexion ? AMBAR : '#fdecea', padding: '12px 14px' }}>
+                                <p style={{ ...fuente(500, '13px', '1.5'), color: errorSalida.conexion ? '#5c3b0b' : ROJO, margin: 0 }}>
+                                    {errorSalida.texto}
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-2 mt-5">
+                            <button
+                                type="button"
+                                onClick={guardarSalida}
+                                disabled={guardandoSalida}
+                                className="border-0 rounded-full flex items-center justify-center gap-2 cursor-pointer"
+                                style={{ height: 52, background: '#3730a3', color: '#fff', ...fuente(600, '15px') }}
+                            >
+                                {guardandoSalida && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {guardandoSalida ? 'Guardando…' : errorSalida ? 'Reintentar' : 'Sí, se retira'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setConfirmandoSalida(false); setErrorSalida(null); }}
                                 className="border-0 rounded-full cursor-pointer"
                                 style={{ height: 52, background: CAMPO, color: INK, ...fuente(600, '15px') }}
                             >
