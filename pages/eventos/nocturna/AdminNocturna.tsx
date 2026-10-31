@@ -232,6 +232,10 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
         const sinFotos = inscripciones.filter(i => !i.aceptaFotos)
             .reduce((a, i) => a + (i.jovenes?.length || 0), 0);
         const sinEmail = inscripciones.filter(i => !i.emailEnviadoAt).length;
+        // Retirados: adolescentes con la salida registrada (en la puerta o a
+        // mano desde la ficha). La misma marca que cuenta Reportes.
+        const retirados = inscripciones
+            .reduce((a, i) => a + (i.jovenes || []).filter(j => j.retiradoAt).length, 0);
         // Adolescentes por tribu, de todas las inscripciones. Una tribu que no
         // sea ninguna de las dos cuenta como "Sin tribu": así las tres suman
         // siempre lo mismo que `chicos`.
@@ -241,7 +245,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                 tribus[j.tribu === 'Garra' || j.tribu === 'Trueno' ? j.tribu : 'Sin tribu'] += 1;
             }
         }
-        return { chicos, aprobados, sinFotos, sinEmail, tribus, familias: inscripciones.length };
+        return { chicos, aprobados, retirados, sinFotos, sinEmail, tribus, familias: inscripciones.length };
     }, [inscripciones]);
 
     // ── Acciones ──────────────────────────────────────────────────────────
@@ -807,6 +811,10 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                         <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: VERDE }}>
                             <span style={{ width: 7, height: 7, borderRadius: 999, background: '#16a34a' }} />
                             {resumen.aprobados} {resumen.aprobados === 1 ? 'aprobado' : 'aprobados'}
+                        </span>
+                        <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: INK }}>
+                            <span style={{ width: 7, height: 7, borderRadius: 999, background: INK }} />
+                            {resumen.retirados} {resumen.retirados === 1 ? 'retirado' : 'retirados'}
                         </span>
                         {resumen.sinFotos > 0 && (
                             <span className="flex items-center gap-1.5" style={{ ...fuente(600, '12.5px'), color: AMBAR_INK }}>
