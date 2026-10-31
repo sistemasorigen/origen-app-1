@@ -513,9 +513,17 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         })();
     }, []);
 
+    /**
+     * El cartel de "listo" se cierra solo a los 2 segundos.
+     *
+     * Dos y no cinco: es una confirmación, no algo para leer. Ocupa la hoja
+     * entera —se ve de un vistazo, con el celular en la mano y la familia
+     * pasando— y después se va sola, sin que nadie toque nada, y la pantalla
+     * vuelve al escáner lista para la próxima.
+     */
     useEffect(() => {
         if (!aviso) return;
-        const t = setTimeout(() => setAviso(null), 5000);
+        const t = setTimeout(() => setAviso(null), 2000);
         return () => clearTimeout(t);
     }, [aviso]);
 
@@ -1523,22 +1531,45 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                 </div>
             )}
 
-            {/* Aviso de éxito */}
-            {aviso && (
-                <div className="absolute left-3.5 right-3.5 flex justify-center z-30" style={{ top: 76 }}>
+            {/* Acreditado: la misma hoja de la familia, en verde.
+                Hasta el 2026-10-30 era un cartelito arriba de la cámara, que
+                con el celular en la mano y gente pasando se perdía. Ahora
+                ocupa el mismo lugar que acaba de dejar la familia, se ve de
+                un vistazo y se va sola a los 2 segundos.
+                `!panel`: si en esos 2 segundos ya se escaneó a la familia
+                siguiente, manda la familia nueva y esto no se dibuja. */}
+            {aviso && !panel && (
+                <div
+                    className="absolute inset-0 z-30 flex items-end lg:items-stretch lg:justify-end"
+                    style={{ background: 'rgba(0,0,0,.35)' }}
+                    role="status"
+                    aria-live="polite"
+                >
                     <div
-                        className="w-full flex items-center gap-3"
-                        style={{ maxWidth: 400, background: '#16a34a', borderRadius: 20, padding: '12px 16px', boxShadow: '0 10px 30px rgba(0,0,0,.35)' }}
-                        role="status"
+                        className="w-full lg:w-[440px] lg:m-5 lg:self-end"
+                        style={{
+                            background: '#16a34a',
+                            borderRadius: '28px 28px 0 0',
+                            padding: '12px 20px 30px',
+                            boxShadow: '0 -10px 40px rgba(0,0,0,.35)',
+                        }}
                     >
-                        <span className="flex items-center justify-center flex-none" style={{ width: 34, height: 34, borderRadius: 999, background: 'rgba(255,255,255,.22)' }}>
-                            <Check className="w-[18px] h-[18px] text-white" strokeWidth={3} />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                            <p style={{ ...fuente(600, '15px'), color: '#fff', margin: 0 }}>{aviso}</p>
-                            <p style={{ ...fuente(500, '12.5px'), color: 'rgba(255,255,255,.88)', margin: '2px 0 0' }}>
-                                Listo para la próxima familia
-                            </p>
+                        <div className="lg:hidden mx-auto mb-5" style={{ width: 44, height: 5, borderRadius: 999, background: 'rgba(255,255,255,.4)' }} />
+                        <div className="flex items-center gap-4">
+                            <span
+                                className="flex items-center justify-center flex-none"
+                                style={{ width: 56, height: 56, borderRadius: 999, background: 'rgba(255,255,255,.22)' }}
+                            >
+                                <Check className="w-7 h-7 text-white" strokeWidth={3} />
+                            </span>
+                            <div className="flex-1 min-w-0">
+                                <p style={{ ...fuente(600, '20px', '1.25'), color: '#fff', margin: 0, letterSpacing: '-.01em' }}>
+                                    {aviso}
+                                </p>
+                                <p style={{ ...fuente(500, '14px', '1.4'), color: 'rgba(255,255,255,.9)', margin: '4px 0 0' }}>
+                                    Listo para la próxima familia
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
