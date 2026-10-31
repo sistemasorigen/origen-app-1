@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Check, ChevronLeft, Flashlight, Keyboard, Loader2, X } from 'lucide-react';
 import { useEscanerQR, useMantenerPantallaEncendida } from '../../../hooks/useEscanerQR';
 import { probarConexionBase, supabaseService } from '../../../services/supabaseService';
-import { NocturnaTribu, User } from '../../../types';
-import { COLOR_TRIBU, enLista } from './compartido/formulario';
+import { NocturnaRestriccion, NocturnaTribu, User } from '../../../types';
+import { COLOR_TRIBU, enLista, etiquetaRestriccion } from './compartido/formulario';
 import { esCodigoDeEntrada, esLecturaRepetida, esUUID, normalizarCodigo, UltimaLectura } from './compartido/lecturaQR';
-import { AMBAR, AMBAR_INK, CAMPO, ESTILOS_PANEL, fuente, INK, ROJO, ROJO_FONDO, VERDE, VERDE_PUNTO } from './compartido/estilos';
+import { AMBAR, AMBAR_INK, BORDE, CAMPO, ESTILOS_PANEL, fuente, INK, ROJO, ROJO_FONDO, VERDE, VERDE_PUNTO } from './compartido/estilos';
 
 /**
  * Acreditación en la puerta.
@@ -36,6 +36,11 @@ interface JovenAcred {
      * así se puede corregir desde acá; la de la inscripción, no.
      */
     tribu_en_puerta?: boolean;
+    /**
+     * Celiaquía o diabetes, lo que respondió la familia al inscribirse. En la
+     * puerta se mira para avisarle a la cocina. 'ninguna' es lo normal.
+     */
+    restriccion?: NocturnaRestriccion;
     /** Su celular, si tiene. */
     telefono: string | null;
     acreditado_at: string | null;
@@ -538,6 +543,15 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         ? familia.jovenes.map(j => j.nombre)
         : [];
 
+    /**
+     * Los que tienen algo con la comida, como los nombra la planilla
+     * ("Celiaquía · Ana"). Sólo los que tienen: una lista con un "ninguna"
+     * por cada adolescente hace que la única que importa se pierda.
+     */
+    const conRestriccion = (familia?.jovenes || [])
+        .filter(j => (j.restriccion || 'ninguna') !== 'ninguna')
+        .map(j => `${etiquetaRestriccion(j.restriccion)} · ${j.nombre}`);
+
     // ── Acciones ──────────────────────────────────────────────────────────
     const cerrarPanel = () => {
         setPanel(null);
@@ -808,11 +822,21 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
         marca: Marca;
         /** Lo que la base ya tiene: la fila queda fija y no rota más. */
         fijado: { texto: string; rojo?: boolean } | null;
-        sinFoto?: boolean;
+        /**
+         * "Celiaquía" o "Diabetes", si tiene.
+         *
+         * Hasta el 2026-10-30 acá iba una pastilla "Sin fotos" en CADA fila.
+         * El permiso de fotos es de la familia entera, así que decía lo mismo
+         * tantas veces como adolescentes hubiera y tapaba lo que sí es de
+         * cada uno. Ahora las fotos se ven una sola vez arriba (en la ficha
+         * del adulto y, si no autorizan, en su cartel), y una pastilla en una
+         * fila quiere decir una sola cosa: algo con la comida.
+         */
+        restriccion?: string;
         /** Lo que dice debajo del nombre cuando está en "no vino". */
         textoAusente?: string;
         onClick: () => void;
-    }> = ({ nombre, sub, marca, fijado, sinFoto, textoAusente, onClick }) => {
+    }> = ({ nombre, sub, marca, fijado, restriccion, textoAusente, onClick }) => {
         const entra = marca === 'entra';
         const ausente = marca === 'ausente';
         const color = ausente ? ROJO : VERDE_PUNTO;
@@ -859,15 +883,86 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                         {fijado ? fijado.texto : ausente ? (textoAusente || 'No vino') : sub}
                     </span>
                 </span>
-                {sinFoto && (
+                {restriccion && (
                     <span
                         className="flex items-center flex-none"
                         style={{ height: 28, padding: '0 10px', borderRadius: 999, background: AMBAR, color: AMBAR_INK, ...fuente(600, '12px') }}
                     >
-                        Sin fotos
+                        {restriccion}
                     </span>
                 )}
             </button>
+        );
+    };
+
+    /**
+     * El adulto que inscribió, entero.
+     *
+     * Antes el panel decía sólo su nombre. En la puerta hacen falta las tres
+     * cosas: el DNI para cotejarlo con lo que muestra, el celular para
+     * llamarlo si algo no cierra, y el email, que es donde le llegó la
+     * entrada y con lo que se la busca. El celular y el email se tocan: abren
+     * el teléfono y el correo.
+     *
+     * La última fila es el permiso de fotos. Cuando es "no" también sale el
+     * cartel ámbar de arriba, que es el que hay que ver sin buscarlo; esta
+     * fila está para poder confirmar la respuesta de la familia en los dos
+     * casos, sin abrir la planilla.
+     */
+    const FichaAdulto: React.FC<{ insc: InscAcred }> = ({ insc }) => {
+        const tel = (insc.adulto_telefono || '').trim();
+        const email = (insc.adulto_email || '').trim();
+        const filas: { rotulo: string; valor: string; href?: string; ambar?: boolean }[] = [
+            { rotulo: 'DNI', valor: (insc.adulto_dni || '').trim() || 'No figura' },
+            {
+                rotulo: 'Celular',
+                valor: tel || 'No lo dejó',
+                // Las inscripciones de antes del 19-oct-2026 no tienen celular;
+                // ésas se llaman por el email.
+                href: tel ? `tel:${tel.replace(/[^+\d]/g, '')}` : undefined,
+            },
+            { rotulo: 'Email', valor: email || 'No figura', href: email ? `mailto:${email}` : undefined },
+            {
+                rotulo: 'Fotos',
+                valor: insc.acepta_fotos ? 'Autoriza' : 'No autoriza',
+                ambar: !insc.acepta_fotos,
+            },
+        ];
+
+        return (
+            <div className="mt-3" style={{ background: CAMPO, borderRadius: 16, padding: '4px 14px' }}>
+                {filas.map((f, i) => (
+                    <div
+                        key={f.rotulo}
+                        className="flex items-center gap-3"
+                        style={{ minHeight: 38, borderTop: i === 0 ? 'none' : `1px solid ${BORDE}` }}
+                    >
+                        <span className="flex-none" style={{ ...fuente(600, '12.5px'), color: 'rgba(0,0,0,.55)', width: 62 }}>
+                            {f.rotulo}
+                        </span>
+                        {f.href ? (
+                            <a
+                                href={f.href}
+                                className="flex-1 min-w-0 text-right truncate"
+                                style={{
+                                    ...fuente(600, '14.5px'), color: INK,
+                                    textDecoration: 'underline', textUnderlineOffset: 3,
+                                    textDecorationColor: 'rgba(0,0,0,.25)',
+                                }}
+                            >
+                                {f.valor}
+                            </a>
+                        ) : (
+                            <span
+                                className="flex-1 min-w-0 text-right truncate"
+                                style={{ ...fuente(600, '14.5px'), color: f.ambar ? AMBAR_INK : INK }}
+                            >
+                                {f.valor}
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
         );
     };
 
@@ -1565,6 +1660,22 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                     </button>
                                 </div>
 
+                                <FichaAdulto insc={familia.insc} />
+
+                                {/* La comida va antes que las fotos: es lo que
+                                    hay que resolver esta noche, y la cocina
+                                    está a unos metros de la puerta. */}
+                                {!!conRestriccion.length && (
+                                    <div className="flex items-center gap-2.5 mt-3" style={{ background: AMBAR, borderRadius: 14, padding: '10px 14px' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AMBAR_INK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none" aria-hidden="true">
+                                            <path d="M4 3v8a2 2 0 0 0 4 0V3" /><path d="M6 11v10" /><path d="M17 3c-1.5 1.5-2 3.5-2 5.5 0 1.5.5 2.5 2 2.5s2-1 2-2.5c0-2-.5-4-2-5.5z" /><path d="M17 11v10" />
+                                        </svg>
+                                        <span style={{ ...fuente(600, '13.5px', '1.4'), color: '#5c3b0b' }}>
+                                            {enLista(conRestriccion)}. Avisale a la cocina.
+                                        </span>
+                                    </div>
+                                )}
+
                                 {!!sinFotos.length && (
                                     <div className="flex items-center gap-2.5 mt-3" style={{ background: AMBAR, borderRadius: 14, padding: '10px 14px' }}>
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AMBAR_INK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none" aria-hidden="true">
@@ -1588,7 +1699,8 @@ const AcreditarNocturna: React.FC<Props> = ({ currentUser }) => {
                                                         : j.acreditado_at ? { texto: `Ya entró a las ${soloHora(j.acreditado_at)}` }
                                                             : null
                                                 }
-                                                sinFoto={!familia.insc.acepta_fotos}
+                                                restriccion={(j.restriccion || 'ninguna') !== 'ninguna'
+                                                    ? etiquetaRestriccion(j.restriccion) : undefined}
                                                 textoAusente={j.ausente_at ? 'No vino · tocá si llegó' : undefined}
                                                 onClick={() => alternarPersona(j.id)}
                                             />
