@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, ChevronDown, ChevronLeft, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronLeft, Folder, FolderOpen, Loader2, Pencil, Plus, QrCode, Search, Trash2, X } from 'lucide-react';
 import { useBloqueoDeFondo } from '../../../hooks/useBloqueoDeFondo';
 import { hasRole } from '../../../services/authUtils';
 import { supabaseService } from '../../../services/supabaseService';
@@ -142,6 +142,35 @@ const chicosDe = (filas: { insc: NocturnaInscripcion }[]): number =>
 
 const CLAVE_SCROLL = 'nocturna.planilla';
 
+/**
+ * Las tres carpetas de la planilla, en el orden de la noche: los que están
+ * adentro, los que ya se fueron y los que todavía no llegaron.
+ *
+ * - Ingresados: la familia pasó la puerta y le queda al menos un chico adentro
+ *   (o ninguno se fue todavía).
+ * - Retirados: entraron y ya salieron todos los que habían entrado.
+ * - Inscritos: todavía no pasaron por la puerta.
+ */
+type Carpeta = 'ingresados' | 'retirados' | 'inscritos';
+const CARPETAS: { clave: Carpeta; titulo: string; vacia: string }[] = [
+    { clave: 'ingresados', titulo: 'Ingresados', vacia: 'Todavía no ingresó nadie.' },
+    { clave: 'retirados', titulo: 'Retirados', vacia: 'Todavía no se retiró nadie.' },
+    { clave: 'inscritos', titulo: 'Inscritos', vacia: 'No queda nadie sin ingresar.' },
+];
+const carpetaDe = (insc: NocturnaInscripcion): Carpeta => {
+    if (estadoInscripcion(insc) !== 'Aprobado') return 'inscritos';
+    const { adentro, retirados } = contarEstados(insc);
+    return adentro === 0 && retirados > 0 ? 'retirados' : 'ingresados';
+};
+/** Las carpetas plegadas, en este dispositivo. */
+const CLAVE_CARPETAS = 'nocturna.planilla.plegadas';
+const leerPlegadas = (): Carpeta[] => {
+    try {
+        const v = JSON.parse(localStorage.getItem(CLAVE_CARPETAS) || '[]');
+        return Array.isArray(v) ? v.filter((c): c is Carpeta => CARPETAS.some(x => x.clave === c)) : [];
+    } catch { return []; }
+};
+
 const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
     const navigate = useNavigate();
     // Borrar es de coordinación. La gente de la puerta (ACREDITACION) ve y
@@ -235,17 +264,63 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
             .filter(Boolean) as { insc: NocturnaInscripcion; coincideChico: string[] }[];
     }, [inscripciones, busqueda]);
 
+    const buscando = !!busqueda.trim();
     const grupos = useMemo(() => {
-        const aprobadas = filtradas.filter(f => estadoInscripcion(f.insc) === 'Aprobado');
-        const inscriptas = filtradas.filter(f => estadoInscripcion(f.insc) !== 'Aprobado');
-        // Los títulos cuentan ADOLESCENTES, no familias: son los que entran
-        // esa noche, los que comen y los que se reparten en las tribus. Una
-        // familia puede traer tres. Las filas siguen siendo una por familia.
-        const salida: { titulo: string; filas: typeof filtradas }[] = [];
-        if (aprobadas.length) salida.push({ titulo: `APROBADOS · ${chicosDe(aprobadas)}`, filas: aprobadas });
-        if (inscriptas.length) salida.push({ titulo: `INSCRIPTOS · ${chicosDe(inscriptas)}`, filas: inscriptas });
-        return salida;
-    }, [filtradas]);
+        // Las tres carpetas siempre, en el orden de la noche. Buscando, sólo
+        // las que tienen resultados. Los títulos cuentan ADOLESCENTES, no
+        // familias: son los que entran esa noche, los que comen y los que se
+        // reparten en las tribus. Las filas siguen siendo una por familia.
+        return CARPETAS
+            .map(c => {
+                const filas = filtradas.filter(f => carpetaDe(f.insc) === c.clave);
+                return { ...c, filas, chicos: chicosDe(filas) };
+            })
+            .filter(g => !buscando || g.filas.length > 0);
+    }, [filtradas, buscando]);
+
+    // Plegar y desplegar las carpetas. Se recuerda en el dispositivo; buscando
+    // se abren todas, para que un resultado no quede escondido.
+    const [plegadas, setPlegadas] = useState<Carpeta[]>(leerPlegadas);
+    const abierta = (c: Carpeta) => buscando || !plegadas.includes(c);
+    const alternarCarpeta = (c: Carpeta) => {
+        if (buscando) return;
+        setPlegadas(p => {
+            const nuevas = p.includes(c) ? p.filter(x => x !== c) : [...p, c];
+            try { localStorage.setItem(CLAVE_CARPETAS, JSON.stringify(nuevas)); } catch { /* queda hasta recargar */ }
+            return nuevas;
+        });
+    };
+    /** El encabezado de una carpeta: tocarlo la abre o la cierra. */
+    const cabeceraCarpeta = (g: (typeof grupos)[number], pc: boolean) => {
+        const abiertaYa = abierta(g.clave);
+        const Icono = abiertaYa ? FolderOpen : Folder;
+        return (
+            <button
+                type="button"
+                onClick={() => alternarCarpeta(g.clave)}
+                aria-expanded={abiertaYa}
+                aria-controls={`carpeta-${g.clave}-${pc ? 'pc' : 'movil'}`}
+                className="w-full flex items-center gap-2.5 border-0 text-left cursor-pointer"
+                style={pc
+                    ? { padding: '11px 20px', background: '#fafaf9', borderBottom: `1px solid ${CAMPO}` }
+                    : { padding: '10px 14px', margin: '0 0 10px', borderRadius: 16, background: CAMPO }}
+            >
+                <Icono className="w-[17px] h-[17px] flex-none" style={{ color: INK }} strokeWidth={2} aria-hidden="true" />
+                <span style={{ ...fuente(600, pc ? '13px' : '14px'), color: INK }}>{g.titulo}</span>
+                <span
+                    style={{ ...fuente(600, '12px'), color: 'rgba(0,0,0,.6)', background: pc ? CAMPO : '#fff', borderRadius: 999, padding: '2px 8px', fontVariantNumeric: 'tabular-nums' }}
+                    aria-label={`${g.chicos} ${g.chicos === 1 ? 'adolescente' : 'adolescentes'}`}
+                >
+                    {g.chicos}
+                </span>
+                <ChevronDown
+                    className="w-4 h-4 ml-auto flex-none transition-transform duration-200"
+                    style={{ color: 'rgba(0,0,0,.55)', transform: abiertaYa ? 'rotate(180deg)' : 'none' }}
+                    aria-hidden="true"
+                />
+            </button>
+        );
+    };
 
     const resumen = useMemo(() => {
         const chicos = inscripciones.reduce((a, i) => a + (i.jovenes?.length || 0), 0);
@@ -907,11 +982,12 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                             {/* ── Mobile: una carta por familia ───────────── */}
                             <div className="lg:hidden">
                                 {grupos.map(g => (
-                                    <div key={g.titulo}>
-                                        <p style={{ ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)', margin: '6px 4px 10px' }}>
-                                            {g.titulo}
-                                        </p>
-                                        <div className="flex flex-col gap-2.5 mb-5">
+                                    <div key={g.clave}>
+                                        {cabeceraCarpeta(g, false)}
+                                        {abierta(g.clave) && g.filas.length === 0 && (
+                                            <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.55)', margin: '0 6px 16px' }}>{g.vacia}</p>
+                                        )}
+                                        <div id={`carpeta-${g.clave}-movil`} className={`${abierta(g.clave) && g.filas.length ? 'flex' : 'hidden'} flex-col gap-2.5 mb-5`}>
                                             {g.filas.map(({ insc, coincideChico }) => (
                                                 <div key={insc.id} className="rounded-[20px]" style={{ background: CARTA, padding: 16 }}>
                                                     <div className="flex items-start gap-2.5">
@@ -1001,10 +1077,12 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                     ))}
                                 </div>
                                 {grupos.map(g => (
-                                    <div key={g.titulo}>
-                                        <div style={{ padding: '10px 20px', background: '#fafaf9', borderBottom: `1px solid ${CAMPO}`, ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)' }}>
-                                            {g.titulo}
-                                        </div>
+                                    <div key={g.clave}>
+                                        {cabeceraCarpeta(g, true)}
+                                        {abierta(g.clave) && g.filas.length === 0 && (
+                                            <p style={{ ...fuente(500, '13px'), color: 'rgba(0,0,0,.55)', margin: 0, padding: '12px 20px', borderBottom: `1px solid ${CAMPO_HONDO}` }}>{g.vacia}</p>
+                                        )}
+                                        <div id={`carpeta-${g.clave}-pc`} className={abierta(g.clave) ? '' : 'hidden'}>
                                         {g.filas.map(({ insc, coincideChico }) => (
                                             <div
                                                 key={insc.id}
@@ -1073,6 +1151,7 @@ const AdminNocturna: React.FC<Props> = ({ currentUser }) => {
                                                 </div>
                                             </div>
                                         ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
