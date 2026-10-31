@@ -83,6 +83,48 @@ const chicoNuevo = (apellido = ''): ChicoForm => ({
     restriccion: 'ninguna',
 });
 
+// ── Piezas ──────────────────────────────────────────────────────────────────
+// AFUERA del componente a propósito. Declaradas adentro, cada tecla creaba
+// funciones nuevas: React las veía como otro componente, desmontaba la tarjeta
+// entera y volvía a montarla, el input perdía el foco y en el iPhone se cerraba
+// el teclado a la primera letra. No usan nada del estado: sólo sus props.
+
+const Carta: React.FC<{ rotulo: string; extra?: React.ReactNode; children: React.ReactNode }> = ({ rotulo, extra, children }) => (
+    <div className="rounded-[22px]" style={{ background: CARTA, padding: 20 }}>
+        <div className="flex items-baseline justify-between gap-2">
+            <p style={{ ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)', margin: 0 }}>{rotulo}</p>
+            {extra}
+        </div>
+        {children}
+    </div>
+);
+
+const Elegible: React.FC<{ activa: boolean; onClick: () => void; children: React.ReactNode }> = ({ activa, onClick, children }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={activa}
+        className="border-0 rounded-full cursor-pointer"
+        style={{ height: 46, background: activa ? INK : CAMPO_HONDO, color: activa ? '#fff' : INK, ...fuente(600, '13.5px') }}
+    >
+        {children}
+    </button>
+);
+
+const Tilde: React.FC<{ activa: boolean }> = ({ activa }) => (
+    <span
+        className="flex items-center justify-center flex-none"
+        style={{
+            width: 22, height: 22, borderRadius: 999,
+            background: activa ? '#16a34a' : CARTA,
+            boxShadow: activa ? 'none' : '0 0 0 1.5px #d6d5d1 inset',
+        }}
+        aria-hidden="true"
+    >
+        {activa && <Check className="w-3 h-3 text-white" strokeWidth={3.2} />}
+    </span>
+);
+
 const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -319,43 +361,6 @@ const CrearInscripcionNocturna: React.FC<Props> = ({ currentUser, modoEdicion = 
         setResultado(res);
         // enviandoRef queda en true: la inscripción ya existe.
     };
-
-    // ── Piezas ────────────────────────────────────────────────────────────
-    const Carta: React.FC<{ rotulo: string; extra?: React.ReactNode; children: React.ReactNode }> = ({ rotulo, extra, children }) => (
-        <div className="rounded-[22px]" style={{ background: CARTA, padding: 20 }}>
-            <div className="flex items-baseline justify-between gap-2">
-                <p style={{ ...fuente(600, '11px'), letterSpacing: '.07em', color: 'rgba(0,0,0,.55)', margin: 0 }}>{rotulo}</p>
-                {extra}
-            </div>
-            {children}
-        </div>
-    );
-
-    const Elegible: React.FC<{ activa: boolean; onClick: () => void; children: React.ReactNode }> = ({ activa, onClick, children }) => (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={activa}
-            className="border-0 rounded-full cursor-pointer"
-            style={{ height: 46, background: activa ? INK : CAMPO_HONDO, color: activa ? '#fff' : INK, ...fuente(600, '13.5px') }}
-        >
-            {children}
-        </button>
-    );
-
-    const Tilde: React.FC<{ activa: boolean }> = ({ activa }) => (
-        <span
-            className="flex items-center justify-center flex-none"
-            style={{
-                width: 22, height: 22, borderRadius: 999,
-                background: activa ? '#16a34a' : CARTA,
-                boxShadow: activa ? 'none' : '0 0 0 1.5px #d6d5d1 inset',
-            }}
-            aria-hidden="true"
-        >
-            {activa && <Check className="w-3 h-3 text-white" strokeWidth={3.2} />}
-        </span>
-    );
 
     // ── Pantallas completas ───────────────────────────────────────────────
     if (cargando) {
