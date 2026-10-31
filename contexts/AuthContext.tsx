@@ -110,6 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Mounted ref for async safety
     const mounted = useRef(true);
 
+    // Quién hay con sesión AHORA. El chequeo de "volví al frente" corre desde
+    // un listener que se engancha una sola vez: sin el ref vería siempre el
+    // usuario del primer render.
+    const usuarioRef = useRef<User | null>(null);
+    useEffect(() => { usuarioRef.current = user; }, [user]);
+
     // Reintento en segundo plano cuando la base no responde, para que la
     // persona no tenga que recargar para salir del estado degradado.
     const reintentoRef = useRef<number | null>(null);
@@ -420,8 +426,41 @@ const fullUser: User = {
             }
         });
 
+        /**
+         * Volver al frente: ¿apareció una sesión mientras tanto?
+         *
+         * En Android, con la app instalada, la vuelta de Google puede
+         * terminar en una pestaña del navegador en vez de adentro de la app.
+         * La sesión queda guardada igual —es el mismo sitio, el mismo
+         * almacenamiento—, pero esta pantalla no se entera: el listener de
+         * arriba corre una sola vez, al montar, y la app nunca se volvió a
+         * montar. El resultado era un bucle: la persona entra con Google,
+         * vuelve a la app, la ve pidiéndole que entre, y prueba otra vez.
+         *
+         * Cada vez que la app vuelve al frente SIN sesión, se fija si hay
+         * una guardada. Si la hay, entra. Si no, no hace nada.
+         */
+        const alVolverAlFrente = () => {
+            if (document.visibilityState !== 'visible') return;
+            if (usuarioRef.current) return;
+            supabase.auth.getSession()
+                .then(({ data: { session } }) => {
+                    if (!mounted.current || usuarioRef.current) return;
+                    if (session?.user) {
+                        setIsLoadingSession(false);
+                        hydrateUser(session.user);
+                    }
+                })
+                .catch(() => { /* sin conexión: queda como estaba */ });
+        };
+
+        document.addEventListener('visibilitychange', alVolverAlFrente);
+        window.addEventListener('focus', alVolverAlFrente);
+
         return () => {
             subscription.unsubscribe();
+            document.removeEventListener('visibilitychange', alVolverAlFrente);
+            window.removeEventListener('focus', alVolverAlFrente);
         };
     }, []); // eslint-disable-next-line react-hooks/exhaustive-deps
 
@@ -455,6 +494,15 @@ const fullUser: User = {
             // Si hay un destino guardado (ej: volver al
             // modal de un grupo de conexión), Google debe
             // devolver ahí en vez de a la raíz.
+            //
+            //
+            // OJO con agregarle el "#" de HashRouter a esta dirección: este
+            // proyecto usa el flujo "implicit" (gotrue-js, flowType por
+            // defecto), así que Google vuelve con los tokens EN EL HASH
+            // (#access_token=…). Un hash propio ahí lo pisa el de los
+            // tokens, y lo único que se consigue es romper el login. Si
+            // algún día se pasa a PKCE —los tokens vuelven en "?code="—,
+            // ahí sí conviene mandar "/#" + destino.
             const destino = sessionStorage.getItem(
                 'post_login_redirect'
             );
