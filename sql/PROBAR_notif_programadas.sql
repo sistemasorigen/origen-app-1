@@ -445,7 +445,7 @@ PERFORM pg_temp.chk('R22', 'la lista trae personas y nombres de las elegidas', '
     (SELECT (x->>'audiencia_personas') || ' personas · ' ||
             (SELECT string_agg(e->>'nombre', ', ' ORDER BY e->>'nombre') FROM jsonb_array_elements(x->'audiencia_detalle') e)
        FROM jsonb_array_elements(v_j->'alertas') x WHERE x->>'id' = p_mix::text));
-PERFORM pg_temp.chk('R23', 'las automáticas siguen en la lista, sin campos de programada', '20 · sin alcance',
+PERFORM pg_temp.chk('R23', 'las automáticas siguen en la lista, sin campos de programada', '21 · sin alcance',
     (SELECT count(*) || CASE WHEN bool_and(NOT (x ? 'alcance')) THEN ' · sin alcance' ELSE ' · CON alcance' END
        FROM jsonb_array_elements(v_j->'alertas') x WHERE x->>'tipo' = 'automatica'));
 

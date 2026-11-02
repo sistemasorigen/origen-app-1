@@ -2813,6 +2813,91 @@ desde la pantalla: el aviso sigue en la campanita y deja de sonar dos veces.
 transferencias de grupo de `supabaseService.ts`, **nadie la lee** y no genera
 push. Su última fila es del 2026-09-24.
 
+## 41. TESTIMONIOS DE LOS GCX
+
+Desde el **2026-11-02** (base ⏳ pendiente de aplicar en producción). Quien fue parte de un GCX en la temporada cuenta lo
+que vivió, y queda publicado para que cualquiera lo lea, con o sin sesión.
+Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 89 casos; deshacer
+`ROLLBACK_`). Servicio: `services/testimonios.ts`. Diseños:
+`design-claude/GCX Testimonios - Dejar testimonio.dc.html` y
+`design-claude/GCX Testimonios - Testimonios.dc.html`; inventario completo en
+`design-claude/INVENTARIO-TESTIMONIOS-GCX.md`.
+
+### El plan (4 prompts)
+1. Diseños, inventario y base (tablas, seguridad, funciones). Sin pantallas.
+2. `/testimonios-gcx`: dejar un testimonio.
+3. `/testimonios` y `/testimonios/:groupId`: leer, buscar, corazones, compartir.
+4. "Mis testimonios" en el Perfil y la moderación en Sistemas
+   (`/panel-admin?tab=testimonios`, a donde ya apunta el aviso).
+
+### Las reglas (no se cambian)
+- **Temporada vigente**: la última que EMPEZÓ, con las fechas de inicio y fin
+  de la configuración (`app_config` 'global' → `groupsConfig.seasonSettings`,
+  las de /admingcx/temporadas), en hora argentina. Se calcula en UNA función:
+  `testimonios_temporada_en(p_ahora)`. La carga sigue abierta **un mes** después
+  del fin (S3: hasta el 29/12, inclusive). Después se cierra, pero lo publicado
+  se ve hasta que empieza la temporada siguiente. A principios de enero la
+  vigente es la Tercera del año anterior. **`isOpen` y `activeYear` no deciden
+  cuál es la vigente**: dicen si se pueden crear grupos, y si contaran, cerrar
+  la temporada cortaría el mes extra.
+- **Un grupo es de la temporada** con la regla de `getSeasonFromDate` más el
+  año de `start_date`, copiada en `testimonios_temporada_de_fecha`: si cambia
+  una, cambia la otra. Esa regla tiene fechas fijas y NO lee la configuración
+  (hoy difiere el fin de la Primera: 31/5 en la regla, 17/5 en la
+  configuración).
+- **Quién publica**: sesión + inscripción `APPROVED` en un GCX aprobado de la
+  temporada vigente (la pareja de `partner_user_id` también cuenta),
+  adolescentes incluidos. Uno por persona y por GCX. 5 por día. Anfitrión y
+  co-anfitrión NO, porque no tienen inscripción.
+- **Qué se publica**: nombre, GCX, temporada y año, y el texto (1 a 1000
+  caracteres, sin espacios ni saltos al principio ni al final). Sólo con el
+  consentimiento del modal (`consentimiento_at`). **No se edita nunca.**
+- **Lectura pública**: galería y detalle sin sesión; corazón y publicar, con
+  sesión. A anon nunca le llega un id de usuario, un email ni un teléfono: de
+  las personas, el nombre (y la foto del anfitrión y del co-anfitrión).
+
+### Las tablas
+`gcx_testimonios` (estado `publicado` · `eliminacion_solicitada` · `oculto`,
+`estado_antes_del_pedido`, fechas del pedido y de la decisión, `decidido_por`;
+`UNIQUE (autor_id, group_id)`; CHECK del largo),
+`gcx_testimonios_corazones` (PK testimonio+persona, `ON DELETE CASCADE`) y
+`gcx_testimonios_ritmo` (toques de corazón por minuto). RLS prendida, **sin
+policies** y con `REVOKE ALL` a anon y authenticated: todo por funciones
+`SECURITY DEFINER`. `gcx_testimonios` tiene el trigger genérico
+`audit_gcx_testimonios_changes` (`log_audit_event`).
+
+### Las funciones
+Cada una contesta `{ ok, … }` o `{ ok: false, motivo }`.
+- Públicas: `testimonios_temporada()`, `testimonios_grupos(p_busqueda)`
+  (TODOS los GCX de la temporada, con `coincide` = grupo / anfitrion /
+  testimonio y `autores`; sin mayúsculas ni acentos con `testimonios_norm`) y
+  `testimonios_grupo(p_group_id)` (con sesión suma `yo_di` y `es_mio`).
+- Con sesión: `testimonios_mis_grupos()`, `testimonios_publicar(p_group_id,
+  p_texto, p_consiento)` (reintentar con el mismo texto devuelve el mismo,
+  `ya_existia`), `testimonios_corazon(p_testimonio_id, p_dar)` (idempotente, 30
+  toques por minuto), `testimonios_mios()` y
+  `testimonios_solicitar_eliminacion(p_id, p_motivo)` (lo oculta en el acto).
+- Sólo SUPER_ADMIN: `testimonios_admin_listar(estado, busqueda, temporada,
+  anio, limite)` (los pedidos primero) y `testimonios_admin_resolver(p_id,
+  p_accion)`: `eliminar` (de verdad, con sus corazones), `rechazar` (vuelve a
+  como estaba: uno que Sistemas había ocultado sigue oculto), `ocultar`,
+  `mostrar`.
+- Motivos: `sin_sesion`, `no_inscripto`, `fuera_de_plazo`, `fuera_de_temporada`,
+  `ya_publicado`, `texto_invalido`, `sin_consentimiento`, `tope`, `sin_nombre`,
+  `no_existe`, `no_es_tuyo`, `motivo_largo`, `no_autorizado`, `accion_invalida`,
+  `estado_invalido`. En el servicio, `mensajeDeMotivo()` los traduce.
+- Las que dependen del día tienen una gemela `_en(…, p_ahora)` para poder
+  probar cualquier fecha; las gemelas y las piezas no las ejecuta nadie de
+  afuera.
+
+### El aviso a Sistemas
+Alerta automática `testimonios_eliminacion_solicitada` (área Sistemas,
+apagable, `type_legacy = 'ADMIN'`, abre `/panel-admin?tab=testimonios`). La
+emite `testimonios_solicitar_eliminacion` con `notif_emitir` a cada
+SUPER_ADMIN, **una vez** por pedido (pedirlo de nuevo mientras está pendiente
+no vuelve a avisar). El catálogo pasa a tener **21** automáticas (las pruebas de
+Notificaciones que contaban 20 se actualizaron).
+
 ---
 
 *Última actualización: Octubre 2026 — Versión 6.0*

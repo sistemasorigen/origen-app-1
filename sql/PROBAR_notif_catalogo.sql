@@ -553,7 +553,7 @@ PERFORM pg_temp.chk('P11', 'las RPC de la pantalla, con alguien sin rol', 'sin_p
        ) t(m) WHERE m = 'sin_permiso'));
 
 PERFORM pg_temp.sesion(eva);
-PERFORM pg_temp.chk('P12', 'notif_alertas_admin con SUPER_ADMIN · trae el catálogo', 'true 20',
+PERFORM pg_temp.chk('P12', 'notif_alertas_admin con SUPER_ADMIN · trae el catálogo', 'true 21',
     (public.notif_alertas_admin()->>'ok') || ' ' || jsonb_array_length(public.notif_alertas_admin()->'alertas'));
 
 PERFORM pg_temp.chk('P13', 'notif_guardar_automatica con una variable que no es de la alerta · rechazada',
@@ -600,7 +600,7 @@ PERFORM pg_temp.chk('P19', 'notif_enviar_prueba · el aviso de prueba se manda i
 -- E · ESTADO DE LA SEMILLA
 -- ══════════════════════════════════════════════════════════════════════════
 PERFORM pg_temp.sesion(NULL);
-PERFORM pg_temp.chk('E1', 'el catálogo tiene las 20 alertas automáticas', '20 automáticas, 0 programadas',
+PERFORM pg_temp.chk('E1', 'el catálogo tiene las 21 alertas automáticas', '21 automáticas, 0 programadas',
     (SELECT count(*) FILTER (WHERE tipo = 'automatica') || ' automáticas, '
             || count(*) FILTER (WHERE tipo = 'programada') || ' programadas'
        FROM public.notif_alertas));
