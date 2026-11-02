@@ -553,7 +553,10 @@ PERFORM pg_temp.chk('P11', 'las RPC de la pantalla, con alguien sin rol', 'sin_p
        ) t(m) WHERE m = 'sin_permiso'));
 
 PERFORM pg_temp.sesion(eva);
-PERFORM pg_temp.chk('P12', 'notif_alertas_admin con SUPER_ADMIN · trae el catálogo', 'true 21',
+-- El catálogo entero: las automáticas y las programadas que haya creado
+-- Sistemas (datos reales: se cuentan, no se fijan).
+PERFORM pg_temp.chk('P12', 'notif_alertas_admin con SUPER_ADMIN · trae el catálogo',
+    'true ' || (SELECT count(*) FROM public.notif_alertas WHERE eliminada_at IS NULL),
     (public.notif_alertas_admin()->>'ok') || ' ' || jsonb_array_length(public.notif_alertas_admin()->'alertas'));
 
 PERFORM pg_temp.chk('P13', 'notif_guardar_automatica con una variable que no es de la alerta · rechazada',
@@ -600,10 +603,9 @@ PERFORM pg_temp.chk('P19', 'notif_enviar_prueba · el aviso de prueba se manda i
 -- E · ESTADO DE LA SEMILLA
 -- ══════════════════════════════════════════════════════════════════════════
 PERFORM pg_temp.sesion(NULL);
-PERFORM pg_temp.chk('E1', 'el catálogo tiene las 21 alertas automáticas', '21 automáticas, 0 programadas',
-    (SELECT count(*) FILTER (WHERE tipo = 'automatica') || ' automáticas, '
-            || count(*) FILTER (WHERE tipo = 'programada') || ' programadas'
-       FROM public.notif_alertas));
+-- Las programadas las crea Sistemas: no son parte de la semilla.
+PERFORM pg_temp.chk('E1', 'el catálogo tiene las 21 alertas automáticas', '21 automáticas',
+    (SELECT count(*) || ' automáticas' FROM public.notif_alertas WHERE tipo = 'automatica'));
 
 -- Ojo: esto corre después de P16, que pausó gcx_inscripcion_aprobada a
 -- propósito. Por eso se cuenta sobre las demás.
@@ -611,7 +613,11 @@ PERFORM pg_temp.chk('E2', 'la semilla no cambia nada: todas activas, sin no mole
     'sí', (SELECT CASE WHEN count(*) = 0 THEN 'sí'
                        ELSE 'no: ' || string_agg(clave, ', ') END
              FROM public.notif_alertas
+            -- Sólo la semilla tal como se sembró: ni las programadas ni las
+            -- que Sistemas ya editó desde la pantalla (updated_by), que puede
+            -- pausar o limitar cuando quiera.
             WHERE clave <> 'gcx_inscripcion_aprobada'
+              AND tipo = 'automatica' AND updated_by IS NULL
               AND (NOT activa OR no_molestar OR max_por_dia IS NOT NULL)));
 
 PERFORM pg_temp.chk('E3', 'todas las alertas apuntan a un type que la app sabe dibujar', 'sí',
@@ -620,7 +626,8 @@ PERFORM pg_temp.chk('E3', 'todas las alertas apuntan a un type que la app sabe d
       WHERE type_legacy NOT IN ('info', 'success', 'warning', 'ADMIN', 'REGISTRATION', 'ATTENDANCE',
             'REGISTRATION_APPROVED', 'REGISTRATION_REJECTED', 'GROUP_APPROVED', 'GROUP_REJECTED',
             'attendance_reminder', 'REPORTE_PROBLEMA', 'SOLICITUD_DATOS', 'PEDIDO_LISTO', 'PUSH_PRUEBA',
-            'AGENDA_TAREA_ASIGNADA', 'AGENDA_TAREA_COMPLETADA', 'AGENDA_SOLICITUD_NUEVA', 'AGENDA_SOLICITUD_REVISADA')));
+            'AGENDA_TAREA_ASIGNADA', 'AGENDA_TAREA_COMPLETADA', 'AGENDA_SOLICITUD_NUEVA', 'AGENDA_SOLICITUD_REVISADA',
+            'PROGRAMADA')));   -- el megáfono de pages/user/Notificaciones.tsx
 
 PERFORM pg_temp.chk('E4', 'todas las plantillas usan sólo sus propias variables', 'sí',
     (SELECT CASE WHEN count(*) = 0 THEN 'sí' ELSE 'no: ' || string_agg(clave || ' → ' || v, ', ') END

@@ -268,10 +268,17 @@ quién decidió).
 3. **El nombre de la temporada.** La configuración dice "Tercer Temporada"; el
    diseño, "Tercera temporada". La base arma el nombre fijo por clave
    (`Primera/Segunda/Tercera temporada`), como el diseño.
-4. **Corazón al propio testimonio.** El diseño no dice nada. La base lo deja.
+4. **Corazón al propio testimonio.** El diseño no dice nada. La base lo deja
+   (decidido por Ignacio, 2026-11-02).
 5. **GCX que no existe o de otra temporada** en `/testimonios/:id`: sin diseño.
-6. **Anfitriones y co-anfitriones** no pueden dejar testimonio: la regla pide
-   inscripción aprobada y ellos no la tienen. Para ellos se ve "No encontramos
-   un GCX tuyo en esta temporada".
+6. **Anfitriones y co-anfitriones** también pueden dejar testimonio de su GCX
+   (decidido por Ignacio, 2026-11-02). `testimonios_mis_grupos` trae su rol
+   (`mi_rol`: "Anfitrión", "Co-anfitrión" o "Participante"); un anfitrión que
+   además está inscripto ve el grupo una sola vez.
+8. **Menores** (decidido por Ignacio, 2026-11-02): quien escribió y tiene menos
+   de 18, o no tiene fecha de nacimiento, se ve "Nombre I." en el detalle, en
+   el chip "Testimonio de X" y en la vista previa del modal ("Así se va a
+   ver"). Las iniciales del avatar salen de ese nombre. Sistemas ve el
+   nombre completo.
 7. **Login del diseño** ("Continuar con Google", "Entrar con email", "Crear
    cuenta"): hay que usar el login que ya existe y volver a `/testimonios-gcx`.

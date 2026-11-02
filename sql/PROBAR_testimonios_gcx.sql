@@ -20,6 +20,9 @@
 --   E · El pedido de eliminación y el aviso a Sistemas.
 --   A · Sistemas: listar y resolver, y que un usuario común no pueda.
 --   M · Mis GCX y mis testimonios.
+--   N · Menores: "Nombre I." en todo lo público, la búsqueda y la vista previa.
+--   H · Anfitrión y co-anfitrión también publican; el grupo una sola vez.
+--   U · La auditoría no guarda el texto; el resto de la app audita igual.
 --   X · Permisos de tablas y funciones.
 -- ════════════════════════════════════════════════════════════════════════════
 BEGIN;
@@ -67,6 +70,10 @@ DECLARE
     fede uuid := gen_random_uuid();   -- aprobado en seis GCX, para el tope diario
     ivo  uuid := gen_random_uuid();   -- para el tope de corazones
     nina uuid := gen_random_uuid();   -- aprobada en G1, sin nombre
+    sofi uuid := gen_random_uuid();   -- menor (14), aprobada en G1
+    tomi uuid := gen_random_uuid();   -- sin fecha de nacimiento, aprobado en G1
+    carla uuid := gen_random_uuid();  -- co-anfitriona de G1 (con cuenta)
+    t_sofi uuid;
     g1 text := gen_random_uuid()::text;
     g2 text := gen_random_uuid()::text;
     gv text := gen_random_uuid()::text;
@@ -94,28 +101,32 @@ ALTER TABLE public.group_registrations DISABLE TRIGGER trigger_gcx_welcome;
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 SELECT x, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
        'prueba.testim.' || left(x::text, 8) || '@test.local', '', now(), now()
-  FROM unnest(ARRAY[eva, hugo, ana, pablo, beto, caro, dani, gus, fede, ivo, nina]) x;
-INSERT INTO public.users (id, name, email, role, roles, is_active, gender, avatar_url) VALUES
-    (eva,   'Eva PRUEBA',        'prueba.testim.eva@test.local',   'SUPER_ADMIN', ARRAY['SUPER_ADMIN'], true, 'Femenino', NULL),
-    (hugo,  'Hugo PRUEBA',       'prueba.testim.hugo@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', 'https://ejemplo.prueba/hugo.jpg'),
-    (ana,   'Ana Gómez PRUEBA',  'prueba.testim.ana@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Femenino', 'https://ejemplo.prueba/ana.jpg'),
-    (pablo, 'Pablo PRUEBA',      'prueba.testim.pablo@test.local', 'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL),
-    (beto,  'Beto PRUEBA',       'prueba.testim.beto@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL),
-    (caro,  'Caro PRUEBA',       'prueba.testim.caro@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL),
-    (dani,  'Dani PRUEBA',       'prueba.testim.dani@test.local',  'VIEWER', ARRAY['VIEWER'], true, NULL, NULL),
-    (gus,   'Gus PRUEBA',        'prueba.testim.gus@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL),
-    (fede,  'Fede PRUEBA',       'prueba.testim.fede@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL),
-    (ivo,   'Ivo PRUEBA',        'prueba.testim.ivo@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL),
-    (nina,  '   ',               'prueba.testim.nina@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL)
+  FROM unnest(ARRAY[eva, hugo, ana, pablo, beto, caro, dani, gus, fede, ivo, nina, sofi, tomi, carla]) x;
+-- Los adultos con fecha de nacimiento: sin fecha se verían como menores.
+INSERT INTO public.users (id, name, email, role, roles, is_active, gender, avatar_url, birth_date) VALUES
+    (eva,   'Eva PRUEBA',        'prueba.testim.eva@test.local',   'SUPER_ADMIN', ARRAY['SUPER_ADMIN'], true, 'Femenino', NULL, '1985-04-10'),
+    (hugo,  'Hugo PRUEBA',       'prueba.testim.hugo@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', 'https://ejemplo.prueba/hugo.jpg', '1980-01-15'),
+    (ana,   'Ana Gómez PRUEBA',  'prueba.testim.ana@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Femenino', 'https://ejemplo.prueba/ana.jpg', '1990-05-10'),
+    (pablo, 'Pablo PRUEBA',      'prueba.testim.pablo@test.local', 'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, '1989-02-02'),
+    (beto,  'Beto PRUEBA',       'prueba.testim.beto@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, '1995-03-03'),
+    (caro,  'Caro PRUEBA',       'prueba.testim.caro@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL, '1995-03-03'),
+    (dani,  'Dani PRUEBA',       'prueba.testim.dani@test.local',  'VIEWER', ARRAY['VIEWER'], true, NULL, NULL, '1995-03-03'),
+    (gus,   'Gus PRUEBA',        'prueba.testim.gus@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, '1975-07-07'),
+    (fede,  'Fede PRUEBA',       'prueba.testim.fede@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, '1995-03-03'),
+    (ivo,   'Ivo PRUEBA',        'prueba.testim.ivo@test.local',   'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, '1995-03-03'),
+    (nina,  '   ',               'prueba.testim.nina@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL, '1995-03-03'),
+    (sofi,  'Sofía Gómez PRUEBA','prueba.testim.sofi@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL, '2012-03-01'),
+    (tomi,  'Tomás Ríos PRUEBA', 'prueba.testim.tomi@test.local',  'VIEWER', ARRAY['VIEWER'], true, 'Masculino', NULL, NULL),
+    (carla, 'Carla Co PRUEBA',   'prueba.testim.carla@test.local', 'VIEWER', ARRAY['VIEWER'], true, 'Femenino', NULL, '1988-08-08')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, roles = EXCLUDED.roles,
-    is_active = true, gender = EXCLUDED.gender, avatar_url = EXCLUDED.avatar_url;
+    is_active = true, gender = EXCLUDED.gender, avatar_url = EXCLUDED.avatar_url, birth_date = EXCLUDED.birth_date;
 
-INSERT INTO public.groups (id, name, leader_name, status, start_date, host_id, co_host_first_name, co_host_last_name,
+INSERT INTO public.groups (id, name, leader_name, status, start_date, host_id, co_host_id, co_host_first_name, co_host_last_name,
                            description, image_url, is_hidden) VALUES
-    (g1, 'PRUEBA Testimonios Uno',   'Hugo', 'approved', '2026-10-06', hugo, 'Carla', 'Co PRUEBA',
+    (g1, 'PRUEBA Testimonios Uno',   'Hugo', 'approved', '2026-10-06', hugo, carla, 'Carla', 'Co PRUEBA',
      'Descripción PRUEBA del grupo uno, completa.', 'https://ejemplo.prueba/portada-uno.jpg', true),
-    (g2, 'PRUEBA Testimonios Dos',   'Eva',  'approved', '2026-10-10', eva,  NULL, NULL, 'PRUEBA dos', '', true),
-    (gv, 'PRUEBA Testimonios Viejo', 'Eva',  'approved', '2026-07-01', eva,  NULL, NULL, 'PRUEBA viejo', NULL, true);
+    (g2, 'PRUEBA Testimonios Dos',   'Eva',  'approved', '2026-10-10', eva,  NULL, NULL, NULL, 'PRUEBA dos', '', true),
+    (gv, 'PRUEBA Testimonios Viejo', 'Eva',  'approved', '2026-07-01', eva,  NULL, NULL, NULL, 'PRUEBA viejo', NULL, true);
 FOR i IN 1..6 LOOP
     gx := gen_random_uuid()::text;
     gt := gt || gx;
@@ -130,7 +141,11 @@ INSERT INTO public.group_registrations (id, first_name, last_name, email, group_
     (gen_random_uuid()::text, 'Caro',  'PRUEBA', 'prueba.testim.caro@test.local',  g1, caro,  NULL, 'REJECTED', NULL),
     (gen_random_uuid()::text, 'Dani',  'PRUEBA', 'prueba.testim.dani@test.local',  gv, dani,  NULL, 'APPROVED', now()),
     (gen_random_uuid()::text, 'Gus',   'PRUEBA', 'prueba.testim.gus@test.local',   g1, gus,   NULL, 'APPROVED', now()),
-    (gen_random_uuid()::text, 'Nina',  'PRUEBA', 'prueba.testim.nina@test.local',  g1, nina,  NULL, 'APPROVED', now());
+    (gen_random_uuid()::text, 'Nina',  'PRUEBA', 'prueba.testim.nina@test.local',  g1, nina,  NULL, 'APPROVED', now()),
+    (gen_random_uuid()::text, 'Sofía', 'PRUEBA', 'prueba.testim.sofi@test.local',  g1, sofi,  NULL, 'APPROVED', now()),
+    (gen_random_uuid()::text, 'Tomás', 'PRUEBA', 'prueba.testim.tomi@test.local',  g1, tomi,  NULL, 'APPROVED', now()),
+    -- Hugo es el anfitrión de G1 y además está inscripto en él.
+    (gen_random_uuid()::text, 'Hugo',  'PRUEBA', 'prueba.testim.hugo@test.local',  g1, hugo,  NULL, 'APPROVED', now());
 INSERT INTO public.group_registrations (id, first_name, last_name, email, group_id, user_id, status, approved_at)
 SELECT gen_random_uuid()::text, 'Fede', 'PRUEBA', 'prueba.testim.fede@test.local', x, fede, 'APPROVED', now()
   FROM unnest(gt) x;
@@ -251,7 +266,7 @@ PERFORM pg_temp.chk('L1', 'anon ve los publicados de G1, más nuevos primero', '
 PERFORM pg_temp.chk('L2', 'anon: ni yo_di ni es_mio', 'false · false',
     (v_j->'testimonios'->1->>'yo_di') || ' · ' || (v_j->'testimonios'->1->>'es_mio'));
 PERFORM pg_temp.chk('L3', 'el grupo: descripción completa, portada y anfitriones con foto y rol',
-    'Descripción PRUEBA del grupo uno, completa. · https://ejemplo.prueba/portada-uno.jpg · Hugo PRUEBA (Anfitrión, https://ejemplo.prueba/hugo.jpg) + Carla Co PRUEBA (Co-anfitrión, sin foto)',
+    'Descripción PRUEBA del grupo uno, completa. · https://ejemplo.prueba/portada-uno.jpg · Hugo PRUEBA (Anfitrión, https://ejemplo.prueba/hugo.jpg) + Carla Co PRUEBA (Co-anfitriona, sin foto)',
     (v_j->'grupo'->>'descripcion') || ' · ' || (v_j->'grupo'->>'portada') || ' · '
     || (SELECT string_agg((h->>'nombre') || ' (' || (h->>'rol') || ', ' || COALESCE(h->>'foto', 'sin foto') || ')', ' + ' ORDER BY o)
           FROM jsonb_array_elements(v_j->'grupo'->'anfitriones') WITH ORDINALITY e(h, o)));
@@ -452,6 +467,95 @@ PERFORM pg_temp.chk('M6', 'mis testimonios, con estado', '2 · oculto, publicado
     || (SELECT string_agg(x->>'estado', ', ' ORDER BY x->>'estado') FROM jsonb_array_elements(v_j->'testimonios') x));
 
 -- ══════════════════════════════════════════════════════════════════════════
+-- N · Menores
+-- ══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.sesion(sofi);
+v_j := public.testimonios_mis_grupos_en(AHORA);
+PERFORM pg_temp.chk('N1', 'la vista previa del modal de una menor: Nombre I.', 'Sofía G.', v_j->>'mi_nombre');
+t_sofi := (public.testimonios_publicar_en(g1, 'Me encantó PRUEBA', true, AHORA)->>'id')::uuid;
+PERFORM pg_temp.sesion(tomi);
+PERFORM public.testimonios_publicar_en(g1, 'Muy bueno PRUEBA', true, AHORA);
+PERFORM pg_temp.sesion(NULL);
+v_j := public.testimonios_grupo_en(g1, AHORA);
+PERFORM pg_temp.chk('N2', 'en el detalle: la menor "Sofía G.", el que no tiene fecha "Tomás R.", el adulto completo',
+    'Ana Gómez PRUEBA · Sofía G. · Tomás R.',
+    (SELECT string_agg(x->>'autor', ' · ' ORDER BY x->>'autor') FROM jsonb_array_elements(v_j->'testimonios') x
+      WHERE x->>'autor' IN ('Ana Gómez PRUEBA', 'Sofía G.', 'Tomás R.', 'Sofía Gómez PRUEBA', 'Tomás Ríos PRUEBA')));
+PERFORM pg_temp.chk('N3', 'el apellido completo de la menor no aparece en lo público', 'no',
+    CASE WHEN position('Sofía Gómez' IN public.testimonios_grupo_en(g1, AHORA)::text) > 0
+           OR position('Sofía Gómez' IN COALESCE((SELECT string_agg(x::text, '') FROM jsonb_array_elements(public.testimonios_grupos_en('sofia', AHORA)->'grupos') x WHERE x->>'id' = g1), '')) > 0
+           OR position('Tomás Ríos' IN public.testimonios_grupo_en(g1, AHORA)::text) > 0 THEN 'SÍ' ELSE 'no' END);
+PERFORM pg_temp.chk('N4', 'buscar el apellido completo de la menor no la encuentra', '0 · 0',
+    (SELECT count(*) FROM jsonb_array_elements(public.testimonios_grupos_en('sofia gomez', AHORA)->'grupos') x WHERE x->>'id' = g1) || ' · '
+    || (SELECT count(*) FROM jsonb_array_elements(public.testimonios_grupos_en('tomas rios', AHORA)->'grupos') x WHERE x->>'id' = g1));
+PERFORM pg_temp.chk('N5', 'buscar lo que se muestra sí la encuentra, con la etiqueta "Sofía G."', 'testimonio · ["Sofía G."]',
+    (SELECT (x->>'coincide') || ' · ' || (x->>'autores') FROM jsonb_array_elements(public.testimonios_grupos_en('sofia g', AHORA)->'grupos') x WHERE x->>'id' = g1));
+PERFORM pg_temp.chk('N6', 'buscar a un adulto por su apellido completo sí lo encuentra', 'testimonio',
+    (SELECT x->>'coincide' FROM jsonb_array_elements(public.testimonios_grupos_en('ana gomez', AHORA)->'grupos') x WHERE x->>'id' = g1));
+PERFORM pg_temp.sesion(eva);
+PERFORM pg_temp.chk('N7', 'Sistemas ve el nombre completo de la menor y del que no tiene fecha', 'Sofía Gómez PRUEBA · Tomás Ríos PRUEBA',
+    (SELECT string_agg(x->'autor'->>'nombre', ' · ' ORDER BY x->'autor'->>'nombre')
+       FROM jsonb_array_elements(public.testimonios_admin_listar(NULL, 'prueba')->'testimonios') x
+      WHERE x->'autor'->>'nombre' IN ('Sofía Gómez PRUEBA', 'Tomás Ríos PRUEBA', 'Sofía G.', 'Tomás R.')));
+PERFORM pg_temp.chk('N8', 'cumple 18 hoy: completo; mañana: inicial; una sola palabra: esa', 'Ana Gómez · Ana G. · Ana',
+    public.testimonios_nombre_publico('Ana  Gómez', '2008-11-02', AHORA) || ' · '
+    || public.testimonios_nombre_publico('Ana Gómez', '2008-11-03', AHORA) || ' · '
+    || public.testimonios_nombre_publico('Ana', NULL, AHORA));
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- H · Anfitrión y co-anfitrión
+-- ══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.sesion(hugo);
+v_j := public.testimonios_mis_grupos_en(AHORA);
+PERFORM pg_temp.chk('H1', 'anfitrión e inscripto en G1: lo ve una sola vez, como Anfitrión', '1 · Anfitrión',
+    (SELECT count(*) || ' · ' || max(x->>'mi_rol') FROM jsonb_array_elements(v_j->'grupos') x WHERE x->>'id' = g1));
+PERFORM pg_temp.chk('H2', 'el anfitrión publica', 'true', public.testimonios_publicar_en(g1, 'Gracias a todos PRUEBA', true, AHORA)->>'ok');
+PERFORM pg_temp.sesion(carla);
+PERFORM pg_temp.chk('H3', 'la co-anfitriona ve su GCX como Co-anfitrión', 'Uno · Co-anfitrión',
+    (SELECT string_agg(replace(x->>'nombre', 'PRUEBA Testimonios ', '') || ' · ' || (x->>'mi_rol'), ', ')
+       FROM jsonb_array_elements(public.testimonios_mis_grupos_en(AHORA)->'grupos') x));
+PERFORM pg_temp.chk('H4', 'la co-anfitriona publica (sin estar inscripta)', 'true', public.testimonios_publicar_en(g1, 'Qué temporada PRUEBA', true, AHORA)->>'ok');
+PERFORM pg_temp.chk('H5', 'con las mismas reglas: un solo testimonio por GCX', 'ya_publicado', public.testimonios_publicar_en(g1, 'Otra vez PRUEBA', true, AHORA)->>'motivo');
+PERFORM pg_temp.chk('H6', 'y el mismo plazo', 'fuera_de_plazo', public.testimonios_publicar_en(g2, 'PRUEBA', true, pg_temp.ar('2027-01-08 12:00'))->>'motivo');
+PERFORM pg_temp.sesion(sofi);
+PERFORM pg_temp.chk('H7', 'una inscripta común es Participante', 'Participante',
+    (SELECT x->>'mi_rol' FROM jsonb_array_elements(public.testimonios_mis_grupos_en(AHORA)->'grupos') x WHERE x->>'id' = g1));
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- U · Auditoría sin texto
+-- ══════════════════════════════════════════════════════════════════════════
+-- Al de Sofía: crear (ya), ocultar y eliminar.
+PERFORM pg_temp.sesion(eva);
+PERFORM public.testimonios_admin_resolver(t_sofi, 'ocultar');
+PERFORM public.testimonios_admin_resolver(t_sofi, 'eliminar');
+PERFORM pg_temp.chk('U1', 'crear, ocultar y eliminar quedan en audit_logs, con quién y el estado', 'DELETE:oculto · INSERT:publicado · UPDATE:oculto · Eva en el ocultar y el eliminar',
+    (SELECT string_agg(action || ':' || COALESCE(new_data->>'estado', old_data->>'estado'), ' · ' ORDER BY action)
+       FROM public.audit_logs WHERE table_name = 'gcx_testimonios' AND record_id = t_sofi)
+    || CASE WHEN (SELECT bool_and(changed_by = eva) FROM public.audit_logs
+                   WHERE table_name = 'gcx_testimonios' AND record_id = t_sofi AND action <> 'INSERT')
+            THEN ' · Eva en el ocultar y el eliminar' ELSE ' · OTRO autor' END);
+PERFORM pg_temp.chk('U2', 'ningún registro de gcx_testimonios guarda el texto ni el motivo del pedido', 'ninguno',
+    (SELECT CASE WHEN count(*) = 0 THEN 'ninguno' ELSE count(*) || ' CON TEXTO' END
+       FROM public.audit_logs
+      WHERE table_name = 'gcx_testimonios'
+        AND (old_data ? 'texto' OR new_data ? 'texto' OR old_data ? 'eliminacion_motivo' OR new_data ? 'eliminacion_motivo'
+             OR COALESCE(old_data::text, '') || COALESCE(new_data::text, '') ~ 'Me encantó|Fue un lugar seguro|Prefiero que no esté')));
+-- Otra tabla auditada: groups sigue guardando la fila entera.
+UPDATE public.groups SET description = 'PRUEBA auditoría' WHERE id = g2;
+PERFORM pg_temp.chk('U3', 'groups sigue guardando la fila entera (con la descripción)', 'PRUEBA dos → PRUEBA auditoría · fila entera',
+    (SELECT (old_data->>'description') || ' → ' || (new_data->>'description')
+            || CASE WHEN new_data = (SELECT to_jsonb(g) FROM public.groups g WHERE g.id = g2) THEN ' · fila entera' ELSE ' · RECORTADA' END
+       FROM public.audit_logs WHERE table_name = 'groups' AND record_id = g2::uuid AND action = 'UPDATE'
+        AND new_data->>'description' IS DISTINCT FROM old_data->>'description'));
+PERFORM pg_temp.chk('U4', 'el trigger genérico (log_audit_event) no cambió', '3b40b426e833be22f182f9b1ccfe2689',
+    md5(pg_get_functiondef('public.log_audit_event'::regproc)));
+PERFORM pg_temp.chk('U5', 'users, groups, group_registrations y notif_alertas siguen con el genérico; testimonios con el suyo',
+    'audit_gcx_testimonios_changes:testimonios_auditar · audit_group_registrations_changes:log_audit_event · audit_groups_changes:log_audit_event · audit_notif_alertas_changes:log_audit_event · audit_users_changes:log_audit_event',
+    (SELECT string_agg(tgname || ':' || tgfoid::regproc::text, ' · ' ORDER BY tgname)
+       FROM pg_trigger WHERE tgname IN ('audit_gcx_testimonios_changes', 'audit_group_registrations_changes',
+                                        'audit_groups_changes', 'audit_notif_alertas_changes', 'audit_users_changes')));
+
+-- ══════════════════════════════════════════════════════════════════════════
 -- X · Permisos
 -- ══════════════════════════════════════════════════════════════════════════
 PERFORM pg_temp.chk('X1', 'anon y authenticated no leen ni escriben las tablas', 'no',
@@ -499,7 +603,8 @@ PERFORM pg_temp.chk('X6', 'nadie de afuera llama a las piezas ni a las que recib
         AND p.proname IN ('testimonios_norm', 'testimonios_temporada_de_fecha', 'testimonios_fecha_md', 'testimonios_temporada_en',
                           'testimonios_grupo_es_de', 'testimonios_anfitriones', 'testimonios_inscripto', 'testimonios_es_sistemas',
                           'testimonios_grupos_en', 'testimonios_grupo_en', 'testimonios_mis_grupos_en', 'testimonios_publicar_en',
-                          'testimonios_corazon_en')
+                          'testimonios_corazon_en', 'testimonios_nombre_publico', 'testimonios_rol_en_grupo',
+                          'testimonios_auditar')
         AND has_function_privilege(rol, p.oid, 'EXECUTE')));
 PERFORM pg_temp.chk('X7', 'la alerta está en el catálogo, apagable, en el área Sistemas', 'automatica · true · Sistemas',
     (SELECT tipo || ' · ' || permite_apagar || ' · ' || area FROM public.notif_alertas WHERE clave = 'testimonios_eliminacion_solicitada'));

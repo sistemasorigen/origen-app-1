@@ -2815,9 +2815,9 @@ push. Su última fila es del 2026-09-24.
 
 ## 41. TESTIMONIOS DE LOS GCX
 
-Desde el **2026-11-02** (base ⏳ pendiente de aplicar en producción). Quien fue parte de un GCX en la temporada cuenta lo
+Desde el **2026-11-02** (base ✅ aplicada en producción el 2026-11-02). Quien fue parte de un GCX en la temporada cuenta lo
 que vivió, y queda publicado para que cualquiera lo lea, con o sin sesión.
-Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 89 casos; deshacer
+Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 109 casos; deshacer
 `ROLLBACK_`). Servicio: `services/testimonios.ts`. Diseños:
 `design-claude/GCX Testimonios - Dejar testimonio.dc.html` y
 `design-claude/GCX Testimonios - Testimonios.dc.html`; inventario completo en
@@ -2847,8 +2847,17 @@ Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 89 casos; deshacer
   configuración).
 - **Quién publica**: sesión + inscripción `APPROVED` en un GCX aprobado de la
   temporada vigente (la pareja de `partner_user_id` también cuenta),
-  adolescentes incluidos. Uno por persona y por GCX. 5 por día. Anfitrión y
-  co-anfitrión NO, porque no tienen inscripción.
+  adolescentes incluidos, **y también el anfitrión y el co-anfitrión**
+  (`host_id` / `co_host_id`) con las mismas reglas. Uno por persona y por GCX.
+  5 por día. `testimonios_rol_en_grupo` dice `anfitrion` / `coanfitrion` /
+  `participante`; quien es anfitrión e inscripto aparece una vez, como anfitrión.
+- **Menores**: quien escribió y tiene menos de 18 al momento de mostrarlo (hora
+  argentina, `users.birth_date`) se ve "Nombre I." (`testimonios_nombre_publico`:
+  primera palabra + inicial de la segunda); **sin fecha de nacimiento, igual
+  que un menor**. Vale en el detalle, en la etiqueta "Testimonio de X" de la
+  galería y en `mi_nombre` (vista previa del modal). La búsqueda pública busca
+  sobre ese nombre mostrado: a un menor no se lo encuentra por su apellido.
+  Sistemas (`testimonios_admin_listar`) ve el nombre completo.
 - **Qué se publica**: nombre, GCX, temporada y año, y el texto (1 a 1000
   caracteres, sin espacios ni saltos al principio ni al final). Sólo con el
   consentimiento del modal (`consentimiento_at`). **No se edita nunca.**
@@ -2863,8 +2872,11 @@ Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 89 casos; deshacer
 `gcx_testimonios_corazones` (PK testimonio+persona, `ON DELETE CASCADE`) y
 `gcx_testimonios_ritmo` (toques de corazón por minuto). RLS prendida, **sin
 policies** y con `REVOKE ALL` a anon y authenticated: todo por funciones
-`SECURITY DEFINER`. `gcx_testimonios` tiene el trigger genérico
-`audit_gcx_testimonios_changes` (`log_audit_event`).
+`SECURITY DEFINER`. `gcx_testimonios` se audita con su propio trigger,
+`audit_gcx_testimonios_changes` → `testimonios_auditar()`: lo mismo que el
+genérico `log_audit_event` pero **sin `texto` ni `eliminacion_motivo`**
+(quién, cuándo, qué acción y el estado). El genérico no se tocó; el resto de
+la app audita igual (lo prueba `PROBAR_`, U3–U5).
 
 ### Las funciones
 Cada una contesta `{ ok, … }` o `{ ok: false, motivo }`.
@@ -2897,6 +2909,16 @@ emite `testimonios_solicitar_eliminacion` con `notif_emitir` a cada
 SUPER_ADMIN, **una vez** por pedido (pedirlo de nuevo mientras está pendiente
 no vuelve a avisar). El catálogo pasa a tener **21** automáticas (las pruebas de
 Notificaciones que contaban 20 se actualizaron).
+
+### Pruebas de Notificaciones independientes de la fecha y de los datos reales
+(2026-11-02) `PROBAR_notif_programadas`: `pg_temp.prog` arranca el reloj
+(`reloj_desde`) de cada programada de prueba el 1/10/2026, antes de todos los
+días que simula; guardar lo arranca en el momento REAL en que corre la prueba,
+y pasado el 1/11 los casos R4, R5, R7 y R8 daban 0 (era la prueba, no el
+motor). `PROBAR_notif_catalogo` cuenta las programadas reales en vez de
+fijarlas, mira la semilla sólo en las automáticas que nadie editó y acepta el
+type `PROGRAMADA`. `PROBAR_notif_preferencias` pausa, dentro de su
+transacción, las programadas reales activas (como "Alerta Nocturna").
 
 ---
 

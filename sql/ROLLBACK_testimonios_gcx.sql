@@ -24,6 +24,8 @@ DROP FUNCTION IF EXISTS public.testimonios_grupo_en(text, timestamptz);
 DROP FUNCTION IF EXISTS public.testimonios_grupos(text);
 DROP FUNCTION IF EXISTS public.testimonios_grupos_en(text, timestamptz);
 DROP FUNCTION IF EXISTS public.testimonios_temporada();
+DROP FUNCTION IF EXISTS public.testimonios_rol_en_grupo(uuid, text);
+DROP FUNCTION IF EXISTS public.testimonios_nombre_publico(text, date, timestamptz);
 DROP FUNCTION IF EXISTS public.testimonios_es_sistemas(uuid);
 DROP FUNCTION IF EXISTS public.testimonios_inscripto(uuid, text);
 DROP FUNCTION IF EXISTS public.testimonios_anfitriones(text);
@@ -36,6 +38,7 @@ DROP FUNCTION IF EXISTS public.testimonios_norm(text);
 DROP TABLE IF EXISTS public.gcx_testimonios_ritmo;
 DROP TABLE IF EXISTS public.gcx_testimonios_corazones;
 DROP TABLE IF EXISTS public.gcx_testimonios;   -- se lleva su trigger de auditoría
+DROP FUNCTION IF EXISTS public.testimonios_auditar();   -- su función (el genérico no se toca)
 
 -- La alerta del catálogo (y lo que alguien haya apagado de ella).
 DELETE FROM public.notif_silenciadas

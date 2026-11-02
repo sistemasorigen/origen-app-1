@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- TESTIMONIOS DE LOS GCX — la base
--- 2026-11-02 · ⏳ PENDIENTE de aplicar (ensayo en seco contra producción: PROBAR 89/89)
+-- 2026-11-02 · ✅ APLICADO el 2026-11-02 (PROBAR_testimonios_gcx 109/109 contra producción)
 --
 -- La gente que fue parte de un GCX en la temporada cuenta lo que vivió, y los
 -- testimonios quedan publicados para que cualquiera los lea, con o sin sesión.
@@ -33,6 +33,19 @@
 -- que devuelven sólo lo que se muestra. A anon nunca le llega un id de
 -- usuario, un email ni un teléfono: de las personas, sólo nombre y foto (la
 -- foto sólo del anfitrión y del co-anfitrión; de quien escribe, sólo el nombre).
+--
+-- MENORES (decisión de Ignacio, 2026-11-02): quien escribió y tiene menos de
+-- 18 años al momento de mostrarlo (hora argentina, por users.birth_date) se ve
+-- "Nombre I." ("Sofía G."); sin fecha de nacimiento, igual que un menor. Vale
+-- en todo lo que devuelve un nombre de autor, y la búsqueda pública sólo lo
+-- encuentra por eso que se muestra. Sistemas ve el nombre completo.
+--
+-- QUIÉN PUBLICA: quien tiene inscripción aprobada, y también el anfitrión y el
+-- co-anfitrión del GCX, con las mismas reglas.
+--
+-- AUDITORÍA SIN TEXTO: gcx_testimonios se audita con su propio trigger
+-- (testimonios_auditar), igual al genérico pero sin el texto ni el motivo del
+-- pedido. El genérico (log_audit_event) no se toca.
 --
 -- Cada función contesta { ok: true, … } o { ok: false, motivo }, como las de
 -- Agenda y Notificaciones.
@@ -110,12 +123,34 @@ ALTER TABLE public.gcx_testimonios_ritmo     ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.gcx_testimonios, public.gcx_testimonios_corazones, public.gcx_testimonios_ritmo
     FROM PUBLIC, anon, authenticated;
 
--- Toda alta, cambio de estado y eliminación queda en audit_logs, con el
--- trigger genérico de users, groups y notif_alertas.
+-- Toda alta, cambio de estado y eliminación queda en audit_logs: quién,
+-- cuándo, qué acción y el estado. NUNCA el texto del testimonio ni el motivo
+-- del pedido de eliminación (que puede citarlo). Es log_audit_event (el
+-- genérico de users, groups y notif_alertas) con esas dos columnas afuera; el
+-- genérico queda igual para el resto de la app.
+CREATE OR REPLACE FUNCTION public.testimonios_auditar()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $fn$
+BEGIN
+    INSERT INTO public.audit_logs (table_name, action, record_id, old_data, new_data, changed_by)
+    VALUES (
+        TG_TABLE_NAME::text,
+        TG_OP::text,
+        CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END,
+        CASE WHEN TG_OP IN ('UPDATE', 'DELETE') THEN to_jsonb(OLD) - 'texto' - 'eliminacion_motivo' END,
+        CASE WHEN TG_OP IN ('UPDATE', 'INSERT') THEN to_jsonb(NEW) - 'texto' - 'eliminacion_motivo' END,
+        auth.uid());
+    RETURN NULL;
+END;
+$fn$;
+
 DROP TRIGGER IF EXISTS audit_gcx_testimonios_changes ON public.gcx_testimonios;
 CREATE TRIGGER audit_gcx_testimonios_changes
     AFTER INSERT OR UPDATE OR DELETE ON public.gcx_testimonios
-    FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
+    FOR EACH ROW EXECUTE FUNCTION public.testimonios_auditar();
 
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
@@ -303,6 +338,43 @@ AS $fn$
            AND ((u.role)::text = 'SUPER_ADMIN' OR COALESCE(u.roles, '{}') && ARRAY['SUPER_ADMIN']));
 $fn$;
 
+-- El nombre de quien escribió, tal como se muestra. Mayor de 18 (en hora
+-- argentina, en p_ahora): nombre completo. Menor, o sin fecha de nacimiento:
+-- la primera palabra y la inicial de la segunda ("Sofía Gómez Pérez" →
+-- "Sofía G."). Con una sola palabra, esa palabra. Sin nombre, NULL.
+CREATE OR REPLACE FUNCTION public.testimonios_nombre_publico(p_nombre text, p_nacimiento date, p_ahora timestamptz)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+SET search_path = public
+AS $fn$
+    SELECT CASE
+        WHEN n = '' THEN NULL
+        WHEN p_nacimiento IS NOT NULL
+             AND p_nacimiento <= ((p_ahora AT TIME ZONE 'America/Argentina/Buenos_Aires')::date - interval '18 years')::date
+            THEN n
+        ELSE split_part(n, ' ', 1)
+             || CASE WHEN split_part(n, ' ', 2) <> '' THEN ' ' || upper(left(split_part(n, ' ', 2), 1)) || '.' ELSE '' END
+    END
+    FROM (SELECT regexp_replace(btrim(COALESCE(p_nombre, '')), '\s+', ' ', 'g') AS n) x;
+$fn$;
+
+-- Qué es una persona en un grupo: 'anfitrion', 'coanfitrion', 'participante'
+-- (inscripción aprobada) o NULL. Si es anfitrión e inscripto, es anfitrión: el
+-- grupo aparece una sola vez.
+CREATE OR REPLACE FUNCTION public.testimonios_rol_en_grupo(p_user uuid, p_group_id text)
+RETURNS text
+LANGUAGE sql STABLE
+SET search_path = public
+AS $fn$
+    SELECT CASE
+        WHEN p_user IS NULL THEN NULL
+        WHEN g.host_id = p_user THEN 'anfitrion'
+        WHEN g.co_host_id = p_user THEN 'coanfitrion'
+        WHEN public.testimonios_inscripto(p_user, g.id) THEN 'participante'
+    END
+    FROM public.groups g WHERE g.id = p_group_id;
+$fn$;
+
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║ 3 · LECTURA PÚBLICA (anon y authenticated)                               ║
@@ -343,15 +415,20 @@ BEGIN
           FROM public.gcx_testimonios x
          WHERE x.estado = 'publicado' AND x.group_id IN (SELECT id FROM g)
          GROUP BY x.group_id
-    ), autores AS (
-        SELECT x.group_id,
-               array_agg(u.name ORDER BY x.created_at DESC) AS nombres
+    ), publicos AS (
+        -- Quién escribió, con el nombre que se muestra: a un menor sólo se lo
+        -- encuentra por "Nombre I.", nunca por su apellido completo.
+        SELECT x.group_id, x.created_at,
+               public.testimonios_nombre_publico(u.name, u.birth_date, p_ahora) AS nombre
           FROM public.gcx_testimonios x
           JOIN public.users u ON u.id = x.autor_id
          WHERE q IS NOT NULL
            AND x.estado = 'publicado' AND x.group_id IN (SELECT id FROM g)
-           AND position(q IN public.testimonios_norm(u.name)) > 0
-         GROUP BY x.group_id
+    ), autores AS (
+        SELECT pu.group_id, array_agg(pu.nombre ORDER BY pu.created_at DESC) AS nombres
+          FROM publicos pu
+         WHERE position(q IN public.testimonios_norm(pu.nombre)) > 0
+         GROUP BY pu.group_id
     ), fila AS (
         SELECT g.*, COALESCE(c.n, 0) AS n, a.nombres,
                CASE
@@ -415,7 +492,7 @@ BEGIN
 
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
                'id', x.id,
-               'autor', COALESCE(NULLIF(btrim(u.name), ''), 'Alguien de Origen'),
+               'autor', COALESCE(public.testimonios_nombre_publico(u.name, u.birth_date, p_ahora), 'Alguien de Origen'),
                'temporada', CASE x.temporada WHEN 'S1' THEN 'Primera temporada'
                                              WHEN 'S2' THEN 'Segunda temporada'
                                              ELSE 'Tercera temporada' END,
@@ -457,9 +534,10 @@ $fn$;
 -- ║ 4 · CON SESIÓN                                                           ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
--- Mis GCX de la temporada vigente (inscripción aprobada), con su anfitrión y
--- si ya dejé testimonio en cada uno. Trae mi nombre para la vista previa del
--- modal ("Así se va a ver").
+-- Mis GCX de la temporada vigente: donde tengo inscripción aprobada o soy
+-- anfitrión o co-anfitrión (una sola vez cada uno), con mi rol, su anfitrión y
+-- si ya dejé testimonio. Trae mi nombre COMO SE VA A VER para la vista previa
+-- del modal ("Así se va a ver"): un menor ve "Nombre I.".
 CREATE OR REPLACE FUNCTION public.testimonios_mis_grupos_en(p_ahora timestamptz)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE
@@ -479,20 +557,25 @@ BEGIN
                'nombre', g.name,
                'portada', NULLIF(btrim(g.image_url), ''),
                'anfitriones', public.testimonios_anfitriones(g.id),
+               'mi_rol_clave', r.rol,
+               'mi_rol', CASE r.rol WHEN 'anfitrion' THEN 'Anfitrión'
+                                    WHEN 'coanfitrion' THEN 'Co-anfitrión'
+                                    ELSE 'Participante' END,
                'ya_publicado', x.id IS NOT NULL,
                'testimonio_id', x.id,
                'estado', x.estado)
            ORDER BY public.testimonios_norm(g.name), g.id), '[]'::jsonb)
       INTO v
       FROM public.groups g
+      CROSS JOIN LATERAL (SELECT public.testimonios_rol_en_grupo(yo, g.id) AS rol) r
       LEFT JOIN public.gcx_testimonios x ON x.group_id = g.id AND x.autor_id = yo
      WHERE public.testimonios_grupo_es_de(g.status, g.start_date, t)
-       AND public.testimonios_inscripto(yo, g.id);
+       AND r.rol IS NOT NULL;
 
     RETURN jsonb_build_object(
         'ok', true,
         'temporada', t,
-        'mi_nombre', (SELECT NULLIF(btrim(name), '') FROM public.users WHERE id = yo),
+        'mi_nombre', (SELECT public.testimonios_nombre_publico(name, birth_date, p_ahora) FROM public.users WHERE id = yo),
         'grupos', v);
 END;
 $fn$;
@@ -542,7 +625,8 @@ BEGIN
     IF NOT public.testimonios_grupo_es_de(g.status, g.start_date, t) THEN
         RETURN jsonb_build_object('ok', false, 'motivo', 'fuera_de_temporada', 'temporada', t);
     END IF;
-    IF NOT public.testimonios_inscripto(yo, g.id) THEN
+    -- Inscripción aprobada, o anfitrión / co-anfitrión del GCX.
+    IF public.testimonios_rol_en_grupo(yo, g.id) IS NULL THEN
         RETURN jsonb_build_object('ok', false, 'motivo', 'no_inscripto');
     END IF;
 
@@ -938,6 +1022,9 @@ REVOKE ALL ON FUNCTION
     public.testimonios_anfitriones(text),
     public.testimonios_inscripto(uuid, text),
     public.testimonios_es_sistemas(uuid),
+    public.testimonios_nombre_publico(text, date, timestamptz),
+    public.testimonios_rol_en_grupo(uuid, text),
+    public.testimonios_auditar(),
     public.testimonios_grupos_en(text, timestamptz),
     public.testimonios_grupo_en(text, timestamptz),
     public.testimonios_mis_grupos_en(timestamptz),

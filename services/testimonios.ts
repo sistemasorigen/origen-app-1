@@ -104,6 +104,7 @@ export interface GrupoGaleria {
 /** Un testimonio publicado, tal como se ve en /testimonios/:id. */
 export interface TestimonioPublico {
     id: string;
+    /** El nombre de quien escribió; un menor de 18 (o sin fecha de nacimiento), "Nombre I." */
     autor: string;
     /** 'Tercera temporada' */
     temporada: string;
@@ -126,12 +127,20 @@ export interface GrupoDetalle {
 
 export type EstadoTestimonio = 'publicado' | 'eliminacion_solicitada' | 'oculto';
 
-/** Un GCX mío de la temporada, en /testimonios-gcx. */
+export type MiRolClave = 'anfitrion' | 'coanfitrion' | 'participante';
+
+/**
+ * Un GCX mío de la temporada, en /testimonios-gcx: donde tengo inscripción
+ * aprobada o soy anfitrión o co-anfitrión (una sola vez cada uno).
+ */
 export interface MiGrupo {
     id: string;
     nombre: string;
     portada: string | null;
     anfitriones: Anfitrion[];
+    /** 'Anfitrión' · 'Co-anfitrión' · 'Participante' */
+    miRol: string;
+    miRolClave: MiRolClave;
     yaPublicado: boolean;
     /** El mío en este GCX, si ya lo dejé. */
     testimonioId: string | null;
@@ -245,6 +254,8 @@ const miGrupoDe = (g: Crudo): MiGrupo => ({
     nombre: txt(g.nombre),
     portada: txtONull(g.portada),
     anfitriones: anfitrionesDe(g.anfitriones),
+    miRol: txt(g.mi_rol),
+    miRolClave: txt(g.mi_rol_clave) as MiRolClave,
     yaPublicado: si(g.ya_publicado),
     testimonioId: txtONull(g.testimonio_id),
     estado: (txtONull(g.estado) as EstadoTestimonio | null),
@@ -389,7 +400,10 @@ export const getGrupoTestimonios = (groupId: string) =>
 export const getMisGruposTestimonios = () =>
     llamarConTemporada('testimonios_mis_grupos', {}, d => ({
         grupos: lista(d.grupos).map(miGrupoDe),
-        /** Para la vista previa del modal. null: la cuenta no tiene nombre. */
+        /**
+         * Para la vista previa del modal, COMO SE VA A VER: un menor de 18 (o
+         * sin fecha de nacimiento) ve "Nombre I.". null: la cuenta no tiene nombre.
+         */
         miNombre: txtONull(d.mi_nombre),
     }));
 
@@ -485,7 +499,7 @@ export const diaYMesLargo = (fecha: string): string => {
 export const mensajeDeMotivo = (f: { motivo?: MotivoTestimonios; limite?: number; temporada?: Temporada }): string => {
     switch (f.motivo ?? 'red') {
         case 'sin_sesion': return 'Tu sesión se cerró. Volvé a entrar y probá de nuevo.';
-        case 'no_inscripto': return 'Para dejar un testimonio tenés que haber sido parte de este GCX en la temporada.';
+        case 'no_inscripto': return 'Para dejar un testimonio tenés que haber sido parte de este GCX en la temporada (inscripto, anfitrión o co-anfitrión).';
         case 'fuera_de_plazo': return f.temporada
             ? `Los testimonios de la ${f.temporada.etiqueta} cerraron el ${diaYMes(f.temporada.cargaHasta)}.`
             : 'La carga de testimonios de esta temporada ya cerró.';

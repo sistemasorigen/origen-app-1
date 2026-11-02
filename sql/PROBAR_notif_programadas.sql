@@ -64,12 +64,22 @@ CREATE FUNCTION pg_temp.prog(
     p_activa boolean DEFAULT true, p_titulo text DEFAULT 'Nos vemos hoy',
     p_mensaje text DEFAULT 'Te esperamos a las 19 en el auditorio.', p_url text DEFAULT '/eventos',
     p_nombre text DEFAULT 'Programada PRUEBA'
-) RETURNS jsonb LANGUAGE sql AS $f$
-    SELECT public.notif_guardar_programada(
+) RETURNS jsonb LANGUAGE plpgsql AS $f$
+DECLARE v jsonb;
+BEGIN
+    v := public.notif_guardar_programada(
         p_id, p_nombre, p_titulo, p_mensaje, p_url,
         p_hasta IS NULL, p_desde, p_hasta, p_cada, p_horas,
         p_todos, p_roles, p_users, false, NULL, NULL, NULL, p_activa);
-$f$;
+    -- La prueba simula días de noviembre de 2026, pero guardar arranca el
+    -- reloj (reloj_desde) en el momento REAL en que corre: pasado ese día, los
+    -- casos del reloj daban 0. Se lo arranca antes de todos los días que se
+    -- simulan. Sólo si cambia (la edición sin cambio de horarios no lo toca),
+    -- y C14 no cuenta esta corrección.
+    UPDATE public.notif_alertas SET reloj_desde = pg_temp.ar('2026-10-01 00:00')
+     WHERE id = p_id AND reloj_desde IS DISTINCT FROM pg_temp.ar('2026-10-01 00:00');
+    RETURN v;
+END $f$;
 
 -- Cuántos horarios salieron de una programada (opcionalmente, de un día).
 CREATE FUNCTION pg_temp.hechas(p uuid, p_fecha date DEFAULT NULL) RETURNS integer LANGUAGE sql AS $f$
@@ -200,7 +210,9 @@ PERFORM pg_temp.chk('C13', 'notif_cambiar_estado sirve para una automática', 'p
 PERFORM pg_temp.chk('C14', 'audit_logs: alta, edición ×2, pausa, activa, baja', 'INSERT ×1 · UPDATE ×5 · por Eva',
     (SELECT 'INSERT ×' || count(*) FILTER (WHERE action = 'INSERT') || ' · UPDATE ×' || count(*) FILTER (WHERE action = 'UPDATE')
             || CASE WHEN bool_and(changed_by = eva) THEN ' · por Eva' ELSE ' · OTRO autor' END
-       FROM public.audit_logs WHERE table_name = 'notif_alertas' AND record_id = p_crud));
+       FROM public.audit_logs WHERE table_name = 'notif_alertas' AND record_id = p_crud
+        -- Sin la corrección del reloj de pg_temp.prog (sólo cambia reloj_desde).
+        AND (old_data IS NULL OR new_data IS NULL OR (old_data - 'reloj_desde') <> (new_data - 'reloj_desde'))));
 
 PERFORM pg_temp.chk('C15', 'guardar con el id de una automática', 'no_es_programada',
     pg_temp.prog(v_auto, '2026-11-01', NULL, 1, ARRAY['10:00']::time[], false, NULL, ARRAY[dani])->>'motivo');

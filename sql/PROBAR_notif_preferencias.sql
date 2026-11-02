@@ -88,6 +88,12 @@ INSERT INTO public.push_suscripciones (user_id, endpoint, p256dh, auth, platafor
 SELECT x, 'https://ejemplo.prueba/pref/' || left(x::text, 8), 'p256dh-PRUEBA', 'auth-PRUEBA', 'ios', 'PRUEBA'
   FROM unnest(ARRAY[eva, ana, beto]) x;
 
+-- Las programadas reales que Sistemas tenga activas (p. ej. "Alerta
+-- Nocturna", para todos) también les "llegan" a estas personas y se cuelan en
+-- sus preferencias. Se pausan sólo dentro de esta transacción, que se deshace.
+UPDATE public.notif_alertas SET activa = false
+ WHERE tipo = 'programada' AND activa AND eliminada_at IS NULL;
+
 -- A Ana le llegaron: los tres de "solicitud de ingreso" (la pareja de
 -- repetidos y el de pareja), una tarea, y la notificación de prueba.
 v_ingreso := public.notif_emitir('gcx_solicitud_ingreso', ana, '{"nombre":"X","grupo":"G"}');
