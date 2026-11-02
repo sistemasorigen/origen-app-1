@@ -14,6 +14,12 @@ interface ModalCompartirQRProps {
     rotulo?: string;
     /** Qué abre el QR, para la leyenda: "el grupo", "el enlace". */
     queAbre?: string;
+    /**
+     * La leyenda del QR, entera, cuando "Escaneá para abrir …" no es lo que
+     * corresponde ("Escaneá para leer los testimonios"). Sin esto, el texto
+     * de siempre: nada cambia donde ya se usaba.
+     */
+    leyendaQR?: string;
 }
 
 /**
@@ -27,7 +33,7 @@ interface ModalCompartirQRProps {
  * opciones" es el compartir del sistema: sólo aparece si el navegador lo
  * tiene, y como en el diseño, sólo en el teléfono.
  */
-const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, subtitle, rotulo = 'COMPARTIR GRUPO', queAbre = 'el grupo' }) => {
+const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, title, link, subtitle, rotulo = 'COMPARTIR GRUPO', queAbre = 'el grupo', leyendaQR }) => {
     const [isCopied, setIsCopied] = useState(false);
     const [esMovil, setEsMovil] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
     const hayCompartirDelSistema = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -104,7 +110,7 @@ const ModalCompartirQR: React.FC<ModalCompartirQRProps> = ({ isOpen, onClose, ti
                     />
                 </div>
                 <p className="mt-3 mb-0 text-center text-[13.5px] font-medium" style={{ color: 'var(--g-m50)' }}>
-                    Escaneá para abrir {queAbre}
+                    {leyendaQR || `Escaneá para abrir ${queAbre}`}
                 </p>
 
                 <div className="mt-5 h-[52px] rounded-[18px] flex items-center gap-2.5 pl-4 pr-1.5" style={{ background: 'var(--g-chip)' }}>

@@ -2836,7 +2836,18 @@ Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 109 casos; deshacer
    `Cara`, `FilaAnfitrion`, `fondoDePortada`, `PantallaAviso`, `ESTILOS` con id
    `testimonios-gcx`, que fuerza Manrope y le gana a los !important de
    index.html).
-3. `/testimonios` y `/testimonios/:groupId`: leer, buscar, corazones, compartir.
+3. `/testimonios` y `/testimonios/:groupId`: leer, buscar, corazones,
+   compartir. ✅ Hecho (2026-11-02): `pages/testimonios/GaleriaTestimonios.tsx`
+   y `TestimoniosDelGrupo.tsx`, las dos PÚBLICAS con menú, arriba de las
+   protegidas. La búsqueda va a la base con 320 ms de espera entre teclas y
+   queda en la URL (`?q=`), así volver desde el detalle la conserva. El
+   corazón se ve al instante y la base manda: si falla se vuelve atrás con un
+   aviso, y con muchos toques seguidos nunca hay dos pedidos del mismo
+   testimonio a la vez (gana el último). Sin sesión, el aviso del diseño, y el
+   corazón pendiente viaja en sessionStorage
+   (`testimonios.corazon-pendiente`) para sobrevivir a la vuelta de Google.
+   Compartir reusa `ModalCompartirQR` (el de Enlaces Origen) con el link de la
+   app: `…/#/testimonios/:id` y `?testimonio=:id`.
 4. "Mis testimonios" en el Perfil y la moderación en Sistemas
    (`/panel-admin?tab=testimonios`, a donde ya apunta el aviso).
 

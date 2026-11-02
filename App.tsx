@@ -73,6 +73,8 @@ import ChequearEntrada from './pages/eventos/nocturna/ChequearEntrada';
 import CompraVoluntarios from './pages/voluntarios/CompraVoluntarios';
 import PaginaSolicitudes from './pages/solicitudes/PaginaSolicitudes';
 import DejarTestimonio from './pages/testimonios/DejarTestimonio';
+import GaleriaTestimonios from './pages/testimonios/GaleriaTestimonios';
+import TestimoniosDelGrupo from './pages/testimonios/TestimoniosDelGrupo';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
@@ -660,6 +662,31 @@ const AppContent: React.FC = () => {
                     appConfig={config}
                 >
                     <DejarTestimonio />
+                </Layout>
+            } />
+
+            {/* Leer los testimonios: la galería de GCX y el detalle de cada
+                uno (design-claude/GCX Testimonios - Testimonios.dc.html).
+                Públicas y con menú, por lo mismo que la de arriba: se leen sin
+                sesión, y el corazón pide entrar con su propio aviso. */}
+            <Route path="/testimonios" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                >
+                    <GaleriaTestimonios />
+                </Layout>
+            } />
+            <Route path="/testimonios/:groupId" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                >
+                    <TestimoniosDelGrupo />
                 </Layout>
             } />
             <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />

@@ -43,6 +43,11 @@ export const ESTILOS = `
 @keyframes tstCircle { from { stroke-dashoffset: 151 } to { stroke-dashoffset: 0 } }
 @keyframes tstCheck { from { stroke-dashoffset: 36 } to { stroke-dashoffset: 0 } }
 @keyframes tstShake { 0%, 100% { transform: none } 25% { transform: translateX(-6px) } 75% { transform: translateX(6px) } }
+/* El corazón que salta, el número que rueda y el resaltado de un testimonio
+   al que se entró por un link compartido (tPop, tRoll y tHl del diseño). */
+@keyframes tstPop { 0% { transform: scale(1) } 35% { transform: scale(1.35) } 70% { transform: scale(.9) } 100% { transform: scale(1) } }
+@keyframes tstRoll { from { opacity: 0; transform: translateY(60%) } to { opacity: 1; transform: none } }
+@keyframes tstHl { 0% { opacity: 0 } 10% { opacity: 1 } 75% { opacity: 1 } 100% { opacity: 0 } }
 @media (prefers-reduced-motion: reduce) {
   #${ID_TESTIMONIOS} *, #${ID_TESTIMONIOS} *::before, #${ID_TESTIMONIOS} *::after { animation: none !important; transition: none !important; }
 }
@@ -160,6 +165,45 @@ export const IconoCalendarioCerrado: React.FC = () => (
 export const IconoSinConexion: React.FC = () => (
     <Trazo tam={30}><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.86a10 10 0 015.17-2.69M19 12.86a10 10 0 00-2.3-1.64M2 8.82a15 15 0 014.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M12 20h.01" /></Trazo>
 );
+export const IconoChat: React.FC<{ tam?: number; ancho?: number }> = ({ tam = 30, ancho = 1.75 }) => (
+    <Trazo tam={tam} ancho={ancho}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /><path d="M8 9h8M8 13h5" /></Trazo>
+);
+export const IconoChatChico: React.FC = () => (
+    <Trazo tam={13} ancho={2}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></Trazo>
+);
+export const IconoLupa: React.FC<{ tam?: number }> = ({ tam = 19 }) => (
+    <Trazo tam={tam}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></Trazo>
+);
+/** La lupa con el menos: "Sin resultados". */
+export const IconoLupaSin: React.FC = () => (
+    <Trazo tam={30}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5M8 11h6" /></Trazo>
+);
+export const IconoEquis: React.FC<{ tam?: number; ancho?: number }> = ({ tam = 15, ancho = 2.4 }) => (
+    <Trazo tam={tam} ancho={ancho}><path d="M6 6l12 12M18 6L6 18" /></Trazo>
+);
+export const IconoFlecha: React.FC<{ tam?: number }> = ({ tam = 16 }) => (
+    <Trazo tam={tam} ancho={2} estilo={{ flex: 'none' }}><path d="M5 12h14M13 6l6 6-6 6" /></Trazo>
+);
+export const IconoVolver: React.FC = () => (
+    <Trazo tam={18} ancho={2} estilo={{ flex: 'none' }}><path d="M19 12H5M11 18l-6-6 6-6" /></Trazo>
+);
+export const IconoLapiz: React.FC = () => (
+    <Trazo tam={19}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></Trazo>
+);
+export const IconoCompartir: React.FC<{ tam?: number }> = ({ tam = 18 }) => (
+    <Trazo tam={tam}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></Trazo>
+);
+export const IconoCandado: React.FC = () => (
+    <Trazo tam={30}><rect x="4" y="11" width="16" height="10" rx="3" /><path d="M8 11V8a4 4 0 018 0v3" /></Trazo>
+);
+/** El corazón: relleno cuando está dado. */
+export const IconoCorazon: React.FC<{ dado: boolean; tam?: number }> = ({ dado, tam = 19 }) => (
+    <svg width={tam} height={tam} viewBox="0 0 24 24" fill={dado ? 'currentColor' : 'none'} stroke="currentColor"
+        strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7z" />
+    </svg>
+);
+
 export const LogoGoogle: React.FC = () => (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.5 5.5 0 01-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.81z" />
@@ -196,6 +240,124 @@ export const PantallaAviso: React.FC<{
         </div>
     </div>
 );
+
+/**
+ * La tarjeta blanca de un estado: ícono, título, texto y (a veces) un botón.
+ *
+ * Es la del diseño de /testimonios: error, sin resultados y GCX sin
+ * testimonios. Ocupa todo el ancho que le den, a diferencia de
+ * `PantallaAviso`, que es la tarjeta angosta y centrada de /testimonios-gcx.
+ */
+export const TarjetaEstado: React.FC<{
+    icono: React.ReactNode;
+    titulo: React.ReactNode;
+    texto?: React.ReactNode;
+    boton?: string;
+    onBoton?: () => void;
+    /** El botón ancho de "Dejar mi testimonio" (60px) en vez del compacto. */
+    botonAncho?: boolean;
+    alerta?: boolean;
+    children?: React.ReactNode;
+}> = ({ icono, titulo, texto, boton, onBoton, botonAncho, alerta, children }) => (
+    <div
+        role={alerta ? 'alert' : undefined}
+        style={{
+            marginTop: 14, background: '#fff', borderRadius: 28, padding: '44px 24px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+            boxShadow: '0 1px 2px rgba(0,0,0,.04)', animation: 'tstIn .3s ease both',
+        }}
+    >
+        <span style={{ width: 72, height: 72, borderRadius: 999, background: C.gris, color: C.m62, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {icono}
+        </span>
+        <h2 style={{ margin: '20px 0 0', maxWidth: 340, fontSize: 21, lineHeight: 1.3, fontWeight: 700, letterSpacing: '-.02em', textWrap: 'balance' } as React.CSSProperties}>
+            {titulo}
+        </h2>
+        {texto && (
+            <p style={{ margin: '8px 0 0', maxWidth: 340, fontSize: 15, lineHeight: 1.5, fontWeight: 500, color: C.m62, textWrap: 'pretty' } as React.CSSProperties}>
+                {texto}
+            </p>
+        )}
+        {boton && onBoton && (
+            botonAncho
+                ? <button type="button" onClick={onBoton} style={{ ...botonNegro(60), marginTop: 22 }} className="active:scale-[.98]">{boton}</button>
+                : (
+                    <button
+                        type="button"
+                        onClick={onBoton}
+                        className="active:scale-[.98]"
+                        style={{ marginTop: 22, height: 50, padding: '0 26px', border: 0, borderRadius: 999, background: C.tinta, color: '#fff', fontSize: 15.5, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        {boton}
+                    </button>
+                )
+        )}
+        {children}
+    </div>
+);
+
+// ── Links para compartir ────────────────────────────────────────────────
+
+/**
+ * El link que se comparte, armado como el de Enlaces Origen: el origen de la
+ * app + "/#" + la ruta. El diseño muestra `origeniglesia.org/testimonios/…`,
+ * pero la app vive en `app.origeniglesia.org` y con HashRouter, así que ese
+ * link no abriría nada (conflicto 1 del inventario).
+ */
+const origen = (): string =>
+    (typeof window !== 'undefined' ? window.location.origin : 'https://app.origeniglesia.org');
+
+export const linkDeGrupo = (groupId: string): string =>
+    `${origen()}/#/testimonios/${encodeURIComponent(groupId)}`;
+
+export const linkDeTestimonio = (groupId: string, testimonioId: string): string =>
+    `${linkDeGrupo(groupId)}?testimonio=${encodeURIComponent(testimonioId)}`;
+
+// ── Ancho de la pantalla ────────────────────────────────────────────────
+
+/** Los tres tamaños del diseño: teléfono < 600, tablet < 1024, compu. */
+export type Vista = 'movil' | 'tablet' | 'compu';
+
+const vistaDe = (ancho: number): Vista => (ancho < ANCHO_MOVIL ? 'movil' : ancho < 1024 ? 'tablet' : 'compu');
+
+export const useVista = (): Vista => {
+    // Se mide en el PRIMER render: arrancando en 'compu', un teléfono
+    // dibujaría tres columnas y las acomodaría después, a la vista.
+    const [vista, setVista] = useState<Vista>(() => (typeof window === 'undefined' ? 'compu' : vistaDe(window.innerWidth)));
+    useEffect(() => {
+        const medir = () => setVista(vistaDe(window.innerWidth));
+        medir();
+        window.addEventListener('resize', medir);
+        return () => window.removeEventListener('resize', medir);
+    }, []);
+    return vista;
+};
+
+// ── Textos ──────────────────────────────────────────────────────────────
+
+/**
+ * El corte de "ver más" del diseño: 100 caracteres, sin partir una palabra
+ * ni dejar un signo colgado.
+ *
+ * Por letra y no por `length`: un emoji son dos unidades en JS, y cortar por
+ * la mitad lo deja roto. Se corta en el último espacio para no partir una
+ * palabra, y se le saca una coma o un punto final antes de los puntos
+ * suspensivos.
+ */
+export const LARGO_CORTE = 100;
+
+export const cortar = (texto: string, largo = LARGO_CORTE): string => {
+    const letras = Array.from(texto);
+    if (letras.length <= largo) return texto;
+    const trozo = letras.slice(0, largo).join('');
+    const sinPalabraPartida = trozo.replace(/\s+\S*$/, '');
+    const base = sinPalabraPartida.length >= Math.floor(largo / 2) ? sinPalabraPartida : trozo;
+    return `${base.replace(/[,.;:]$/, '')}…`;
+};
+
+/** ¿Hace falta el "ver más"? */
+export const hayQueCortar = (texto: string, largo = LARGO_CORTE): boolean =>
+    Array.from(texto || '').length > largo;
 
 // ── La hoja (teléfono) / el modal (compu) ───────────────────────────────
 
