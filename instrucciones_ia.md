@@ -2825,7 +2825,17 @@ Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 109 casos; deshacer
 
 ### El plan (4 prompts)
 1. Diseños, inventario y base (tablas, seguridad, funciones). Sin pantallas.
-2. `/testimonios-gcx`: dejar un testimonio.
+2. `/testimonios-gcx`: dejar un testimonio. ✅ Hecho (2026-11-02):
+   `pages/testimonios/DejarTestimonio.tsx`, ruta PÚBLICA con menú (como
+   /solicitudes, arriba de las protegidas). Login real: Google con
+   `signInWithGoogle` y email/registro por `/auth` (`?registro=1`), con
+   `post_login_redirect` + `state.from` y la marca `testimonios-gcx.volviendo`
+   para "Volviendo de iniciar sesión…". Borrador (GCX + texto) en
+   sessionStorage por persona (`testimonios-gcx.borrador.<id>`). Piezas
+   compartidas para el prompt 3 en `pages/testimonios/piezas.tsx` (`HojaModal`,
+   `Cara`, `FilaAnfitrion`, `fondoDePortada`, `PantallaAviso`, `ESTILOS` con id
+   `testimonios-gcx`, que fuerza Manrope y le gana a los !important de
+   index.html).
 3. `/testimonios` y `/testimonios/:groupId`: leer, buscar, corazones, compartir.
 4. "Mis testimonios" en el Perfil y la moderación en Sistemas
    (`/panel-admin?tab=testimonios`, a donde ya apunta el aviso).

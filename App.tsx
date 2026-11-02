@@ -72,6 +72,7 @@ import InscripcionNocturna from './pages/eventos/nocturna/InscripcionNocturna';
 import ChequearEntrada from './pages/eventos/nocturna/ChequearEntrada';
 import CompraVoluntarios from './pages/voluntarios/CompraVoluntarios';
 import PaginaSolicitudes from './pages/solicitudes/PaginaSolicitudes';
+import DejarTestimonio from './pages/testimonios/DejarTestimonio';
 import InscripcionInfluosDia from './pages/eventos/influos/InscripcionInfluosDia';
 import BuscarInfluosDia from './pages/eventos/influos/BuscarInfluosDia';
 import AdminInfluosDia from './pages/eventos/influos/AdminInfluosDia';
@@ -642,6 +643,23 @@ const AppContent: React.FC = () => {
                     appConfig={config}
                 >
                     <PaginaSolicitudes />
+                </Layout>
+            } />
+
+            {/* Dejar un testimonio de un GCX (design-claude/GCX Testimonios -
+                Dejar testimonio.dc.html). PÚBLICA como /solicitudes y por lo
+                mismo va acá arriba: sin sesión muestra el paso de login y
+                vuelve sola; abajo, con las protegidas, vería SinAcceso.
+                Con el menú puesto, como /solicitudes: el diseño no muestra
+                si va con o sin navegación. */}
+            <Route path="/testimonios-gcx" element={
+                <Layout
+                    userRole={user?.role || null}
+                    currentUser={user}
+                    onLogout={onLogoutClick}
+                    appConfig={config}
+                >
+                    <DejarTestimonio />
                 </Layout>
             } />
             <Route path="/tribal-wars" element={<InscripcionInfluosDia />} />
