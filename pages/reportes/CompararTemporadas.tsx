@@ -342,7 +342,7 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
         <div className="min-h-screen" style={{ background: C.fondo, fontFamily: FUENTE, color: C.tinta }}>
 
             {/* ── Encabezado ── */}
-            <div className="bg-white px-7 py-5" style={{ borderBottom: `1px solid ${C.borde}` }}>
+            <div className="bg-white px-4 py-5 sm:px-7" style={{ borderBottom: `1px solid ${C.borde}` }}>
                 <div className="max-w-[1440px] mx-auto flex items-center gap-7 flex-wrap">
                     <div className="min-w-0 flex-1">
                         <button
@@ -390,7 +390,7 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                 </div>
             </div>
 
-            <div className="max-w-[1440px] mx-auto px-7 py-6">
+            <div className="max-w-[1440px] mx-auto px-4 py-5 sm:px-7 sm:py-6">
 
                 {fallaronTodas ? (
                     <Tarjeta className="px-6 py-8 text-center">
@@ -441,7 +441,7 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                         </div>
 
                         {cargando ? (
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {[0, 1, 2].map(i => (
                                     <Tarjeta key={i} className="px-5 py-[18px]">
                                         <Esqueleto alto={14} ancho="46%" />
@@ -453,7 +453,7 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <KpiComparado
                                     titulo="Grupos"
                                     detalle="Activos en cada temporada."
@@ -479,12 +479,12 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                 detalle="Qué parte de los inscriptos está asistiendo, temporada por temporada."
                             />
                             {cargando ? (
-                                <div className="grid grid-cols-3 gap-6 mt-[22px]">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-[22px]">
                                     {[0, 1, 2].map(i => <Esqueleto key={i} alto={168} />)}
                                 </div>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-3 gap-6 mt-[22px]">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-[22px]">
                                         {TEMPORADAS.map(t => {
                                             const a = porTemporada[t].datos?.asistenciaPersonas;
                                             const r = porTemporada[t].datos?.gruposQueReportan;
@@ -534,12 +534,12 @@ const CompararTemporadas: React.FC<{ currentUser: User }> = () => {
                                 detalle="Cantidad de Grupos que reportan asistencias."
                             />
                             {cargando ? (
-                                <div className="grid grid-cols-3 gap-6 mt-[22px]">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-[22px]">
                                     {[0, 1, 2].map(i => <Esqueleto key={i} alto={168} />)}
                                 </div>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-3 gap-6 mt-[22px]">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-[22px]">
                                         {TEMPORADAS.map(t => {
                                             const r = porTemporada[t].datos?.gruposQueReportan;
                                             return (

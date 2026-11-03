@@ -19,6 +19,7 @@
 import type {
     ReportesGCXTemporada, AsistenciaPorFechaDia, CargaPorGrupoFila, AsistenciaPersonasReporte,
     GruposQueReportanReporte, ReporteModalidadGCX, ModalidadGrupo, ModoReunion, ReunionCrudaGCX,
+    DetalleGrupoReporte, TemporadaGCX,
 } from '../../types';
 
 /** Un rango de fechas, inclusive en las dos puntas. Igual que el de SelectorDeRango. */
@@ -224,54 +225,203 @@ export const tramosDelPeriodo = (r: Rango, agrupacion: 'semanas' | 'meses'): Tra
 
 const porcentaje = (parte: number, total: number) => (total > 0 ? Math.round((parte / total) * 100) : 0);
 
+// ── "Días con asistencia cargada": cargadas sobre las que correspondían ──
+
+/**
+ * Un día del gráfico. Además de quiénes cargaron, dice cuántas reuniones
+ * correspondían ese día (el día de encuentro de cada grupo, dentro de su
+ * vigencia y hasta hoy) y cuáles de ellas no se cargaron.
+ */
+export interface DiaDeCalendario {
+    fecha: string;
+    /** Los que cargaron ese día, con sus presentes contra el cupo. */
+    grupos: AsistenciaPorFechaDia['grupos'];
+    /** Reuniones que correspondían ese día. */
+    esperadas: number;
+    /** Las que correspondían y nadie cargó: la barra clara. */
+    sinCargar: AsistenciaPorFechaDia['sinCargar'];
+    /**
+     * Las que correspondían y no se cargaron ESE día, pero el grupo cargó en
+     * otra fecha que no era su día de encuentro y esa carga la cubre. No
+     * cuentan como falta, igual que en "Quiénes no reportan".
+     */
+    cubiertas: Array<{ id: string; nombre: string; capacidad: number; fechaCarga: string }>;
+}
+
+/**
+ * Qué reunión cubre cada carga hecha fuera del día de encuentro.
+ *
+ * "Quiénes no reportan" cuenta, por grupo, max(0, esperadas − cargadas): una
+ * carga de un martes en un grupo de los lunes cuenta como cargada. Para que
+ * la barra clara sume lo mismo, esa carga tiene que cubrir una de sus
+ * reuniones sin cargar: primero la de la misma semana (la reunión que se
+ * movió de día) y, si no hay, la más cercana. Cubren tantas como cargas
+ * extra haya, ni una más: el total de faltas da exactamente el de "Quiénes
+ * no reportan".
+ */
+const cubrirFaltas = (faltas: string[], extras: string[]): Map<string, string> => {
+    const libres = [...faltas].sort();
+    const cubre = new Map<string, string>();
+    const sinUsar: string[] = [];
+    const distancia = (a: string, b: string) => Math.abs(fechaDe(a).getTime() - fechaDe(b).getTime());
+    [...extras].sort().forEach(extra => {
+        const misma = libres.filter(f => lunesDe(f) === lunesDe(extra))
+            .sort((a, b) => distancia(a, extra) - distancia(b, extra) || a.localeCompare(b))[0];
+        if (misma) { cubre.set(misma, extra); libres.splice(libres.indexOf(misma), 1); } else sinUsar.push(extra);
+    });
+    sinUsar.forEach(extra => {
+        if (!libres.length) return;
+        const cercana = [...libres].sort((a, b) => distancia(a, extra) - distancia(b, extra) || a.localeCompare(b))[0];
+        cubre.set(cercana, extra);
+        libres.splice(libres.indexOf(cercana), 1);
+    });
+    return cubre;
+};
+
+/**
+ * Los días del gráfico, con la cuenta de las reuniones que correspondían.
+ *
+ * Recibe el tablero ya recortado al período (o el de la temporada entera):
+ * las fechas de encuentro salen de `cargaPorGrupo[].dias` y las cargas de
+ * `asistenciaPorFecha`, así que todo queda dentro del mismo período. Aparecen
+ * los días con alguna carga y los días en los que correspondía alguna
+ * reunión, aunque nadie haya cargado; los demás no.
+ *
+ * La suma de `sinCargar` de todos los días es igual a la de "Quiénes no
+ * reportan" para el mismo período, y la de `grupos` a la de "Quiénes reportan
+ * más".
+ */
+export const calendarioDeCarga = (
+    datos: Pick<ReportesGCXTemporada, 'asistenciaPorFecha' | 'cargaPorGrupo' | 'tablaGrupos'>,
+): DiaDeCalendario[] => {
+    const capacidad = new Map(datos.tablaGrupos.map(f => [f.groupId, Number(f.capacidad) || 0]));
+    const cargasPorGrupo = new Map<string, Set<string>>();
+    datos.asistenciaPorFecha.forEach(d => d.grupos.forEach(g => {
+        if (!cargasPorGrupo.has(g.id)) cargasPorGrupo.set(g.id, new Set());
+        cargasPorGrupo.get(g.id)!.add(d.fecha);
+    }));
+
+    const dias = new Map<string, DiaDeCalendario>();
+    const diaDe = (fecha: string) => {
+        let d = dias.get(fecha);
+        if (!d) { d = { fecha, grupos: [], esperadas: 0, sinCargar: [], cubiertas: [] }; dias.set(fecha, d); }
+        return d;
+    };
+    datos.asistenciaPorFecha.forEach(d => { diaDe(d.fecha).grupos = d.grupos; });
+
+    datos.cargaPorGrupo.forEach(f => {
+        const cargas = cargasPorGrupo.get(f.groupId) || new Set<string>();
+        const esperadas = new Set(f.dias.map(d => d.fecha));
+        const faltas = [...esperadas].filter(x => !cargas.has(x));
+        const extras = [...cargas].filter(x => !esperadas.has(x));
+        const cubre = cubrirFaltas(faltas, extras);
+        const g = { id: f.groupId, nombre: f.nombre, capacidad: capacidad.get(f.groupId) ?? 0 };
+        esperadas.forEach(x => { diaDe(x).esperadas += 1; });
+        faltas.forEach(x => {
+            const otra = cubre.get(x);
+            if (otra) diaDe(x).cubiertas.push({ ...g, fechaCarga: otra });
+            else diaDe(x).sinCargar.push(g);
+        });
+    });
+
+    const porNombre = (a: { nombre: string }, b: { nombre: string }) => a.nombre.localeCompare(b.nombre);
+    return [...dias.values()]
+        .sort((a, b) => a.fecha.localeCompare(b.fecha))
+        .map(d => ({ ...d, sinCargar: d.sinCargar.sort(porNombre), cubiertas: d.cubiertas.sort(porNombre) }));
+};
+
 /** Una barra de "Días con asistencia cargada" agrupada. */
 export interface TramoDeCarga extends Tramo {
     /** Reuniones cargadas en el tramo: la suma de las barras de sus días. */
     Cargaron: number;
-    /** Reuniones que tocaban y no se cargaron, sumadas igual. */
+    /** Reuniones que correspondían en el tramo. */
+    Esperadas: number;
+    /** Las que correspondían y no se cargaron, sumadas igual. */
     NoCargaron: number;
-    /** Sobre el total del tramo, nunca el promedio de los porcentajes de cada día. */
+    /**
+     * Cargadas sobre las que correspondían, con techo en 100: un grupo que
+     * cargó de más no lleva el tramo arriba del 100 %. Sobre el total del
+     * tramo, nunca el promedio de los porcentajes de cada día.
+     */
     porcentaje: number;
     /** Qué grupos cargaron y cuántas veces, con los presentes de cada vez. */
     lista: Array<{ id: string; nombre: string; capacidad: number; presentes: number[] }>;
     faltantes: Array<{ id: string; nombre: string; capacidad: number; veces: number }>;
+    /** Reuniones cubiertas por una carga en otra fecha, por grupo. */
+    cubiertas: Array<{ id: string; nombre: string; capacidad: number; veces: number }>;
 }
+
+/** Cargadas sobre esperadas, con techo en 100. */
+export const porcentajeCargado = (cargadas: number, esperadas: number) =>
+    porcentaje(Math.min(cargadas, esperadas), esperadas);
 
 /**
  * "Días con asistencia cargada" por semana o por mes. Cada barra SUMA lo de
  * sus días —las mismas barras de "Días"—, así el total de las semanas es el
  * mismo que el de los días.
  */
-export const agruparCalendario = (dias: AsistenciaPorFechaDia[], tramos: Tramo[]): TramoDeCarga[] =>
+export const agruparCalendario = (dias: DiaDeCalendario[], tramos: Tramo[]): TramoDeCarga[] =>
     tramos.map(t => {
         const lista = new Map<string, { id: string; nombre: string; capacidad: number; presentes: number[] }>();
         const faltantes = new Map<string, { id: string; nombre: string; capacidad: number; veces: number }>();
+        const cubiertas = new Map<string, { id: string; nombre: string; capacidad: number; veces: number }>();
+        const contar = (m: typeof faltantes, g: { id: string; nombre: string; capacidad: number }) => {
+            const fila = m.get(g.id) || { id: g.id, nombre: g.nombre, capacidad: g.capacidad, veces: 0 };
+            fila.veces += 1;
+            m.set(g.id, fila);
+        };
         let cargaron = 0;
+        let esperadas = 0;
         let noCargaron = 0;
         dias.filter(d => d.fecha >= t.desde && d.fecha <= t.hasta)
             .sort((a, b) => a.fecha.localeCompare(b.fecha))
             .forEach(d => {
                 cargaron += d.grupos.length;
+                esperadas += d.esperadas;
                 noCargaron += d.sinCargar.length;
                 d.grupos.forEach(g => {
                     const fila = lista.get(g.id) || { id: g.id, nombre: g.nombre, capacidad: g.capacidad, presentes: [] };
                     fila.presentes.push(g.presentes);
                     lista.set(g.id, fila);
                 });
-                d.sinCargar.forEach(g => {
-                    const fila = faltantes.get(g.id) || { id: g.id, nombre: g.nombre, capacidad: g.capacidad, veces: 0 };
-                    fila.veces += 1;
-                    faltantes.set(g.id, fila);
-                });
+                d.sinCargar.forEach(g => contar(faltantes, g));
+                d.cubiertas.forEach(g => contar(cubiertas, g));
             });
         const porNombre = (a: { nombre: string }, b: { nombre: string }) => a.nombre.localeCompare(b.nombre);
         return {
             ...t,
             Cargaron: cargaron,
+            Esperadas: esperadas,
             NoCargaron: noCargaron,
-            porcentaje: porcentaje(cargaron, cargaron + noCargaron),
+            porcentaje: porcentajeCargado(cargaron, esperadas),
             lista: [...lista.values()].sort(porNombre),
             faltantes: [...faltantes.values()].sort(porNombre),
+            cubiertas: [...cubiertas.values()].sort(porNombre),
+        };
+    });
+
+/**
+ * "Asistencia reunión a reunión" del detalle de un grupo, por semana o mes:
+ * cada barra suma los presentes de sus reuniones, y el "de N" es la suma de
+ * sus padrones (nunca un promedio de porcentajes).
+ */
+export interface TramoDeReuniones extends Tramo {
+    presentes: number;
+    total: number;
+    reuniones: Array<{ fecha: string; presentes: number; total: number }>;
+}
+
+export const agruparReuniones = (
+    reuniones: Array<{ fecha: string; presentes: number; total: number }>,
+    tramos: Tramo[],
+): TramoDeReuniones[] =>
+    tramos.map(t => {
+        const del = reuniones.filter(r => r.fecha >= t.desde && r.fecha <= t.hasta);
+        return {
+            ...t,
+            presentes: del.reduce((a, r) => a + r.presentes, 0),
+            total: del.reduce((a, r) => a + r.total, 0),
+            reuniones: del,
         };
     });
 
@@ -458,5 +608,82 @@ export const vistaDelPeriodo = (datos: ReportesGCXTemporada, r: Rango): Reportes
         cargaPorGrupo,
         tablaGrupos: datos.tablaGrupos.map(f => ({ ...f, reportaAsistencia: c.reportan.has(f.groupId) })),
         porModalidad: { presencial: reporteDe('presencial'), online: reporteDe('online'), hibrido: reporteDe('hibrido') },
+    };
+};
+
+// ── La URL: del tablero al detalle de un grupo y de vuelta ───────────────
+
+const TEMPORADAS_URL: TemporadaGCX[] = ['S1', 'S2', 'S3'];
+
+export interface ParametrosDeReporte {
+    temporada: TemporadaGCX | null;
+    anio: number | null;
+    desde: string | null;
+    hasta: string | null;
+    por: string | null;
+}
+
+/** Lo que trae la URL al entrar (un link compartido, una recarga o el paso tablero ↔ detalle). */
+export const leerParametros = (p: URLSearchParams): ParametrosDeReporte => {
+    const t = p.get('temporada');
+    const a = Number(p.get('anio'));
+    return {
+        temporada: (TEMPORADAS_URL as string[]).includes(t || '') ? (t as TemporadaGCX) : null,
+        anio: Number.isInteger(a) && a >= 2020 && a <= 2100 ? a : null,
+        desde: p.get('desde'),
+        hasta: p.get('hasta'),
+        por: p.get('por'),
+    };
+};
+
+/**
+ * Los parámetros para ir del tablero al detalle de un grupo, o volver: la
+ * temporada, el período (con "Toda la temporada", sus fechas enteras) y la
+ * agrupación. Del otro lado, un período igual a la temporada entera se lee
+ * como "Toda la temporada".
+ */
+export const parametrosDeVista = (v: { temporada: TemporadaGCX; anio: number; rango: Rango | null; agrupacion: Agrupacion }): string => {
+    const p = new URLSearchParams();
+    p.set('temporada', v.temporada);
+    p.set('anio', String(v.anio));
+    if (v.rango) { p.set('desde', v.rango.desde); p.set('hasta', v.rango.hasta); }
+    p.set('por', v.agrupacion);
+    return p.toString();
+};
+
+// ── El detalle de un grupo en un período ─────────────────────────────────
+
+/**
+ * El detalle de un grupo recortado a un período: sus reuniones, las que le
+ * tocaban, la constancia de cada miembro y el promedio de la iglesia, sólo
+ * con las fechas del período. Lo que no depende de fechas (el grupo, sus
+ * miembros, el liderazgo, la ocupación) queda como vino.
+ *
+ * Con el período igual a la temporada entera da lo mismo que el servicio; la
+ * pantalla, en ese caso, usa lo del servicio tal cual.
+ */
+export const detalleDelPeriodo = (d: DetalleGrupoReporte, r: Rango): DetalleGrupoReporte => {
+    const en = (f: string) => f >= r.desde && f <= r.hasta;
+    const reuniones = d.asistencia.reuniones.filter(x => en(x.fecha));
+    const reporta = reuniones.length > 0;
+    const fechasEsperadas = (d.asistencia.fechasEsperadas || []).filter(en);
+    const iglesia = (d.reunionesIglesia || []).filter(x => en(x.fecha));
+    return {
+        ...d,
+        miembros: d.miembros.map(m => {
+            const fechasDeReunion = (m.fechasDeReunion || []).filter(en);
+            const fechasAsistidas = (m.fechasAsistidas || []).filter(en);
+            return { ...m, totalReuniones: fechasDeReunion.length, reunionesAsistidas: fechasAsistidas.length, fechasDeReunion, fechasAsistidas };
+        }),
+        asistencia: {
+            ...d.asistencia,
+            reuniones,
+            promedioPresentes: reporta ? reuniones.reduce((a, x) => a + x.presentes, 0) / reuniones.length : 0,
+            reportaAsistencia: reporta,
+            reunionesEsperadas: fechasEsperadas.length,
+            fechasEsperadas,
+        },
+        promedioIglesia: iglesia.length > 0 ? iglesia.reduce((a, x) => a + x.presentes, 0) / iglesia.length : null,
+        reunionesIglesia: iglesia,
     };
 };

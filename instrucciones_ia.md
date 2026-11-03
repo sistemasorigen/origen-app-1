@@ -2259,7 +2259,71 @@ propia del Día del Niño y no se puede probar sin cámara).
 - `SelectorDeRango` sumó props opcionales para esto: `minimo`, `maximo`,
   `etiquetaDelBoton` y `alinearPanel`. Sin ellas se ve y funciona como
   siempre; se comparó el HTML con el de antes.
-- Comparar temporadas y el detalle de un grupo no usan el período.
+- Comparar temporadas no usa el período.
+
+### "Días con asistencia cargada": cargadas sobre las que correspondían (2026-11-03)
+- **Decisión de Ignacio:** el gráfico cuenta las **reuniones esperadas**, con
+  la misma regla que "Quiénes no reportan" y "Reporte de asistencia".
+- **Se arma en el front** con `calendarioDeCarga` (`periodoGCX.ts`), a partir
+  de `cargaPorGrupo[].dias` y `asistenciaPorFecha`. `getAsistenciaPorFecha` del
+  servicio no cambió.
+- **Qué días aparecen.** Los días con alguna carga y los días con reuniones que
+  correspondían, aunque nadie haya cargado. Los días sin nada no aparecen.
+- **Total.** La suma de "No cargaron" es igual a la de "Quiénes no reportan"
+  para el mismo período: 82, 88 y 137 en la Tercera, Segunda y Primera 2026.
+  "Cargaron" es igual a "Quiénes reportan más".
+- **Cargas fuera del día de encuentro.** Un grupo de los lunes que cargó un
+  martes cuenta esa reunión como cargada, porque "Quiénes no reportan" hace
+  max(0, esperadas − cargadas). Para que el día a día sume lo mismo, esa carga
+  **cubre** una reunión suya sin cargar: primero la de la misma semana y, si no
+  hay, la más cercana. En el tooltip aparece como "Cargaron en otra fecha".
+  - La cobertura se calcula dentro del período que se mira. Por eso una semana
+    puede tener menos faltas vista dentro de "Toda la temporada" (cargas de
+    otras semanas la cubren) que elegida sola. Cada vista coincide con su
+    "Quiénes no reportan".
+- **Tooltips.** "16 de 45 reuniones cargadas · 36%": cargadas sobre esperadas,
+  con techo en 100. Cada lista va completa, en dos columnas si es larga.
+- **Excel.** La hoja por día suma la fila "Sí, en otra fecha". La agrupada
+  suma la columna "Reuniones que correspondían".
+
+### El período en el detalle de un grupo (2026-11-03)
+- **Ida.** "Ver más detalles" y "Ver el grupo" (Por modalidad) llevan
+  `?temporada&anio&desde&hasta&por` (`parametrosDeVista`).
+- **El detalle.** Tiene el mismo selector, con mínimo y máximo de la temporada
+  del grupo, y el mismo control "Días · Semanas · Meses".
+- **Vuelta.** "Volver al dashboard" lleva al tablero con lo que se esté
+  mirando.
+- **Sin parámetros, inválidos o de otra temporada:** "Toda la temporada" +
+  "Días", igual que antes. La agrupación del detalle sale sólo de la URL: la
+  ruta no recibe al usuario.
+- **Sin consultas nuevas.** `getDetalleGrupoReporte` devuelve además, con
+  fecha, lo que ya calculaba:
+  - `asistencia.fechasEsperadas`;
+  - `miembros[].fechasDeReunion` y `fechasAsistidas`;
+  - `reunionesIglesia`.
+  
+  Los límites de la temporada salen de `getReportesGCX`, que usa la misma base
+  cacheada que el promedio de la iglesia. `detalleDelPeriodo` recorta.
+- **Qué sigue el período:**
+  - se agrupa "Asistencia reunión a reunión": cada barra suma presentes y
+    padrones, y la línea del promedio de la iglesia, que es por reunión, no se
+    dibuja al agrupar;
+  - siguen el período, sin agrupar, el diagnóstico, presentes por reunión,
+    reuniones cargadas, el promedio de la iglesia, la constancia y la columna
+    de asistencia de Miembros;
+  - son de la temporada la identidad, la ocupación, el co-anfitrión, el
+    liderazgo y la ficha.
+
+### El tablero en el celular (2026-11-03)
+- **Umbral.** Por debajo de 640 px (`sm`), el tablero, el detalle y Comparar
+  temporadas pasan a una columna y los títulos apilan sus botones. Desde 640 px
+  rigen las clases de siempre, así que la compu y el papel (~720 px) quedan
+  iguales. Se comprobó elemento por elemento contra el commit anterior.
+- **La tabla "Detalle por grupo"** se desliza dentro de su tarjeta.
+- **Los `select` de "Un grupo en detalle" y "Asistencia de un grupo"** van
+  dentro de una caja que, en el celular, recorta el texto de sus opciones. En
+  WebKit, el nombre más largo desbordaba la página aunque el select midiera
+  bien.
 
 ---
 

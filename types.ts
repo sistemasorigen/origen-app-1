@@ -1677,6 +1677,10 @@ export interface MiembroDetalleReporte {
     // del grupo — alguien que entró en abril no puede deber las reuniones
     // de marzo.
     totalReuniones: number;
+    /** Las fechas de esas reuniones (una por reunión), para recortarlas a un período. */
+    fechasDeReunion?: string[];
+    /** Las fechas de las que asistió. */
+    fechasAsistidas?: string[];
 }
 
 export interface ReunionDetalleReporte {
@@ -1703,6 +1707,8 @@ export interface DetalleGrupoReporte {
         // a un "14" — sin esto, 14 reuniones cargadas no dice si el grupo
         // reporta bien o le faltan la mitad.
         reunionesEsperadas: number;
+        /** Las fechas de esas reuniones esperadas, para contarlas en un período. */
+        fechasEsperadas?: string[];
     };
     genealogia: {
         vieneDe: { id: string; nombre: string } | null;
@@ -1714,6 +1720,12 @@ export interface DetalleGrupoReporte {
     // reunión" es bueno o malo — sin una referencia, el número no dice nada.
     // null si la temporada del grupo no se pudo determinar.
     promedioIglesia: number | null;
+    /**
+     * Las reuniones de la temporada de toda la iglesia, con su fecha y sus
+     * presentes: con esto se saca el promedio de un período. Su promedio
+     * entero es `promedioIglesia`.
+     */
+    reunionesIglesia?: Array<{ fecha: string; presentes: number }>;
     // No pedido en la spec original: cuántas solicitudes PENDING tiene el
     // grupo hoy. Sale gratis — ya se pide la lista completa de inscripciones
     // para calcular el resto — y es justo el tipo de dato que el diseño

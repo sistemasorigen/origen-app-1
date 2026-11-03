@@ -11,18 +11,26 @@
 // parcial) que pages/reportes/ReportesGCX.tsx, para que las dos pantallas
 // del tablero se sientan como una sola herramienta.
 // ════════════════════════════════════════════════════════════════════════
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { NOMBRE_MODALIDAD, modalidadDe, dondeSeReune } from '../../src/utils/modalidad';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
 import { ArrowLeft, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import {
     TemporadaGCX, DetalleGrupoReporte as DetalleGrupoReporteDatos,
-    MiembroDetalleReporte, GroupCategory, GroupTag,
+    MiembroDetalleReporte, GroupCategory, GroupTag, ReportesGCXTemporada, DEFAULT_SEASON_SETTINGS,
 } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
+import { db } from '../../services/dbService';
+import SelectorDeRango, { etiquetaDeRango } from '../audiencia/SelectorDeRango';
+import {
+    Agrupacion, AGRUPACIONES, NOMBRE_AGRUPACION, POR_AGRUPACION, Rango,
+    agrupacionValida, agruparReuniones, atajosDeTemporada, detalleDelPeriodo, frasePeriodo, isoDe,
+    leerParametros, limitesDeTemporada, mismoRango, parametrosDeVista, periodoDeLaUrl, rangoDeToda,
+    tramosDelPeriodo,
+} from './periodoGCX';
 
 // ── Tokens (mismos valores que ReportesGCX.tsx) ─────────────────────────
 const C = {
@@ -113,6 +121,37 @@ const FilaConstancia: React.FC<{ nombre: string; asistidas: number; total: numbe
     );
 };
 
+/**
+ * El control "Días · Semanas · Meses", con el mismo dibujo que el del tablero
+ * (las pastillas de temporada).
+ */
+const ControlAgrupacion: React.FC<{ valor: Agrupacion; onCambiar: (a: Agrupacion) => void }> = ({ valor, onCambiar }) => (
+    <div
+        role="group"
+        aria-label="Agrupar los gráficos con fechas por"
+        className="grid grid-cols-3 gap-[3px] rounded-[10px] p-[3px] w-full md:flex md:w-auto"
+        style={{ background: '#f4f5f7', border: `1px solid ${C.borde}` }}
+    >
+        {AGRUPACIONES.map(a => (
+            <button
+                key={a}
+                type="button"
+                onClick={() => onCambiar(a)}
+                aria-pressed={valor === a}
+                className="h-8 px-3.5 rounded-[7px] flex items-center justify-center text-[13.5px] font-semibold transition-colors"
+                style={valor === a ? { background: C.azul, color: '#fff' } : { color: '#4b5563' }}
+            >
+                {NOMBRE_AGRUPACION[a]}
+            </button>
+        ))}
+    </div>
+);
+
+/** Una línea chica que dice de qué fechas es una tarjeta, cuando no es lo de siempre. */
+const Alcance: React.FC<{ texto: string | null; claro?: boolean }> = ({ texto, claro }) => texto ? (
+    <p className="mt-1.5 text-[12px] font-semibold" style={{ color: claro ? 'rgba(255,255,255,.6)' : C.apagado }}>{texto}</p>
+) : null;
+
 // ── Diagnóstico ──────────────────────────────────────────────────────────
 // Heurística propia, no pedida por la spec: la pantalla existe para dar un
 // veredicto en una frase, y sin esto el "DIAGNÓSTICO" del diseño quedaría
@@ -124,9 +163,21 @@ interface Veredicto { titulo: string; texto: string; }
 const diagnosticar = (
     d: DetalleGrupoReporteDatos,
     personasInscriptas: number,
-    ocupacionPct: number
+    ocupacionPct: number,
+    /** "del 26 de octubre al 1 de noviembre", si se mira un período. */
+    enElPeriodo?: string | null
 ): Veredicto => {
     const { asistencia, promedioIglesia, coAnfitrion } = d;
+
+    if (!asistencia.reportaAsistencia && enElPeriodo) {
+        const semanas = asistencia.reunionesEsperadas;
+        return {
+            titulo: 'Sin datos para evaluar',
+            texto: semanas > 0
+                ? `${capitalizar(enElPeriodo)} le ${semanas === 1 ? 'tocó 1 reunión' : `tocaron ${semanas} reuniones`} y no cargó ninguna. No sabemos si se reunió en esas fechas.`
+                : `${capitalizar(enElPeriodo)} no le tocó ninguna reunión. Probá con un período más largo.`,
+        };
+    }
 
     if (!asistencia.reportaAsistencia) {
         const desde = fechaLarga(d.grupo.startDate);
@@ -178,8 +229,14 @@ const diagnosticar = (
 const DetalleGrupoReporte: React.FC = () => {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Lo que trae el tablero (o un link): temporada, período y agrupación. Se
+    // lee una sola vez; sin parámetros, "Toda la temporada" por días, como antes.
+    const [urlInicial] = useState(() => leerParametros(searchParams));
 
-    const [datos, setDatos] = useState<DetalleGrupoReporteDatos | null>(null);
+    // Lo que trajo el servicio, de toda la temporada. `datos`, más abajo, es
+    // lo que se dibuja: lo mismo recortado al período elegido.
+    const [datosGrupo, setDatos] = useState<DetalleGrupoReporteDatos | null>(null);
     const [cargando, setCargando] = useState(true);
     const [noEncontrado, setNoEncontrado] = useState(false);
     const [categorias, setCategorias] = useState<GroupCategory[]>([]);
@@ -201,6 +258,13 @@ const DetalleGrupoReporte: React.FC = () => {
             setNoEncontrado(true);
             setDatos(null);
         } else {
+            // El tablero de su temporada, para los límites del período. No es
+            // otra consulta: es la misma base que ya pidió el promedio de la
+            // iglesia, cacheada.
+            if (res.temporada && res.anio) {
+                const tablero = await supabaseService.getReportesGCX(res.temporada, res.anio);
+                setTablero(tablero);
+            }
             setDatos(res);
             // Comparación de "sin co-anfitrión" contra el resto de la temporada.
             // Reusa la misma base cacheada que promedioIglesia — si el
@@ -215,11 +279,88 @@ const DetalleGrupoReporte: React.FC = () => {
 
     useEffect(() => { cargar(); setVerTodosMiembros(false); }, [cargar]);
 
+    // ── Período y agrupación ────────────────────────────────────────────
+    // Los mismos que el tablero: el período, dentro de la temporada del
+    // grupo; null es "Toda la temporada".
+    const [tablero, setTablero] = useState<ReportesGCXTemporada | null>(null);
+    const [periodo, setPeriodo] = useState<Rango | null>(null);
+    const [agrupacion, setAgrupacion] = useState<Agrupacion>(() => agrupacionValida(urlInicial.por));
+    const periodoPedido = useRef(urlInicial.desde || urlInicial.hasta ? { desde: urlInicial.desde, hasta: urlInicial.hasta } : null);
+
+    const hoy = isoDe(new Date());
+    const temporadaGrupo = datosGrupo?.temporada ?? null;
+    const anioGrupo = datosGrupo?.anio ?? null;
+    const configTemporada = temporadaGrupo
+        ? (db.getAppConfig()?.groupsConfig?.seasonSettings ?? DEFAULT_SEASON_SETTINGS).seasons?.[temporadaGrupo]
+        : undefined;
+    const limites = useMemo(
+        () => (tablero && anioGrupo ? limitesDeTemporada(tablero, anioGrupo, configTemporada) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [tablero, anioGrupo, configTemporada?.startDate, configTemporada?.endDate]
+    );
+    const todaDesde = limites ? rangoDeToda(limites, hoy)?.desde : undefined;
+    const todaHasta = limites ? rangoDeToda(limites, hoy)?.hasta : undefined;
+    const toda = useMemo<Rango | null>(() => (todaDesde && todaHasta ? { desde: todaDesde, hasta: todaHasta } : null), [todaDesde, todaHasta]);
+    const rango = periodo ?? toda;
+
+    // El período del link, una vez que se sabe de qué temporada es el grupo.
+    // Inválido, de otra temporada o fuera de ella: "Toda la temporada".
+    useEffect(() => {
+        if (cargando || !periodoPedido.current) return;
+        const pedido = periodoPedido.current;
+        periodoPedido.current = null;
+        const deOtraTemporada = (urlInicial.temporada && urlInicial.temporada !== temporadaGrupo)
+            || (urlInicial.anio && urlInicial.anio !== anioGrupo);
+        const r = toda && !deOtraTemporada ? periodoDeLaUrl(pedido.desde, pedido.hasta, toda) : null;
+        setPeriodo(r && toda && !mismoRango(r, toda) ? r : null);
+    }, [cargando, toda, temporadaGrupo, anioGrupo, urlInicial.temporada, urlInicial.anio]);
+
+    /** Los parámetros de lo que se está mirando, para la URL y para volver. */
+    const parametros = temporadaGrupo && anioGrupo
+        ? parametrosDeVista({ temporada: temporadaGrupo, anio: anioGrupo, rango, agrupacion })
+        : null;
+
+    // La URL dice lo que se ve, como en el tablero.
+    useEffect(() => {
+        if (cargando || periodoPedido.current || !parametros) return;
+        if (searchParams.toString() !== parametros) setSearchParams(new URLSearchParams(parametros), { replace: true });
+    }, [cargando, parametros, searchParams, setSearchParams]);
+
+    /** Lo que se dibuja: lo del servicio tal cual con "Toda la temporada"; si no, recortado. */
+    const datos = useMemo(
+        () => (datosGrupo && periodo ? detalleDelPeriodo(datosGrupo, periodo) : datosGrupo),
+        [datosGrupo, periodo]
+    );
+
+    const elegirPeriodo = (r: Rango) => setPeriodo(toda && mismoRango(r, toda) ? null : r);
+    const agrupado = agrupacion !== 'dias';
+    const tramos = useMemo(
+        () => (rango && agrupacion !== 'dias' ? tramosDelPeriodo(rango, agrupacion) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [rango?.desde, rango?.hasta, agrupacion]
+    );
+    const atajos = useMemo(() => (toda ? atajosDeTemporada(toda, hoy) : []), [toda, hoy]);
+    /** Las reuniones cargadas del grupo por día: el punto de cada día del calendario. */
+    const reunionesPorDia = useMemo(() => {
+        const m = new Map<string, number>();
+        (datosGrupo?.asistencia.reuniones || []).forEach(r => m.set(r.fecha, (m.get(r.fecha) || 0) + 1));
+        return m;
+    }, [datosGrupo]);
+
+    // Las bajadas, como en el tablero.
+    const textoPeriodo = periodo ? etiquetaDeRango(periodo) : null;
+    const enElPeriodo = periodo ? frasePeriodo(periodo) : null;
+    const alcanceAgrupado = (() => {
+        const s = [textoPeriodo, agrupado ? POR_AGRUPACION[agrupacion] : null].filter(Boolean).join(' · ');
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+    })();
+    const alcanceTemporada = periodo ? 'De toda la temporada' : null;
+
     const volver = () => {
-        // No hay filtros en la URL de /reportes/gcx (temporada y año viven en
-        // estado local de esa pantalla), así que hacia atrás en el historial
-        // es lo más parecido a "donde estabas" que se puede ofrecer sin
-        // cambiar esa pantalla.
+        // Al tablero, con la temporada del grupo, el período y la agrupación
+        // que se están mirando acá.
+        if (parametros) { navigate(`/reportes/gcx?${parametros}`); return; }
+        // Sin temporada (un grupo fuera de las fechas de temporada), como antes.
         if (window.history.length > 1) navigate(-1);
         else navigate('/reportes/gcx');
     };
@@ -241,14 +382,19 @@ const DetalleGrupoReporte: React.FC = () => {
     const ocupacionPct = capacidad > 0 ? Math.min(100, Math.round((personasInscriptas / capacidad) * 100)) : 0;
 
     const veredicto = useMemo(
-        () => datos ? diagnosticar(datos, personasInscriptas, ocupacionPct) : null,
-        [datos, personasInscriptas, ocupacionPct]
+        () => datos ? diagnosticar(datos, personasInscriptas, ocupacionPct, enElPeriodo) : null,
+        [datos, personasInscriptas, ocupacionPct, enElPeriodo]
     );
 
-    // Datos para el gráfico de barras: fecha corta + presentes.
+    // Datos para el gráfico de barras: fecha corta + presentes. Por semana o
+    // por mes, cada barra suma los presentes de sus reuniones y el "de N" la
+    // suma de sus padrones.
     const datosBarras = useMemo(
-        () => (datos?.asistencia.reuniones || []).map(r => ({ fecha: fechaLarga(r.fecha), presentes: r.presentes, total: r.total })),
-        [datos]
+        () => agrupado
+            ? agruparReuniones(datos?.asistencia.reuniones || [], tramos)
+                .map(t => ({ fecha: t.etiqueta, titulo: t.titulo, presentes: t.presentes, total: t.total, reuniones: t.reuniones.length }))
+            : (datos?.asistencia.reuniones || []).map(r => ({ fecha: fechaLarga(r.fecha), presentes: r.presentes, total: r.total })),
+        [datos, agrupado, tramos]
     );
 
     // Constancia de los miembros: ranking de asistencia. Solo los extremos —
@@ -304,6 +450,7 @@ const DetalleGrupoReporte: React.FC = () => {
     }
 
     const { grupo, asistencia, miembros, anfitrion, coAnfitrion, promedioIglesia, solicitudesPendientes } = datos;
+    // Sin cargas en el período, el "Desde el …" de la casilla es el período.
 
     const estaFinalizado = !!(grupo.endDate && grupo.endDate < new Date().toLocaleDateString('en-CA'));
     const estado = estaFinalizado
@@ -325,7 +472,7 @@ const DetalleGrupoReporte: React.FC = () => {
 
     const faltantes = asistencia.reunionesEsperadas - asistencia.reuniones.length;
     const notaReuniones = !asistencia.reportaAsistencia
-        ? `Desde el ${fechaLarga(grupo.startDate)}`
+        ? (enElPeriodo ? capitalizar(enElPeriodo) : `Desde el ${fechaLarga(grupo.startDate)}`)
         : faltantes <= 0
             ? 'Al día con la carga'
             : `Faltan ${faltantes} ${faltantes === 1 ? 'reunión' : 'reuniones'}`;
@@ -336,7 +483,7 @@ const DetalleGrupoReporte: React.FC = () => {
         <div className="min-h-screen" style={{ background: C.fondo, fontFamily: FUENTE, color: C.tinta }}>
 
             {/* ── Encabezado / breadcrumb ── */}
-            <div className="bg-white px-7 py-3.5" style={{ borderBottom: `1px solid ${C.borde}` }}>
+            <div className="bg-white px-4 py-3.5 sm:px-7" style={{ borderBottom: `1px solid ${C.borde}` }}>
                 <div className="max-w-[1200px] mx-auto flex items-center gap-4 flex-wrap">
                     <button
                         type="button"
@@ -355,9 +502,35 @@ const DetalleGrupoReporte: React.FC = () => {
                     <span className="text-[13px] font-medium" style={{ color: C.linea }}>/</span>
                     <span className="text-[13px] font-semibold truncate" style={{ color: C.tinta }}>{grupo.name}</span>
                 </div>
+
+                {/* Período y agrupación, los mismos del tablero. */}
+                {toda && rango && (
+                    <div className="max-w-[1200px] mx-auto mt-3 flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-x-6 md:gap-y-2.5">
+                        <div className="flex items-center gap-2.5">
+                            <span className="hidden md:inline text-[12.5px] font-medium" style={{ color: C.apagado }}>Período</span>
+                            <div className="w-full md:w-[270px]">
+                                <SelectorDeRango
+                                    valor={rango}
+                                    onCambiar={elegirPeriodo}
+                                    serviciosPorDia={reunionesPorDia}
+                                    atajos={atajos}
+                                    nombreDelConteo={{ uno: 'reunión cargada', varios: 'reuniones cargadas' }}
+                                    minimo={toda.desde}
+                                    maximo={toda.hasta}
+                                    etiquetaDelBoton={r => (mismoRango(r, toda) ? 'Toda la temporada' : etiquetaDeRango(r))}
+                                    alinearPanel="derecha"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2.5">
+                            <span className="hidden md:inline text-[12.5px] font-medium" style={{ color: C.apagado }}>Ver por</span>
+                            <ControlAgrupacion valor={agrupacion} onCambiar={setAgrupacion} />
+                        </div>
+                    </div>
+                )}
             </div>
 
-            <div className="max-w-[1200px] mx-auto px-7 py-6 flex flex-col gap-4">
+            <div className="max-w-[1200px] mx-auto px-4 py-5 sm:px-7 sm:py-6 flex flex-col gap-4">
 
                 {/* ── Identidad ── */}
                 <Tarjeta className="px-[22px] py-[18px] flex items-center gap-[22px] flex-wrap">
@@ -392,9 +565,10 @@ const DetalleGrupoReporte: React.FC = () => {
                 </Tarjeta>
 
                 {/* ── Diagnóstico ── */}
-                <div className="rounded-[14px] p-6 grid gap-8 items-center" style={{ background: C.diagnostico, gridTemplateColumns: 'minmax(0,1.25fr) minmax(0,2fr)' }}>
+                <div className="rounded-[14px] p-5 sm:p-6 grid gap-6 sm:gap-8 items-center grid-cols-1 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,2fr)]" style={{ background: C.diagnostico }}>
                     <div className="min-w-0">
                         <p className="m-0 text-[11.5px] font-semibold tracking-[.07em]" style={{ color: 'rgba(255,255,255,.5)' }}>DIAGNÓSTICO</p>
+                        <Alcance claro texto={textoPeriodo ? `${textoPeriodo}. Ocupación y co-anfitrión, de toda la temporada.` : null} />
                         <p className="mt-3 text-[27px] leading-[1.25] font-semibold tracking-[-.02em] text-white">{veredicto!.titulo}</p>
                         <p className="mt-3 text-[14px] leading-[1.6] font-medium" style={{ color: 'rgba(255,255,255,.72)' }}>{veredicto!.texto}</p>
 
@@ -457,8 +631,10 @@ const DetalleGrupoReporte: React.FC = () => {
                             <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.apagado }}>
                                 {asistencia.reportaAsistencia
                                     ? `${asistencia.reuniones.length} ${asistencia.reuniones.length === 1 ? 'reunión cargada' : 'reuniones cargadas'}.`
-                                    : `${asistencia.reunionesEsperadas} ${grupo.meetingDay ? `${grupo.meetingDay.toLowerCase()}s` : 'semanas'} transcurridos desde el inicio de la temporada.`}
+                                    : `${asistencia.reunionesEsperadas} ${grupo.meetingDay ? `${grupo.meetingDay.toLowerCase()}s` : 'semanas'} ${enElPeriodo ?? 'transcurridos desde el inicio de la temporada'}.`}
+                                {agrupado && asistencia.reportaAsistencia && ` Cada barra suma los presentes de sus reuniones ${POR_AGRUPACION[agrupacion]}; el promedio de la iglesia es por reunión y no se dibuja.`}
                             </p>
+                            <Alcance texto={alcanceAgrupado} />
                         </div>
                         {asistencia.reportaAsistencia && (
                             <div className="flex items-center gap-4">
@@ -466,7 +642,7 @@ const DetalleGrupoReporte: React.FC = () => {
                                     <span className="w-[9px] h-[9px] rounded-sm" style={{ background: C.azul }} />
                                     <span className="text-[12px] font-semibold" style={{ color: '#4b5563' }}>Presentes</span>
                                 </div>
-                                {promedioIglesia != null && (
+                                {promedioIglesia != null && !agrupado && (
                                     <div className="flex items-center gap-[7px]">
                                         <span className="w-3.5 h-0.5" style={{ background: C.tenue }} />
                                         <span className="text-[12px] font-semibold" style={{ color: '#4b5563' }}>Promedio iglesia {numero(promedioIglesia)}</span>
@@ -484,10 +660,16 @@ const DetalleGrupoReporte: React.FC = () => {
                                     <XAxis dataKey="fecha" tick={{ fontFamily: FUENTE, fontSize: 11, fill: C.tenue }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                                     <YAxis tick={{ fontFamily: FUENTE, fontSize: 11, fill: C.tenue }} axisLine={false} tickLine={false} allowDecimals={false} />
                                     <Tooltip
-                                        formatter={(v: number, n: string, p: any) => [`${v} de ${p.payload.total}`, 'Presentes']}
+                                        formatter={(v: number, n: string, p: any) => [
+                                            agrupado
+                                                ? `${v} de ${p.payload.total} en ${p.payload.reuniones} ${p.payload.reuniones === 1 ? 'reunión' : 'reuniones'}`
+                                                : `${v} de ${p.payload.total}`,
+                                            'Presentes',
+                                        ]}
+                                        labelFormatter={(l: string, p: any[]) => (agrupado && p?.[0]?.payload?.titulo) || l}
                                         contentStyle={{ fontFamily: FUENTE, fontSize: 12.5, borderRadius: 10, border: `1px solid ${C.borde}` }}
                                     />
-                                    {promedioIglesia != null && (
+                                    {promedioIglesia != null && !agrupado && (
                                         <ReferenceLine y={promedioIglesia} stroke={C.tenue} strokeDasharray="5 4" strokeWidth={2} />
                                     )}
                                     <Bar dataKey="presentes" fill={C.azul} radius={[4, 4, 0, 0]} maxBarSize={28} />
@@ -506,7 +688,9 @@ const DetalleGrupoReporte: React.FC = () => {
                             </div>
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
                                 <p className="m-0 text-[15px] font-semibold" style={{ color: C.medio }}>
-                                    {asistencia.reunionesEsperadas > 0 ? `${asistencia.reunionesEsperadas} reuniones sin ninguna carga` : 'Todavía no pasó ninguna reunión'}
+                                    {asistencia.reunionesEsperadas > 0
+                                        ? `${asistencia.reunionesEsperadas} reuniones sin ninguna carga`
+                                        : enElPeriodo ? `No le tocó ninguna reunión ${enElPeriodo}` : 'Todavía no pasó ninguna reunión'}
                                 </p>
                                 <p className="mt-2 max-w-[420px] text-[12.5px] leading-[1.6] font-medium" style={{ color: C.apagado }}>
                                     Cada barra vacía es una reunión que pudo haber pasado y no quedó registrada. Este grupo no aparece en ninguno de los promedios del dashboard.
@@ -523,6 +707,7 @@ const DetalleGrupoReporte: React.FC = () => {
                         <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.apagado }}>
                             Sobre las {asistencia.reuniones.length} reuniones cargadas.
                         </p>
+                        <Alcance texto={textoPeriodo} />
 
                         <div className="grid md:grid-cols-2 gap-x-8 gap-y-5 mt-4">
                             {constancia.vienen.length > 0 && (
@@ -561,6 +746,8 @@ const DetalleGrupoReporte: React.FC = () => {
                             {personasInscriptas} {personasInscriptas === 1 ? 'persona' : 'personas'} en {miembros.length} {miembros.length === 1 ? 'inscripción' : 'inscripciones'}
                             {miembros.filter(m => m.esPareja).length > 0 ? `: ${miembros.filter(m => m.esPareja).length} ${miembros.filter(m => m.esPareja).length === 1 ? 'es pareja' : 'son parejas'}.` : '.'}
                         </p>
+                        {/* Los miembros son los inscriptos de hoy; su asistencia, la del período. */}
+                        <Alcance texto={textoPeriodo ? `Asistencia: ${textoPeriodo}` : null} />
                     </div>
 
                     {miembros.length === 0 ? (
@@ -617,6 +804,7 @@ const DetalleGrupoReporte: React.FC = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                     <Tarjeta className="px-[22px] py-5">
                         <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>Liderazgo</p>
+                        <Alcance texto={alcanceTemporada} />
                         <div className="flex items-center gap-[13px] mt-[18px]">
                             <div className="w-[42px] h-[42px] rounded-full flex items-center justify-center text-[13.5px] font-semibold shrink-0" style={{ background: '#eaf0fc', color: C.azul }}>
                                 {(anfitrion?.nombre || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
@@ -660,6 +848,7 @@ const DetalleGrupoReporte: React.FC = () => {
 
                     <Tarjeta className="px-[22px] py-5">
                         <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>Ficha del grupo</p>
+                        <Alcance texto={alcanceTemporada} />
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3.5 mt-[18px]">
                             {[
                                 ['Categoría', categoriaNombre || 'Sin categoría'],

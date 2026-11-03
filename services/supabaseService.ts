@@ -7660,6 +7660,10 @@ export const supabaseService = {
       const reunionesEsperadas = contarReunionesEsperadas(
         grupoRaw.start_date, grupoRaw.end_date, grupoRaw.meeting_day
       );
+      // Las mismas, con fecha: el detalle las cuenta dentro de un período.
+      const fechasEsperadas = fechasDeReunion(
+        grupoRaw.start_date, grupoRaw.end_date, grupoRaw.meeting_day
+      );
 
       // ── Miembros ──────────────────────────────────────────────────────
       const miembros: MiembroDetalleReporte[] = aprobadas.map((r: any) => {
@@ -7701,6 +7705,13 @@ export const supabaseService = {
           derivadoDe: r.transfer_from_group_id ? nombreGrupoPorId.get(r.transfer_from_group_id) : undefined,
           reunionesAsistidas,
           totalReuniones: reunionesDelPeriodo.length,
+          // Los dos números de arriba, con fecha (una por reunión, como se
+          // cuentan): el detalle los recorta a un período sin volver a la base.
+          fechasDeReunion: reunionesDelPeriodo.map((a: any) => String(a.date)),
+          fechasAsistidas: reunionesDelPeriodo.filter((a: any) => {
+            const presentesRaw = Array.isArray(a.present_members) ? a.present_members.map(String) : [];
+            return presentesRaw.includes(idTitular) || (!!pd && presentesRaw.includes(idPareja));
+          }).map((a: any) => String(a.date)),
         };
       });
 
@@ -7711,11 +7722,14 @@ export const supabaseService = {
       // nuevo toda la asistencia: si el dashboard ya se visitó, esto sale
       // gratis; si no, es UNA consulta extra, no cinco.
       let promedioIglesia: number | null = null;
+      // Las mismas reuniones con fecha, para el promedio de un período.
+      let reunionesIglesia: Array<{ fecha: string; presentes: number }> = [];
       if (temporada && anio) {
         const base = await supabaseService._cargarBaseReportesGCX(temporada, anio);
         if (base && base.presentesPorReunion.length > 0) {
           promedioIglesia = base.presentesPorReunion.reduce((a, b) => a + b, 0) / base.presentesPorReunion.length;
         }
+        if (base) reunionesIglesia = base.reuniones.map(r => ({ fecha: r.fecha, presentes: r.presentes }));
       }
 
       const solicitudesPendientes = todasLasInscripciones.filter(
@@ -7729,9 +7743,10 @@ export const supabaseService = {
         anfitrion,
         coAnfitrion,
         miembros,
-        asistencia: { reuniones, promedioPresentes, reportaAsistencia, reunionesEsperadas },
+        asistencia: { reuniones, promedioPresentes, reportaAsistencia, reunionesEsperadas, fechasEsperadas },
         genealogia,
         promedioIglesia,
+        reunionesIglesia,
         solicitudesPendientes,
       };
     } catch (err) {

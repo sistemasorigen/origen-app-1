@@ -29,9 +29,9 @@ import { db } from '../../services/dbService';
 import SelectorDeRango, { etiquetaDeRango } from '../audiencia/SelectorDeRango';
 import {
     Agrupacion, AGRUPACIONES, NOMBRE_AGRUPACION, POR_AGRUPACION, Rango, TramoDeCarga, TramoDelGrupo,
-    agrupacionValida, agruparCalendario, agruparDiasDelGrupo, atajosDeTemporada, diasDelRango,
-    frasePeriodo, isoDe, limitesDeTemporada, mismoRango, periodoDeLaUrl, rangoDeToda, tramosDelPeriodo,
-    vistaDelPeriodo,
+    agrupacionValida, agruparCalendario, agruparDiasDelGrupo, atajosDeTemporada, calendarioDeCarga, diasDelRango,
+    frasePeriodo, isoDe, leerParametros, limitesDeTemporada, mismoRango, parametrosDeVista, periodoDeLaUrl,
+    rangoDeToda, tramosDelPeriodo, vistaDelPeriodo,
 } from './periodoGCX';
 import {
     C, FUENTE, NOMBRE_TEMPORADA, TEMPORADAS, EjeCategoria, RAMPA_AZUL, COLOR_RESTO,
@@ -49,9 +49,39 @@ interface DiaDeCarga {
     etiqueta: string;
     Cargaron: number;
     NoCargaron: number;
+    /** Reuniones que correspondían ese día. */
+    esperadas: number;
     lista: Array<{ id: string; nombre: string; presentes: number; capacidad: number }>;
     faltantes: Array<{ id: string; nombre: string; capacidad: number }>;
+    /** Reuniones de ese día que no se cargaron, pero que cubre una carga del grupo en otra fecha. */
+    cubiertas: Array<{ id: string; nombre: string; capacidad: number; fechaCarga: string }>;
 }
+
+/** "5 de 12 reuniones cargadas", o lo que corresponda si ese día no tocaba ninguna. */
+const lineaDeCarga = (cargadas: number, esperadas: number, porcentaje?: number) => {
+    if (esperadas === 0) {
+        return cargadas === 0
+            ? 'No correspondía ninguna reunión'
+            : `${cargadas} ${cargadas === 1 ? 'reunión cargada' : 'reuniones cargadas'}; no correspondía ninguna`;
+    }
+    return `${cargadas} de ${esperadas} ${esperadas === 1 ? 'reunión cargada' : 'reuniones cargadas'}`
+        + (porcentaje !== undefined ? ` · ${porcentaje}%` : '');
+};
+
+/** Una lista del tooltip: el rótulo y los grupos, en dos columnas si son muchos. */
+const ListaTooltip: React.FC<{ rotulo: string; color: string; dos: boolean; filas: Array<{ id: string; nombre: string; dato?: string }>; tenue?: boolean }> = ({ rotulo, color, dos, filas, tenue }) => (
+    <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+        <p className="m-0 mb-1 text-[11px] font-semibold" style={{ color }}>{rotulo}</p>
+        <div className={dos ? 'grid grid-cols-2 gap-x-5' : ''}>
+            {filas.map(g => (
+                <div key={g.id} className="flex items-baseline gap-2 mt-1 min-w-0">
+                    <span className="flex-1 min-w-0 text-[12px] leading-[1.5] font-medium truncate" style={{ color: tenue ? C.tenue : C.medio }}>{g.nombre}</span>
+                    {g.dato && <span className="shrink-0 text-[11.5px] font-semibold tabular-nums" style={{ color: C.tenue }}>{g.dato}</span>}
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 /**
  * Tooltip del calendario de carga.
@@ -71,17 +101,19 @@ interface DiaDeCarga {
 const TooltipDia: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDeCarga }> }> = ({ active, payload }) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
+    const dos = d.lista.length + d.faltantes.length + d.cubiertas.length > 14;
 
     return (
         <div
-            className="px-3 py-2.5 w-[300px]"
+            className={`px-3 py-2.5 ${dos ? 'w-[540px]' : 'w-[300px]'}`}
             style={{ background: '#fff', border: `1px solid ${C.borde}`, borderRadius: 10, fontFamily: FUENTE }}
         >
             <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{fechaLarga(d.fecha)}</p>
             <p className="mt-0.5 m-0 text-[12px] font-medium" style={{ color: C.apagado }}>
-                {d.Cargaron} de {d.Cargaron + d.NoCargaron} {d.Cargaron + d.NoCargaron === 1 ? 'grupo' : 'grupos'} de ese día
+                {lineaDeCarga(d.Cargaron, d.esperadas)}
             </p>
 
+            {d.lista.length > 0 && (
             <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
                 <div className="flex items-baseline gap-3">
                     <span className="flex-1 min-w-0 text-[11px] font-semibold" style={{ color: C.azul }}>
@@ -93,8 +125,9 @@ const TooltipDia: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDeC
                     <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.tenue }}>asistieron / cupo</span>
                 </div>
 
+                <div className={dos ? 'grid grid-cols-2 gap-x-5' : ''}>
                 {d.lista.map(g => (
-                    <div key={g.id} className="flex items-baseline gap-3 mt-1">
+                    <div key={g.id} className="flex items-baseline gap-3 mt-1 min-w-0">
                         <span className="flex-1 min-w-0 text-[12px] leading-[1.5] font-medium truncate" style={{ color: C.medio }}>
                             {g.nombre}
                         </span>
@@ -104,19 +137,27 @@ const TooltipDia: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDeC
                         </span>
                     </div>
                 ))}
+                </div>
             </div>
+            )}
+
+            {d.cubiertas.length > 0 && (
+                <ListaTooltip
+                    rotulo={`Cargaron en otra fecha (${d.cubiertas.length})`}
+                    color={C.azul}
+                    dos={dos}
+                    filas={d.cubiertas.map(g => ({ id: g.id, nombre: g.nombre, dato: `el ${fechaCorta(g.fechaCarga)}` }))}
+                />
+            )}
 
             {d.faltantes.length > 0 && (
-                <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
-                    <p className="m-0 mb-1 text-[11px] font-semibold" style={{ color: C.apagado }}>
-                        No cargaron ({d.NoCargaron})
-                    </p>
-                    {d.faltantes.map(g => (
-                        <p key={g.id} className="m-0 mt-1 text-[12px] leading-[1.5] font-medium truncate" style={{ color: C.tenue }}>
-                            {g.nombre}
-                        </p>
-                    ))}
-                </div>
+                <ListaTooltip
+                    rotulo={`No cargaron (${d.NoCargaron})`}
+                    color={C.apagado}
+                    dos={dos}
+                    tenue
+                    filas={d.faltantes.map(g => ({ id: g.id, nombre: g.nombre }))}
+                />
             )}
         </div>
     );
@@ -136,8 +177,7 @@ const TooltipDia: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDeC
 const TooltipTramo: React.FC<{ active?: boolean; payload?: Array<{ payload: TramoDeCarga }> }> = ({ active, payload }) => {
     if (!active || !payload?.length) return null;
     const t = payload[0].payload;
-    const total = t.Cargaron + t.NoCargaron;
-    const ancho = t.lista.length + t.faltantes.length > 14;
+    const ancho = t.lista.length + t.faltantes.length + t.cubiertas.length > 14;
 
     return (
         <div
@@ -146,9 +186,7 @@ const TooltipTramo: React.FC<{ active?: boolean; payload?: Array<{ payload: Tram
         >
             <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{t.titulo}</p>
             <p className="mt-0.5 m-0 text-[12px] font-medium" style={{ color: C.apagado }}>
-                {total === 0
-                    ? 'Ningún grupo cargó asistencia'
-                    : `${t.Cargaron} de ${total} ${total === 1 ? 'reunión cargada' : 'reuniones cargadas'} · ${t.porcentaje}%`}
+                {lineaDeCarga(t.Cargaron, t.Esperadas, t.porcentaje)}
             </p>
 
             {t.lista.length > 0 && (
@@ -175,20 +213,23 @@ const TooltipTramo: React.FC<{ active?: boolean; payload?: Array<{ payload: Tram
                 </div>
             )}
 
+            {t.cubiertas.length > 0 && (
+                <ListaTooltip
+                    rotulo={`Cargaron en otra fecha (${t.cubiertas.reduce((a, g) => a + g.veces, 0)})`}
+                    color={C.azul}
+                    dos={ancho}
+                    filas={t.cubiertas.map(g => ({ id: g.id, nombre: g.nombre, dato: `${g.veces}×` }))}
+                />
+            )}
+
             {t.faltantes.length > 0 && (
-                <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
-                    <p className="m-0 mb-1 text-[11px] font-semibold" style={{ color: C.apagado }}>
-                        No cargaron ({t.NoCargaron} {t.NoCargaron === 1 ? 'vez' : 'veces'}, {t.faltantes.length} {t.faltantes.length === 1 ? 'grupo' : 'grupos'})
-                    </p>
-                    <div className={ancho ? 'grid grid-cols-2 gap-x-5' : ''}>
-                        {t.faltantes.map(g => (
-                            <div key={g.id} className="flex items-baseline gap-2 mt-1 min-w-0">
-                                <span className="flex-1 min-w-0 text-[12px] leading-[1.5] font-medium truncate" style={{ color: C.tenue }}>{g.nombre}</span>
-                                <span className="shrink-0 text-[11.5px] font-semibold tabular-nums" style={{ color: C.tenue }}>{g.veces}×</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <ListaTooltip
+                    rotulo={`No cargaron (${t.NoCargaron} ${t.NoCargaron === 1 ? 'vez' : 'veces'}, ${t.faltantes.length} ${t.faltantes.length === 1 ? 'grupo' : 'grupos'})`}
+                    color={C.apagado}
+                    dos={ancho}
+                    tenue
+                    filas={t.faltantes.map(g => ({ id: g.id, nombre: g.nombre, dato: `${g.veces}×` }))}
+                />
             )}
         </div>
     );
@@ -361,19 +402,6 @@ const ControlAgrupacion: React.FC<{ valor: Agrupacion; onCambiar: (a: Agrupacion
     </div>
 );
 
-/** Lo que trae la URL al entrar: un link compartido o una recarga. */
-const leerUrl = (p: URLSearchParams) => {
-    const t = p.get('temporada');
-    const a = Number(p.get('anio'));
-    return {
-        temporada: (TEMPORADAS as string[]).includes(t || '') ? (t as TemporadaGCX) : null,
-        anio: Number.isInteger(a) && a >= 2020 && a <= 2100 ? a : null,
-        desde: p.get('desde'),
-        hasta: p.get('hasta'),
-        por: p.get('por'),
-    };
-};
-
 const GRUPOS_POR_PAGINA = 7;
 
 /**
@@ -433,7 +461,7 @@ const TortaAsistencia: React.FC<{
     const base = a.asistieron + a.nuncaAsistieron;
     const pct = base > 0 ? Math.round((a.asistieron / base) * 100) : 0;
     return (
-        <div className={`flex items-center gap-[22px] ${arriba} flex-1`}>
+        <div className={`flex flex-col sm:flex-row items-center gap-[22px] ${arriba} flex-1`}>
             <Torta
                 tamano={TAMANO_TORTA}
                 datos={[
@@ -443,7 +471,7 @@ const TortaAsistencia: React.FC<{
                 porcentaje={pct}
                 etiqueta={etiqueta}
             />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 w-full sm:w-auto">
                 <FilaLeyenda primera color={C.azul} nombre={si} valor={a.asistieron} />
                 <FilaLeyenda color={C.azulClaro} nombre={no} valor={a.nuncaAsistieron} />
                 <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
@@ -562,16 +590,21 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                         ? 'Elegí un grupo híbrido: suma sus reuniones en persona y las online.'
                         : `Elegí un grupo ${nombre.singular} para ver a su gente.`}
                 />
-                <select
-                    value={grupoActual?.groupId ?? ''}
-                    onChange={e => setElegido(e.target.value)}
-                    aria-label={`Grupo ${nombre.singular} a mirar`}
-                    className="no-print mt-4 h-9 px-3 w-full text-[12.5px] font-semibold outline-none cursor-pointer"
-                >
-                    {grupos.map(g => (
-                        <option key={g.groupId} value={g.groupId}>{g.nombre}</option>
-                    ))}
-                </select>
+                {/* En el celular, la caja recorta el texto de las opciones,
+                    que en WebKit desborda la tarjeta (ver "Un grupo en
+                    detalle"). Desde 640 px es el mt-4 de siempre. */}
+                <div className="no-print mt-[13px] -mx-[3px] -mb-[3px] p-[3px] overflow-hidden sm:mt-4 sm:mx-0 sm:mb-0 sm:p-0 sm:overflow-visible">
+                    <select
+                        value={grupoActual?.groupId ?? ''}
+                        onChange={e => setElegido(e.target.value)}
+                        aria-label={`Grupo ${nombre.singular} a mirar`}
+                        className="h-9 px-3 w-full text-[12.5px] font-semibold outline-none cursor-pointer"
+                    >
+                        {grupos.map(g => (
+                            <option key={g.groupId} value={g.groupId}>{g.nombre}</option>
+                        ))}
+                    </select>
+                </div>
                 {/* El selector no va al papel, así que sin esto la hoja no
                     diría de qué grupo es la torta. */}
                 <p className="solo-impresion mt-3 text-[12.5px] font-semibold" style={{ color: C.medio }}>
@@ -799,7 +832,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     // Se lee una sola vez, al entrar: después la URL la escribe la pantalla.
-    const [urlInicial] = useState(() => leerUrl(searchParams));
+    const [urlInicial] = useState(() => leerParametros(searchParams));
 
     const anioActual = new Date().getFullYear();
     const [anio, setAnio] = useState(urlInicial.anio ?? anioActual);
@@ -914,6 +947,13 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const elegirPeriodo = (r: Rango) => setPeriodo(toda && mismoRango(r, toda) ? null : r);
 
     /**
+     * Al detalle de un grupo con la temporada, el período y la agrupación de
+     * acá: abre mirando lo mismo, y su "Volver" trae de vuelta a esto.
+     */
+    const irAlGrupo = (id: string) =>
+        navigate(`/reportes/gcx/${id}?${parametrosDeVista({ temporada, anio, rango, agrupacion })}`);
+
+    /**
      * Lo que se dibuja. Con "Toda la temporada" son los datos del servicio tal
      * cual: así el tablero de siempre da exactamente lo de siempre. Con un
      * período, lo mismo recalculado sólo con sus reuniones.
@@ -1022,10 +1062,16 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const sinDatoEdad = resumenEdad?.sinDato ?? 0;
     const totalEdad = resumenEdad?.personas ?? 0;
 
-    /** "Días con asistencia cargada" por semana o por mes (vacío con "Días"). */
+    /**
+     * "Días con asistencia cargada": cada día con las reuniones que
+     * correspondían. Las faltas suman lo mismo que "Quiénes no reportan" en el
+     * mismo período (ver calendarioDeCarga).
+     */
+    const calendario = useMemo(() => (datos ? calendarioDeCarga(datos) : []), [datos]);
+    /** Lo mismo por semana o por mes (vacío con "Días"). */
     const tramosDeCarga = useMemo(
-        () => (datos && tramos.length ? agruparCalendario(datos.asistenciaPorFecha, tramos) : []),
-        [datos, tramos]
+        () => (calendario.length && tramos.length ? agruparCalendario(calendario, tramos) : []),
+        [calendario, tramos]
     );
 
     // ── Descargas ───────────────────────────────────────────────────────
@@ -1037,6 +1083,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         periodo: periodo ? { rango: periodo, texto: etiquetaDeRango(periodo) } : null,
         agrupacion,
         tramosCalendario: tramosDeCarga,
+        diasCalendario: calendario,
     };
 
     const bajarExcel = useCallback((clave: ClaveGrafico | null) => {
@@ -1048,7 +1095,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
             clave ? TITULO_GRAFICO[clave] : 'todos los graficos',
             'xlsx'
         ));
-    }, [datos, edades, temporada, anio, edadMin, edadMax, periodo, agrupacion, tramosDeCarga]);
+    }, [datos, edades, temporada, anio, edadMin, edadMax, periodo, agrupacion, tramosDeCarga, calendario]);
 
     /**
      * El PDF sale del diálogo de impresión del navegador ("Guardar como
@@ -1142,26 +1189,30 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const intervaloTramos = agrupacion === 'semanas' ? Math.max(0, Math.ceil(tramos.length / 9) - 1) : 0;
 
     // ── Calendario de carga de asistencia ───────────────────────────────
-    const diasDeCarga = useMemo<DiaDeCarga[]>(() => (datos?.asistenciaPorFecha || []).map(d => ({
+    const diasDeCarga = useMemo<DiaDeCarga[]>(() => calendario.map(d => ({
         fecha: d.fecha,
         etiqueta: fechaCorta(d.fecha),
         Cargaron: d.grupos.length,
         NoCargaron: d.sinCargar.length,
+        esperadas: d.esperadas,
         lista: d.grupos,
         faltantes: d.sinCargar,
-    })), [datos]);
+        cubiertas: d.cubiertas,
+    })), [calendario]);
 
     const resumenCarga = useMemo(() => {
         const distintos = new Set<string>();
         let reuniones = 0;
         let faltas = 0;
-        (datos?.asistenciaPorFecha || []).forEach(d => {
+        let esperadas = 0;
+        calendario.forEach(d => {
             reuniones += d.grupos.length;
             faltas += d.sinCargar.length;
+            esperadas += d.esperadas;
             d.grupos.forEach(g => distintos.add(g.id));
         });
-        return { reuniones, faltas, grupos: distintos.size };
-    }, [datos]);
+        return { reuniones, faltas, esperadas, grupos: distintos.size };
+    }, [calendario]);
 
     // Con una temporada de diez semanas hay entre 40 y 70 días con carga: si
     // se etiquetaran todos, el eje sería una mancha. Uno de cada N, con N
@@ -1207,8 +1258,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         >
 
             {/* ── Encabezado ── */}
-            <div className="encabezado-tablero bg-white px-7 py-5" style={{ borderBottom: `1px solid ${C.borde}` }}>
-                <div className="max-w-[1440px] mx-auto flex items-center gap-7 flex-wrap">
+            <div className="encabezado-tablero bg-white px-4 py-5 sm:px-7" style={{ borderBottom: `1px solid ${C.borde}` }}>
+                <div className="max-w-[1440px] mx-auto flex items-center gap-x-7 gap-y-4 flex-wrap sm:gap-7">
                     <div className="min-w-0 flex-1">
                         <h1 className="m-0 text-[19px] font-semibold tracking-[-.01em]" style={{ color: C.tinta }}>
                             Reportes Grupo de Conexión
@@ -1252,8 +1303,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         </button>
                     </div>
 
-                    {/* Temporada */}
-                    <div className="no-print flex items-center gap-2.5">
+                    {/* Temporada. En el celular, los botones bajan de renglón. */}
+                    <div className="no-print flex flex-wrap items-center gap-2.5">
                         <span className="text-[12.5px] font-medium" style={{ color: C.apagado }}>Temporada</span>
                         <div className="flex gap-[3px] rounded-[10px] p-[3px]" style={{ background: '#f4f5f7', border: `1px solid ${C.borde}` }}>
                             {TEMPORADAS.map(t => (
@@ -1331,7 +1382,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                 )}
             </div>
 
-            <div className="max-w-[1440px] mx-auto px-7 py-6">
+            <div className="max-w-[1440px] mx-auto px-4 py-5 sm:px-7 sm:py-6">
 
                 {/* Mientras carga, en el lugar del tablero va la barra. No
                     conviven: el tablero entra cuando la barra terminó de
@@ -1374,7 +1425,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                     <>
                         {/* ── Panorama ── */}
                         <div data-grafico="indicadores" className={claseImpresion('indicadores')}>
-                        <div className="flex items-end justify-between gap-5 mb-3.5">
+                        <div className="flex flex-col items-start gap-3 mb-3.5 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
                             <div>
                                 <p className="m-0 text-[11.5px] font-semibold tracking-[.06em]" style={{ color: C.apagado }}>
                                     PANORAMA DE LA TEMPORADA
@@ -1396,7 +1447,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         </div>
 
                         {cargando ? (
-                            <div className="grid gap-4 grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
+                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
                                 {[0, 1, 2, 3, 4].map(i => (
                                     <Tarjeta key={i} className="px-5 py-[18px]">
                                         <Esqueleto alto={14} ancho="52%" />
@@ -1409,7 +1460,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         ) : !hayGrupos ? (
                             // Borde punteado y el mismo alto: se lee como una
                             // temporada que no arrancó, no como una carga fallida.
-                            <div className="grid gap-4 grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
+                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
                                 {['Grupos', 'Anfitriones', 'Co-anfitriones', 'Personas únicas'].map(t => (
                                     <div key={t} className="bg-white rounded-[14px] px-5 py-[18px]" style={{ border: `1px dashed ${C.gris}` }}>
                                         <p className="m-0 text-[13.5px] font-semibold" style={{ color: C.tenue }}>{t}</p>
@@ -1437,7 +1488,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 </Tarjeta>
                             </div>
                         ) : (
-                            <div className="grid gap-4 grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
+                            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 [@media(min-width:1500px)]:!grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.55fr)]">
                                 <Kpi
                                     titulo="Grupos"
                                     detalle="Activos en la temporada."
@@ -1468,7 +1519,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     titulo="Inscripciones totales"
                                     detalle="Una persona puede estar en varios grupos."
                                     valor={
-                                        <span className="flex items-baseline gap-2.5">
+                                        <span className="flex flex-wrap items-baseline gap-x-2.5">
                                             {datos!.kpis.inscripcionesTotales}
                                             <span className="text-[12.5px] font-medium" style={{ color: C.apagado }}>
                                                 {datos!.kpis.personasUnicas} personas ·{' '}
@@ -1498,7 +1549,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         </div>
 
                         {/* ── Tortas ── */}
-                        <div className="fila-graficos grid gap-4 mt-4" style={{ gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr)' }}>
+                        <div className="fila-graficos grid gap-4 mt-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]">
 
                             <Tarjeta data-grafico="asistencia" className={`px-[22px] py-5 flex flex-col ${claseImpresion('asistencia')}`}>
                                 <TituloTarjeta
@@ -1593,7 +1644,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         </div>
 
                         {/* ── Barras ── */}
-                        <div className="fila-graficos grid grid-cols-2 gap-4 mt-4">
+                        <div className="fila-graficos grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
 
                             <Tarjeta data-grafico="genero" className={`px-[22px] py-5 ${claseImpresion('genero')}`}>
                                 <TituloTarjeta
@@ -1689,7 +1740,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         </div>
 
                         {/* ── Quién carga y quién no, grupo por grupo ── */}
-                        <div className="fila-graficos grid grid-cols-2 gap-4 mt-4">
+                        <div className="fila-graficos grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
 
                             <Tarjeta data-grafico="masReportan" className={`px-[22px] py-5 flex flex-col ${claseImpresion('masReportan')}`}>
                                 <TituloTarjeta
@@ -1712,14 +1763,14 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     />
                                 ) : (
                                     <>
-                                        <div className="flex items-center gap-6 mt-[22px] flex-1">
+                                        <div className="flex flex-col sm:flex-row items-center gap-6 mt-[22px] flex-1">
                                             <Torta
                                                 datos={tortaMasReportan.datos}
                                                 porcentaje={0}
                                                 centro={tortaMasReportan.total}
                                                 etiqueta="reuniones"
                                             />
-                                            <div className="min-w-0 flex-1">
+                                            <div className="min-w-0 flex-1 w-full sm:w-auto">
                                                 {tortaMasReportan.datos.map((d, i) => (
                                                     <FilaLeyenda
                                                         key={d.nombre}
@@ -1761,14 +1812,14 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     />
                                 ) : (
                                     <>
-                                        <div className="flex items-center gap-6 mt-[22px] flex-1">
+                                        <div className="flex flex-col sm:flex-row items-center gap-6 mt-[22px] flex-1">
                                             <Torta
                                                 datos={tortaNoReportan.datos}
                                                 porcentaje={0}
                                                 centro={tortaNoReportan.total}
                                                 etiqueta="sin cargar"
                                             />
-                                            <div className="min-w-0 flex-1">
+                                            <div className="min-w-0 flex-1 w-full sm:w-auto">
                                                 {tortaNoReportan.datos.map((d, i) => (
                                                     <FilaLeyenda
                                                         key={d.nombre}
@@ -1799,21 +1850,28 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 descargas={descargas('grupoDetalle')}
                                 alcance={alcancePeriodo}
                                 extra={!cargando && gruposPorNombre.length > 0 ? (
-                                    <select
-                                        value={grupoActual?.groupId ?? ''}
-                                        onChange={e => setGrupoElegido(e.target.value)}
-                                        aria-label="Grupo a mirar en detalle"
-                                        className="h-9 px-3 min-w-[240px] max-w-[340px] shrink-0 text-[12.5px] font-semibold outline-none cursor-pointer"
-                                    >
-                                        {gruposPorNombre.map(g => (
-                                            <option key={g.groupId} value={g.groupId}>{g.nombre}</option>
-                                        ))}
-                                    </select>
+                                    // En el celular, la caja recorta el texto de las
+                                    // opciones: en WebKit el nombre más largo desborda
+                                    // la tarjeta aunque el select mida bien. Los 3 px
+                                    // de aire dejan ver el anillo de foco. Desde 640 px
+                                    // no hace nada.
+                                    <div className="w-full overflow-hidden p-[3px] -m-[3px] sm:w-auto sm:overflow-visible sm:p-0 sm:m-0">
+                                        <select
+                                            value={grupoActual?.groupId ?? ''}
+                                            onChange={e => setGrupoElegido(e.target.value)}
+                                            aria-label="Grupo a mirar en detalle"
+                                            className="h-9 px-3 w-full sm:w-auto sm:min-w-[240px] max-w-[340px] shrink-0 text-[12.5px] font-semibold outline-none cursor-pointer"
+                                        >
+                                            {gruposPorNombre.map(g => (
+                                                <option key={g.groupId} value={g.groupId}>{g.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 ) : undefined}
                             />
 
                             {cargando ? (
-                                <div className="grid grid-cols-2 gap-6 mt-[22px]">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-[22px]">
                                     {[0, 1].map(i => (
                                         <div key={i} className="flex items-center gap-[22px]">
                                             <Esqueleto alto={148} ancho="148px" className="!rounded-full shrink-0" />
@@ -1830,7 +1888,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 </div>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-2 gap-6 mt-[22px]">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-[22px]">
 
                                         {/* Asistencia de la gente del grupo */}
                                         <div>
@@ -1842,7 +1900,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                                     <SinDatos titulo="Sin inscriptos" detalle="Nadie se anotó en este grupo todavía." />
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-[22px] mt-3.5">
+                                                <div className="flex flex-col sm:flex-row items-center gap-[22px] mt-3.5">
                                                     <Torta
                                                         tamano={148}
                                                         datos={[
@@ -1852,7 +1910,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                                         porcentaje={pctAsistieron}
                                                         etiqueta="asistió"
                                                     />
-                                                    <div className="min-w-0 flex-1">
+                                                    <div className="min-w-0 flex-1 w-full sm:w-auto">
                                                         <FilaLeyenda primera color={C.azul} nombre={enElPeriodo ? 'Asistió en el período' : 'Asistió alguna vez'} valor={grupoActual.asistieron} />
                                                         <FilaLeyenda color={C.azulClaro} nombre={enElPeriodo ? 'No asistió' : 'Nunca asistió'} valor={grupoActual.personas - grupoActual.asistieron} />
                                                         <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
@@ -1882,7 +1940,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                                     />
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-[22px] mt-3.5">
+                                                <div className="flex flex-col sm:flex-row items-center gap-[22px] mt-3.5">
                                                     <Torta
                                                         tamano={148}
                                                         datos={[
@@ -1892,7 +1950,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                                         porcentaje={pctCargadas}
                                                         etiqueta="cargó"
                                                     />
-                                                    <div className="min-w-0 flex-1">
+                                                    <div className="min-w-0 flex-1 w-full sm:w-auto">
                                                         <FilaLeyenda primera color={C.azul} nombre="Cargadas" valor={grupoActual.cargadas} />
                                                         <FilaLeyenda color={C.azulClaro} nombre="Sin cargar" valor={grupoActual.sinCargar} />
                                                         <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
@@ -1914,7 +1972,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                         cumplimiento, que es lo que el dato es. */}
                                     {diasDelGrupo.length > 0 && (
                                         <div className="mt-6 pt-5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
-                                            <div className="flex items-start justify-between gap-4">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                                                 <div className="min-w-0">
                                                     <p className="m-0 text-[13px] font-semibold" style={{ color: C.tinta }}>
                                                         {agrupado ? `Sus días de encuentro, ${POR_AGRUPACION[agrupacion]}` : 'Sus días de encuentro, uno por uno'}
@@ -2002,7 +2060,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             <TituloTarjeta
                                 descargas={descargas('calendario')}
                                 titulo="Días con asistencia cargada"
-                                detalle="Cuáles reportaron y cuáles debían reportar y no lo hicieron. Pasá el mouse por una barra para ver los nombres."
+                                detalle="Reuniones cargadas sobre las que correspondían. Pasá el mouse por una barra para ver los nombres."
                                 alcance={alcanceAgrupado}
                                 extra={!cargando && diasDeCarga.length > 0 ? (
                                     <div className="flex items-center gap-4 shrink-0">
@@ -2063,15 +2121,16 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     </div>
                                     <NotaCobertura>
                                         {resumenCarga.reuniones} {resumenCarga.reuniones === 1 ? 'reunión cargada' : 'reuniones cargadas'} por{' '}
-                                        {resumenCarga.grupos} de los {datos!.kpis.totalGrupos} grupos, repartidas en {diasDeCarga.length}{' '}
-                                        {diasDeCarga.length === 1 ? 'día' : 'días'} entre el {fechaCorta(diasDeCarga[0].fecha)} y el{' '}
-                                        {fechaCorta(diasDeCarga[diasDeCarga.length - 1].fecha)}, y {resumenCarga.faltas}{' '}
-                                        {resumenCarga.faltas === 1 ? 'reunión que quedó sin cargar' : 'reuniones que quedaron sin cargar'}.{' '}
-                                        La barra clara cuenta sólo los grupos que se reúnen ESE día de la semana y ya estaban
-                                        vigentes en esa fecha — un grupo de los lunes no falta un jueves.{' '}
+                                        {resumenCarga.grupos} de los {datos!.kpis.totalGrupos} grupos, de {resumenCarga.esperadas}{' '}
+                                        {resumenCarga.esperadas === 1 ? 'que correspondía' : 'que correspondían'} entre el {fechaCorta(diasDeCarga[0].fecha)} y el{' '}
+                                        {fechaCorta(diasDeCarga[diasDeCarga.length - 1].fecha)}. {resumenCarga.faltas}{' '}
+                                        {resumenCarga.faltas === 1 ? 'quedó sin cargar' : 'quedaron sin cargar'}: el mismo total que "Quiénes no reportan".{' '}
+                                        Lo que correspondía sale del día de encuentro de cada grupo, dentro de su vigencia y hasta hoy:
+                                        un grupo de los lunes no falta un jueves. Si un grupo cargó en una fecha que no era su día,
+                                        esa carga cubre una reunión suya sin cargar (primero la de esa misma semana) y no cuenta como falta.{' '}
                                         {agrupado
-                                            ? `Cada barra suma las de sus días, ${POR_AGRUPACION[agrupacion]}: entran sólo los días con al menos una carga, y ${agrupacion === 'meses' ? 'un mes' : 'una semana'} sin ninguna queda en cero.`
-                                            : 'Sólo aparecen los días con al menos una carga: un día en el que nadie reportó nada todavía no está en el eje.'}
+                                            ? `Cada barra suma las de sus días, ${POR_AGRUPACION[agrupacion]}: ${agrupacion === 'meses' ? 'un mes' : 'una semana'} sin reuniones queda en cero.`
+                                            : 'Aparecen los días con alguna carga o con alguna reunión que correspondía.'}
                                     </NotaCobertura>
                                 </>
                             )}
@@ -2083,14 +2142,14 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                             cargando={cargando}
                             temporada={temporada}
                             anio={anio}
-                            onVerGrupo={id => navigate(`/reportes/gcx/${id}`)}
+                            onVerGrupo={irAlGrupo}
                             enElPeriodo={enElPeriodo}
                             alcance={alcancePeriodo}
                         />
 
                         {/* ── Tabla ── */}
                         <Tarjeta data-grafico="tabla" className={`mt-4 overflow-hidden ${claseImpresion('tabla')}`}>
-                            <div className="px-[22px] py-5 flex items-start justify-between gap-5">
+                            <div className="px-[22px] py-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
                                 <div className="min-w-0">
                                     <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>Detalle por grupo</p>
                                     <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>
@@ -2102,8 +2161,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                         <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>{alcanceTemporada}</p>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-2.5 shrink-0">
-                                    <div className="h-9 px-3.5 rounded-[9px] flex items-center gap-2.5 min-w-[230px]" style={{ border: `1px solid ${C.borde}` }}>
+                                <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                                    <div className="h-9 px-3.5 rounded-[9px] flex items-center gap-2.5 w-full sm:w-auto sm:min-w-[230px]" style={{ border: `1px solid ${C.borde}` }}>
                                         <Search className="w-[15px] h-[15px] shrink-0" style={{ color: C.tenue }} strokeWidth={2.2} />
                                         <input
                                             type="text"
@@ -2118,6 +2177,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                 </div>
                             </div>
 
+                            {/* En el celular la tabla no entra: se desliza dentro de la
+                                tarjeta, nunca la página. Desde 640 px, como siempre. */}
+                            <div className="overflow-x-auto sm:overflow-visible">
+                            <div className="min-w-[720px] sm:min-w-0">
                             <div
                                 className="grid gap-5 px-[22px] py-[11px]"
                                 style={{
@@ -2183,7 +2246,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => navigate(`/reportes/gcx/${f.groupId}`)}
+                                                onClick={() => irAlGrupo(f.groupId)}
                                                 className="flex items-center gap-1.5 text-[12.5px] font-semibold hover:underline justify-self-start"
                                                 style={{ color: C.azul }}
                                             >
@@ -2194,6 +2257,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     );
                                 })
                             )}
+
+                            </div>
+                            </div>
 
                             {!cargando && totalPaginas > 1 && (
                                 <div className="px-[22px] py-3.5 flex items-center justify-between gap-5 flex-wrap">

@@ -105,7 +105,10 @@ export const TituloTarjeta: React.FC<{
      */
     alcance?: string | null;
 }> = ({ titulo, detalle, extra, descargas, alcance }) => (
-    <div className="flex items-start justify-between gap-4">
+    // En el celular, la leyenda y las descargas van debajo del título: al
+    // lado, el título quedaba con una palabra por renglón. Desde 640 px (y en
+    // papel) es la fila de siempre.
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
             <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>{titulo}</p>
             <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>{detalle}</p>
@@ -114,7 +117,7 @@ export const TituloTarjeta: React.FC<{
             )}
         </div>
         {(extra || descargas) && (
-            <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="flex flex-col items-start gap-2 shrink-0 sm:items-end">
                 {extra}
                 {descargas}
             </div>

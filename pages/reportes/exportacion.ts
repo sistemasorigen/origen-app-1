@@ -18,7 +18,7 @@
 import * as XLSX from 'xlsx';
 import { ReportesGCXTemporada, TemporadaGCX, EdadesPorCategoriaFila } from '../../types';
 import { NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
-import { Agrupacion, POR_AGRUPACION, Rango, TramoDeCarga } from './periodoGCX';
+import { Agrupacion, DiaDeCalendario, POR_AGRUPACION, Rango, TramoDeCarga } from './periodoGCX';
 
 // ── Fechas ──────────────────────────────────────────────────────────────
 // Viven acá y no en la pantalla porque las usan las dos: el eje del
@@ -81,6 +81,8 @@ export interface ContextoExport {
     agrupacion?: Agrupacion;
     /** "Días con asistencia cargada" agrupado, tal como se ve. */
     tramosCalendario?: TramoDeCarga[];
+    /** "Días con asistencia cargada" por día, con las reuniones que correspondían (calendarioDeCarga). */
+    diasCalendario?: DiaDeCalendario[];
 }
 
 const NOMBRE_TEMPORADA: Record<TemporadaGCX, string> = { S1: '1', S2: '2', S3: '3' };
@@ -239,15 +241,27 @@ const hojaGrupoDetalle = (d: ReportesGCXTemporada): HojaExcel[] => [{
  * filtrar por grupo o por fecha en la planilla, que es lo que alguien va a
  * querer hacer con esto.
  */
-const hojaCalendario = (d: ReportesGCXTemporada): HojaExcel[] => {
+const hojaCalendario = (d: ReportesGCXTemporada, ctx: ContextoExport): HojaExcel[] => {
     const filas: Array<Record<string, string | number>> = [];
-    d.asistenciaPorFecha.forEach(dia => {
+    // Los días del gráfico: con alguna carga o con alguna reunión que
+    // correspondía. Sin ellos (un llamado viejo), los días con carga.
+    const dias: Array<Pick<DiaDeCalendario, 'fecha' | 'grupos' | 'sinCargar'> & { cubiertas?: DiaDeCalendario['cubiertas'] }> =
+        ctx.diasCalendario ?? d.asistenciaPorFecha;
+    dias.forEach(dia => {
         dia.grupos.forEach(g => filas.push({
             Fecha: fechaCompleta(dia.fecha),
             'Día de la semana': nombreDia(dia.fecha),
             Grupo: g.nombre,
             '¿Cargó la asistencia?': 'Sí',
             Asistentes: g.presentes,
+            'Cupo del grupo': g.capacidad || 'Sin cupo cargado',
+        }));
+        (dia.cubiertas || []).forEach(g => filas.push({
+            Fecha: fechaCompleta(dia.fecha),
+            'Día de la semana': nombreDia(dia.fecha),
+            Grupo: g.nombre,
+            '¿Cargó la asistencia?': `Sí, en otra fecha (${fechaCompleta(g.fechaCarga)})`,
+            Asistentes: 'En esa fecha',
             'Cupo del grupo': g.capacidad || 'Sin cupo cargado',
         }));
         dia.sinCargar.forEach(g => filas.push({
@@ -274,8 +288,9 @@ const hojasCalendarioAgrupado = (tramos: TramoDeCarga[], agrupacion: Agrupacion)
         Desde: fechaCompleta(t.desde),
         Hasta: fechaCompleta(t.hasta),
         'Reuniones cargadas': t.Cargaron,
+        'Reuniones que correspondían': t.Esperadas,
         'Reuniones sin cargar': t.NoCargaron,
-        'Porcentaje cargado': t.Cargaron + t.NoCargaron > 0 ? `${t.porcentaje}%` : 'Ninguna reunión',
+        'Porcentaje cargado': t.Esperadas > 0 ? `${t.porcentaje}%` : 'No correspondía ninguna',
     }));
     const porGrupo: Array<Record<string, string | number>> = [];
     tramos.forEach(t => {
@@ -283,15 +298,21 @@ const hojasCalendarioAgrupado = (tramos: TramoDeCarga[], agrupacion: Agrupacion)
             [tramo]: t.etiqueta,
             Grupo: g.nombre,
             'Veces que cargó': g.presentes.length,
+            'Cubiertas con una carga en otra fecha': t.cubiertas.find(f => f.id === g.id)?.veces ?? 0,
             'Veces que no cargó': t.faltantes.find(f => f.id === g.id)?.veces ?? 0,
             'Asistentes de cada vez': g.presentes.join(', '),
             'Cupo del grupo': g.capacidad || 'Sin cupo cargado',
         }));
-        t.faltantes.filter(f => !t.lista.some(g => g.id === f.id)).forEach(f => porGrupo.push({
+        // Los que no cargaron nada en el tramo: sólo faltas, o reuniones
+        // cubiertas por una carga de otro tramo.
+        const sinCargas = [...t.faltantes, ...t.cubiertas].filter((f, i, todos) =>
+            !t.lista.some(g => g.id === f.id) && todos.findIndex(x => x.id === f.id) === i);
+        sinCargas.forEach(f => porGrupo.push({
             [tramo]: t.etiqueta,
             Grupo: f.nombre,
             'Veces que cargó': 0,
-            'Veces que no cargó': f.veces,
+            'Cubiertas con una carga en otra fecha': t.cubiertas.find(x => x.id === f.id)?.veces ?? 0,
+            'Veces que no cargó': t.faltantes.find(x => x.id === f.id)?.veces ?? 0,
             'Asistentes de cada vez': 'Sin dato',
             'Cupo del grupo': f.capacidad || 'Sin cupo cargado',
         }));
@@ -415,7 +436,7 @@ const hojasSinEncabezado = (
         case 'calendario':
             return ctx.agrupacion && ctx.agrupacion !== 'dias' && ctx.tramosCalendario
                 ? hojasCalendarioAgrupado(ctx.tramosCalendario, ctx.agrupacion)
-                : hojaCalendario(datos);
+                : hojaCalendario(datos, ctx);
         case 'tabla': return hojaTabla(datos, ctx);
     }
 };
