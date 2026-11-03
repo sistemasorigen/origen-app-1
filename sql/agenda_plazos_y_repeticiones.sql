@@ -176,9 +176,11 @@ $$;
 --
 -- `supera_tope` avisa que esa opción daría más de 200 repeticiones: la base la
 -- va a rechazar al crearla, y el formulario puede decirlo antes.
+-- SECURITY DEFINER: usa agenda_serie_fechas y agenda_frecuencia_texto, que
+-- están cerradas a los usuarios (ver sql/agenda_repeticiones_posibles_permiso.sql).
 CREATE OR REPLACE FUNCTION public.agenda_repeticiones_posibles(p_desde date, p_hasta date)
 RETURNS jsonb
-LANGUAGE sql STABLE SET search_path = public
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
     SELECT CASE
         WHEN p_desde IS NULL OR p_hasta IS NULL OR p_hasta <= p_desde
