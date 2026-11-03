@@ -2417,7 +2417,7 @@ export const supabaseService = {
       // Step 2: Get all groups with endDate
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, name, start_date, end_date, status');
+        .select('id, name, start_date, end_date, status, is_test');
 
       if (groupsError) {
         console.error('[Reports] Error fetching groups:', groupsError);
@@ -2450,7 +2450,11 @@ export const supabaseService = {
           status?: string;
       }> = {};
 
+      // Los grupos de prueba no cuentan (groups.is_test).
+      const dePrueba = new Set((groups || []).filter((g: any) => g.is_test).map((g: any) => g.id));
+
       registrations.forEach((reg: any) => {
+        if (dePrueba.has(reg.group_id)) return;
         const groupInfo = groupMap[reg.group_id] || { name: 'Desconocido', endDate: undefined, status: undefined };
         const groupName = groupInfo.name;
 
@@ -2500,7 +2504,8 @@ export const supabaseService = {
           category_id,
           end_date,
           group_categories!inner(id, name, color)
-        `);
+        `)
+        .eq('is_test', false); // los grupos de prueba no cuentan
 
       if (groupsError) {
         console.error('[Analytics] Error fetching groups:', groupsError);
@@ -2582,7 +2587,8 @@ export const supabaseService = {
       // Get all groups with tags
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, tags, end_date');
+        .select('id, tags, end_date')
+        .eq('is_test', false); // los grupos de prueba no cuentan
 
       if (groupsError) {
         console.error('[Analytics] Error fetching groups:', groupsError);
@@ -2681,6 +2687,7 @@ export const supabaseService = {
           status,
           group_categories!inner(id, name, color)
         `)
+        .eq('is_test', false) // los grupos de prueba no cuentan
         .eq('status', 'approved');
 
       if (groupsError || !groups?.length) return emptyResult;
@@ -2831,7 +2838,8 @@ export const supabaseService = {
           end_date,
           start_date,
           group_categories(name)
-        `);
+        `)
+        .eq('is_test', false); // los grupos de prueba no cuentan
 
       if (groupsError) {
         console.error('[Analytics] Error fetching groups:', groupsError);
@@ -3070,6 +3078,7 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('groups')
         .select('*, registrations:group_registrations(*)')
+        .eq('is_test', false) // los grupos de prueba no cuentan
         .eq('status', 'approved'); // Only show approved groups to public
 
       if (error) {
@@ -3096,6 +3105,7 @@ export const supabaseService = {
       const { data, error } = await supabase
         .from('groups')
         .select('*, registrations:group_registrations(*)')
+        .eq('is_test', false) // los grupos de prueba no cuentan
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -6110,6 +6120,7 @@ export const supabaseService = {
             status
           )
         `)
+        .eq('is_test', false) // los grupos de prueba no cuentan
         .in('status', ['approved', 'finished']);
 
       if (groupsError) {
@@ -6211,6 +6222,7 @@ export const supabaseService = {
             status
           )
         `)
+        .eq('is_test', false) // los grupos de prueba no cuentan
         .in('status', ['approved', 'finished']);
 
       if (groupsError) {
@@ -6601,7 +6613,8 @@ export const supabaseService = {
     try {
       const { data: groups, error: groupsError } = await supabase
         .from('groups')
-        .select('id, status, start_date, end_date, host_id, co_host_id');
+        .select('id, status, start_date, end_date, host_id, co_host_id')
+        .eq('is_test', false); // los grupos de prueba no cuentan
 
       if (groupsError) {
         console.error('[supabaseService] Error fetching groups for analytics:', groupsError);
@@ -6751,7 +6764,8 @@ export const supabaseService = {
           // '*' y no la lista de columnas: nombrar is_hybrid haría fallar el
           // tablero entero mientras sql/add_modalidad_hibrida.sql no se corra.
           // Son ~100 filas y ~130 KB, y la base se cachea.
-          .select('*');
+          .select('*')
+          .eq('is_test', false); // los grupos de prueba no cuentan
 
         if (errGrupos) {
           console.error('[ReportesGCX] Error trayendo grupos:', errGrupos);

@@ -2541,6 +2541,16 @@ propia del Día del Niño y no se puede probar sin cámara).
 - **Si se apaga un trigger** para cargar volumen, volver a prenderlo y
   verificarlo (`tgenabled = 'O'`). Un trigger de email apagado no da ningún
   error: simplemente nadie recibe nada.
+- **GCX de prueba que queda vivo: `groups.is_test = true`** (desde el
+  2026-11-03, `sql/add_groups_is_test.sql`). Se carga además con
+  `is_hidden = true`, y queda fuera de Reportes GCX, `/reportes`, los reportes
+  de asistencia, el Panel GCX (`getGroupsForAdmin`) y el catálogo
+  (`getGroups`). Lo filtra cada consulta de `groups` con
+  `.eq('is_test', false)`; `getGroupRegistrationChartData`, que trae todas las
+  inscripciones, saltea las del grupo de prueba. Sólo lo ve su anfitrión, en
+  `/mis-grupos` (`getGroupsByHost` no filtra). Una consulta nueva de `groups`
+  que cuente algo tiene que sumar el mismo filtro. Hay uno vivo: "GCX de
+  prueba" de Ignacio, con 4 integrantes `@origen.test`.
 - Lo que solo se prueba con un dispositivo (cámara, Gmail en modo oscuro,
   Outlook) va en un **checklist para Ignacio**.
 - Puede haber **ediciones en paralelo** de Ignacio en el mismo archivo: leer el
