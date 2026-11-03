@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-    getTestimoniosAdmin, mensajeDeMotivo, resolverTestimonio,
-    type AccionModeracion, type EstadoTestimonio, type TestimonioAdmin,
+    getHabilitacionTestimonios, getTestimoniosAdmin, habilitarPaginaTestimonios, mensajeDeMotivo, resolverTestimonio,
+    type AccionModeracion, type EstadoPagina, type EstadoTestimonio, type PaginaTestimonios, type TestimonioAdmin,
 } from '../../services/testimonios';
 import { cortar, hayQueCortar, linkDeTestimonio } from '../testimonios/piezas';
 import { ModalConfirmacion, type PedidoConfirmacion } from './piezasAdmin';
@@ -165,6 +165,144 @@ const ESTADO_DEL_FILTRO: Record<Filtro, EstadoTestimonio | null> = {
     publicados: 'publicado',
     ocultos: 'oculto',
     todos: null,
+};
+
+// ── Los botones de las dos páginas ──────────────────────────────────────
+
+/**
+ * Prender y apagar /testimonios y /testimonios-gcx (sql/testimonios_habilitar.sql).
+ * Apagada, la página se abre pero muestra el cartel de "todavía no están
+ * habilitados". Lo decide el botón y nada más: ninguna fecha las prende.
+ */
+const PAGINAS: Record<PaginaTestimonios, { t: string; ruta: string; prender: string; apagar: string }> = {
+    galeria: {
+        t: 'Leer los testimonios',
+        ruta: '/testimonios',
+        prender: 'Cualquiera va a poder leer los testimonios de la temporada y darles corazón.',
+        apagar: 'Va a mostrar el cartel de que los testimonios todavía no están habilitados. No se borra nada.',
+    },
+    carga: {
+        t: 'Dejar un testimonio',
+        ruta: '/testimonios-gcx',
+        prender: 'Quienes fueron parte de un GCX de la temporada van a poder dejar su testimonio, mientras el plazo de carga siga abierto.',
+        apagar: 'Va a mostrar el cartel y nadie va a poder dejar un testimonio. Los que ya están no se tocan.',
+    },
+};
+
+const BotonesDePaginas: React.FC<{
+    avisar: Props['avisar'];
+    pedirConfirmacion: (p: PedidoConfirmacion) => void;
+}> = ({ avisar, pedirConfirmacion }) => {
+    const [paginas, setPaginas] = useState<EstadoPagina[] | null | 'error' | 'no_disponible'>(null);
+    const [tocando, setTocando] = useState<PaginaTestimonios | null>(null);
+
+    const cargar = useCallback(async () => {
+        const r = await getHabilitacionTestimonios();
+        if (!r.ok) { setPaginas(r.motivo === 'no_disponible' ? 'no_disponible' : 'error'); return; }
+        setPaginas(r.paginas);
+    }, []);
+
+    useEffect(() => { void cargar(); }, [cargar]);
+
+    const cambiar = async (p: PaginaTestimonios, habilitada: boolean) => {
+        setTocando(p);
+        const r = await habilitarPaginaTestimonios(p, habilitada);
+        setTocando(null);
+        if (!r.ok) { avisar(mensajeDeMotivo(r), 'error'); return; }
+        avisar(`${PAGINAS[p].ruta} quedó ${habilitada ? 'habilitada' : 'deshabilitada'}.`);
+        await cargar();
+    };
+
+    const pedir = (e: EstadoPagina) => {
+        const prender = !e.habilitada;
+        const d = PAGINAS[e.pagina];
+        pedirConfirmacion({
+            tipo: 'control',
+            rotulo: 'Páginas públicas',
+            titulo: `¿${prender ? 'Habilitar' : 'Deshabilitar'} ${d.ruta}?`,
+            texto: prender ? d.prender : d.apagar,
+            etiquetaBoton: prender ? 'Habilitar' : 'Deshabilitar',
+            onConfirmar: () => { void cambiar(e.pagina, prender); },
+        });
+    };
+
+    return (
+        <section aria-labelledby="tst-paginas" className="mb-3 rounded-[24px] p-4 md:px-[18px]"
+            style={{ background: 'var(--t-card)', boxShadow: 'var(--t-shadow)' }}>
+            <h3 id="tst-paginas" className="m-0 text-[15.5px] font-semibold leading-[1.3]">Páginas públicas</h3>
+            <p className="mt-1 mb-0 text-[13.5px] font-medium leading-[1.5] [text-wrap:pretty]" style={{ color: 'var(--t-m55)' }}>
+                Deshabilitada, la página se abre igual pero muestra que los testimonios todavía no están habilitados.
+                Sólo cambia cuando tocás el botón.
+            </p>
+
+            {paginas === null && (
+                <div aria-busy="true" aria-label="Cargando las páginas" className="mt-3 flex flex-col gap-2">
+                    {[0, 1].map(i => <div key={i} className="tst-brillo h-[60px] rounded-[18px]" />)}
+                </div>
+            )}
+
+            {(paginas === 'error' || paginas === 'no_disponible') && (
+                <div role="alert" className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[18px] px-4 py-3" style={{ background: 'var(--t-redBg)' }}>
+                    <p className="m-0 text-[13.5px] font-semibold leading-[1.5]" style={{ color: 'var(--t-redInk)' }}>
+                        {paginas === 'no_disponible'
+                            ? 'Los botones todavía no están en la base: falta aplicar sql/testimonios_habilitar.sql.'
+                            : 'No pudimos traer cómo están las páginas.'}
+                    </p>
+                    {paginas === 'error' && (
+                        <button type="button" onClick={() => { setPaginas(null); void cargar(); }}
+                            className="h-10 rounded-full border-0 px-4 text-[13.5px] font-semibold"
+                            style={{ background: 'var(--t-card)', color: 'var(--t-ink)' }}>
+                            Reintentar
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {Array.isArray(paginas) && (
+                <div className="mt-3 flex flex-col gap-2">
+                    {paginas.map(e => {
+                        const d = PAGINAS[e.pagina];
+                        if (!d) return null;
+                        const ocupado = tocando === e.pagina;
+                        return (
+                            <div key={e.pagina} className="flex items-center justify-between gap-3 rounded-[18px] px-4 py-3"
+                                style={{ background: 'var(--t-chip)' }}>
+                                <span className="flex min-w-0 flex-col gap-0.5">
+                                    <span className="text-[14.5px] font-semibold leading-[1.3]">{d.t}</span>
+                                    <span className="whitespace-nowrap text-[13px] font-medium leading-[1.35]" style={{ color: 'var(--t-m55)' }}>{d.ruta}</span>
+                                    <span className="text-[13px] font-semibold leading-[1.4]"
+                                        style={{ color: e.habilitada ? 'var(--t-grn)' : 'var(--t-m55)' }}>
+                                        {e.habilitada ? 'Habilitada' : 'Deshabilitada: muestra el cartel'}
+                                    </span>
+                                    {e.cambiado && (
+                                        <span className="text-[12.5px] font-medium leading-[1.4]" style={{ color: 'var(--t-m42)' }}>
+                                            {e.cambiadoPor ? `Lo cambió ${e.cambiadoPor}` : 'Cambiado'} · {fecha(e.cambiado)}
+                                        </span>
+                                    )}
+                                </span>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={e.habilitada}
+                                    aria-label={`Habilitar ${d.ruta}`}
+                                    aria-busy={ocupado || undefined}
+                                    disabled={ocupado}
+                                    onClick={() => pedir(e)}
+                                    className="flex h-11 w-[60px] flex-none items-center justify-center rounded-full border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 disabled:opacity-60"
+                                >
+                                    <span className="relative block h-8 w-[52px] rounded-full transition-colors duration-200"
+                                        style={{ background: e.habilitada ? 'var(--t-ink)' : 'rgba(0,0,0,.16)' }}>
+                                        <span className="absolute top-[3px] block h-[26px] w-[26px] rounded-full bg-white transition-[left] duration-200"
+                                            style={{ left: e.habilitada ? 23 : 3, boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                                    </span>
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </section>
+    );
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -351,6 +489,8 @@ const TestimoniosSistemas: React.FC<Props> = ({ avisar, onResumen }) => {
     return (
         <div id="testimonios-admin">
             <style>{ESTILOS}</style>
+
+            <BotonesDePaginas avisar={avisar} pedirConfirmacion={setConfirmacion} />
 
             {/* Contadores */}
             <div className="grid grid-cols-3 gap-2 md:gap-2.5">

@@ -8,9 +8,9 @@ import {
     type GrupoDetalle, type TestimonioPublico, type Temporada,
 } from '../../services/testimonios';
 import {
-    botonGris, botonNegro, C, Cara, cortar, ESTILOS, esqueleto, fondoDePortada, hayQueCortar, HojaModal,
+    botonGris, botonNegro, C, Cara, CartelNoHabilitado, cortar, ESTILOS, esqueleto, fondoDePortada, hayQueCortar, HojaModal,
     ID_TESTIMONIOS, IconoCandado, IconoChat, IconoCompartir, IconoCorazon, IconoSinConexion, IconoVolver,
-    linkDeGrupo, linkDeTestimonio, PantallaAviso, PASTELES, TarjetaEstado, useVista,
+    linkDeGrupo, linkDeTestimonio, PantallaAviso, PASTELES, TarjetaEstado, useCargaHabilitada, useVista,
 } from './piezas';
 
 /**
@@ -65,6 +65,9 @@ const TestimoniosDelGrupo: React.FC = () => {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
     const [sinGrupo, setSinGrupo] = useState(false);
+    /** Sistemas tiene apagada la galería: el cartel y nada más. */
+    const [apagada, setApagada] = useState(false);
+    const cargaHabilitada = useCargaHabilitada();
 
     const [descAbierta, setDescAbierta] = useState(false);
     const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
@@ -98,12 +101,14 @@ const TestimoniosDelGrupo: React.FC = () => {
         const r = await getGrupoTestimonios(groupId);
         setCargando(false);
         if (!r.ok) {
+            if (r.motivo === 'no_habilitado') { setApagada(true); return; }
             // Un GCX que no existe o que es de otra temporada tiene su propia
             // pantalla; cualquier otra cosa es un error que se reintenta.
             if (r.motivo === 'no_existe' || r.motivo === 'fuera_de_temporada') setSinGrupo(true);
             else setError(true);
             return;
         }
+        setApagada(false);
         setGrupo(r.grupo);
         setTemporada(r.temporada);
         setTestimonios(r.testimonios);
@@ -136,7 +141,11 @@ const TestimoniosDelGrupo: React.FC = () => {
         olvidarPendiente();
         (async () => {
             const r = await darCorazon(p.testimonio, true);
-            if (!r.ok) { setToast(mensajeDeMotivo(r)); return; }
+            if (!r.ok) {
+                setToast(mensajeDeMotivo(r));
+                if (r.motivo === 'no_habilitado') setApagada(true);
+                return;
+            }
             servidor.current[p.testimonio] = { di: r.di, corazones: r.corazones };
             deseado.current[p.testimonio] = r.di;
             setTestimonios(ts => ts.map(t => (t.id === p.testimonio ? { ...t, yoDi: r.di, corazones: r.corazones } : t)));
@@ -191,6 +200,8 @@ const TestimoniosDelGrupo: React.FC = () => {
             deseado.current[id] = v ? v.di : false;
             if (v) setTestimonios(ts => ts.map(t => (t.id === id ? { ...t, yoDi: v.di, corazones: v.corazones } : t)));
             setToast(r.motivo === 'sin_sesion' ? 'Tu sesión se cerró. Volvé a entrar.' : mensajeDeMotivo(r));
+            // La apagaron con la página abierta: el cartel.
+            if (r.motivo === 'no_habilitado') setApagada(true);
             return;
         }
 
@@ -236,6 +247,15 @@ const TestimoniosDelGrupo: React.FC = () => {
         gap: esCompu ? 48 : 28,
         alignItems: 'start',
     };
+
+    if (apagada) {
+        return (
+            <div id={ID_TESTIMONIOS} className="min-h-screen" style={{ background: C.fondo }}>
+                <style>{ESTILOS}</style>
+                <CartelNoHabilitado pagina="galeria" onInicio={() => navigate('/')} />
+            </div>
+        );
+    }
 
     return (
         <div id={ID_TESTIMONIOS} className="min-h-screen" style={{ background: C.fondo }}>
@@ -434,11 +454,13 @@ const TestimoniosDelGrupo: React.FC = () => {
                                 <TarjetaEstado
                                     icono={<IconoChat />}
                                     titulo="Todavía nadie contó su experiencia en este grupo"
-                                    texto={temporada?.cargaAbierta
-                                        ? `Si fuiste parte, podés ser la primera persona en contarlo. Tenés hasta el ${diaYMes(temporada.cargaHasta)}.`
-                                        : 'La carga de testimonios de esta temporada ya cerró.'}
-                                    boton={temporada?.cargaAbierta ? 'Dejar mi testimonio' : undefined}
-                                    onBoton={temporada?.cargaAbierta ? () => navigate('/testimonios-gcx') : undefined}
+                                    texto={!temporada?.cargaAbierta
+                                        ? 'La carga de testimonios de esta temporada ya cerró.'
+                                        : cargaHabilitada === false
+                                            ? 'Si fuiste parte, vas a poder contarlo cuando se habiliten los testimonios, al terminar la temporada.'
+                                            : `Si fuiste parte, podés ser la primera persona en contarlo. Tenés hasta el ${diaYMes(temporada.cargaHasta)}.`}
+                                    boton={temporada?.cargaAbierta && cargaHabilitada ? 'Dejar mi testimonio' : undefined}
+                                    onBoton={temporada?.cargaAbierta && cargaHabilitada ? () => navigate('/testimonios-gcx') : undefined}
                                     botonAncho
                                 />
                             )}

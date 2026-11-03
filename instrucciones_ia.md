@@ -2904,6 +2904,31 @@ sólo SUPER_ADMIN: `isSuperAdmin` en `App.tsx`).
 - `?id=` (el link de la alerta) pasa el filtro a "Todos", resalta la tarjeta
   3,2 s y hace scroll hasta ella; si ese testimonio ya se eliminó, lo dice.
 
+### Los botones de las dos páginas (`sql/testimonios_habilitar.sql`)
+Arriba de la moderación, "Páginas públicas": dos interruptores que prenden y
+apagan `/testimonios` (+ `/testimonios/:id`, la página 'galeria') y
+`/testimonios-gcx` ('carga'). Los pidió Ignacio el 2026-11-03; arrancan
+APAGADOS.
+
+- **Lo decide el botón, nunca una fecha.** Ninguna fecha prende nada: se
+  prenden a mano cuando termina la temporada. Prendida, siguen valiendo las
+  reglas de siempre (el plazo de carga incluido): el botón es una llave más,
+  adelante, y no abre una carga cuyo plazo ya cerró.
+- **Apagada, la URL se abre igual** y muestra `CartelNoHabilitado`
+  (`pages/testimonios/piezas.tsx`): "Los testimonios todavía no están
+  habilitados · Se habilitan cuando termine la temporada". En
+  `/testimonios-gcx` sale ANTES de pedir que se inicie sesión
+  (`testimonios_temporada()` trae `habilitado: { galeria, carga }`).
+- **Se corta en la base**, no sólo en la pantalla: las funciones públicas
+  (`_grupos`, `_grupo`, `_corazon`, `_mis_grupos`, `_publicar`) contestan
+  `no_habilitado` con su página apagada. Las `_en` no cambiaron, y las suites
+  que las prueban prenden las dos dentro de la transacción. No tienen llave
+  "Mis testimonios" ni la moderación.
+- Con la carga apagada, "Dejar mi testimonio" no se ofrece en la galería, el
+  detalle ni Mis testimonios (`useCargaHabilitada`): llevaría derecho al cartel.
+- Si la base todavía no tiene el SQL, el front hace lo mismo que la base
+  (abierta) y el panel dice que falta aplicarlo.
+
 ### Las reglas (no se cambian)
 - **Temporada vigente**: la última que EMPEZÓ, con las fechas de inicio y fin
   de la configuración (`app_config` 'global' → `groupsConfig.seasonSettings`,

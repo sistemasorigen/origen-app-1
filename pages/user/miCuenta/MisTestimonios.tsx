@@ -4,7 +4,7 @@ import {
     getMisTestimonios, LIMITE_MOTIVO, mensajeDeMotivo, solicitarEliminacion,
     type MiTestimonio, type Temporada,
 } from '../../../services/testimonios';
-import { cortar, hayQueCortar } from '../../testimonios/piezas';
+import { cortar, hayQueCortar, useCargaHabilitada } from '../../testimonios/piezas';
 import {
     BotonFantasma, BotonPrimario, EncabezadoSubpagina, ESTILO_TARJETA, EsqueletoDeSeccion,
     Girito, Icono, ICONOS, Panel, TARJETA, TituloDePanel, Vacio,
@@ -213,6 +213,8 @@ export const MisTestimonios: React.FC<{
     const navigate = useNavigate();
     const [lista, setLista] = useState<MiTestimonio[] | null>(null);
     const [temporada, setTemporada] = useState<Temporada | null>(null);
+    /** Sistemas puede tener apagada /testimonios-gcx: entonces no se ofrece. */
+    const cargaHabilitada = useCargaHabilitada();
     const [falló, setFalló] = useState(false);
     const [intento, setIntento] = useState(0);
 
@@ -288,7 +290,7 @@ export const MisTestimonios: React.FC<{
                         icono={ICONOS.testimonio}
                         titulo="Todavía no dejaste testimonios"
                         detalle="Si fuiste parte de un GCX, podés contar lo que viviste para que otras personas lo lean."
-                        accion={temporada?.cargaAbierta
+                        accion={temporada?.cargaAbierta && cargaHabilitada
                             ? { texto: 'Dejar mi testimonio', onClick: () => navigate('/testimonios-gcx') }
                             : undefined}
                     />

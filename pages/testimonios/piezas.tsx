@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useDragControls, useReducedMotion } from 'framer-motion';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
-import type { Anfitrion } from '../../services/testimonios';
+import { getTemporadaTestimonios, type Anfitrion, type PaginaTestimonios } from '../../services/testimonios';
 
 /**
  * Piezas de los testimonios de los GCX, compartidas por /testimonios-gcx
@@ -162,6 +162,9 @@ export const IconoPersonas: React.FC = () => (
 export const IconoCalendarioCerrado: React.FC = () => (
     <Trazo tam={30}><rect x="3" y="4" width="18" height="18" rx="3" /><path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4" /></Trazo>
 );
+export const IconoCalendario: React.FC = () => (
+    <Trazo tam={30}><rect x="3" y="4" width="18" height="18" rx="3" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="M12 14v3l2 1" /></Trazo>
+);
 export const IconoSinConexion: React.FC = () => (
     <Trazo tam={30}><path d="M2 2l20 20M8.5 16.5a5 5 0 017 0M5 12.86a10 10 0 015.17-2.69M19 12.86a10 10 0 00-2.3-1.64M2 8.82a15 15 0 014.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M12 20h.01" /></Trazo>
 );
@@ -238,6 +241,26 @@ export const PantallaAviso: React.FC<{
             <p style={{ margin: '10px 0 0', fontSize: 15, lineHeight: 1.55, fontWeight: 500, color: C.m62, textWrap: 'pretty' } as React.CSSProperties}>{texto}</p>
             <button type="button" onClick={onBoton} style={{ ...botonNegro(56), marginTop: 24 }}>{boton}</button>
         </div>
+    </div>
+);
+
+/**
+ * El cartel de una página que Sistemas todavía no prendió (los botones de
+ * /panel-admin?tab=testimonios). No está en los diseños: lo pidió Ignacio, y
+ * usa la misma tarjeta que el plazo cerrado. La página se abre igual; el
+ * cartel ocupa el lugar de todo lo demás.
+ */
+export const CartelNoHabilitado: React.FC<{ pagina: PaginaTestimonios; onInicio: () => void }> = ({ pagina, onInicio }) => (
+    <div className="px-5 pb-[60px] pt-6 min-[600px]:p-10">
+        <PantallaAviso
+            icono={<IconoCalendario />}
+            titulo="Los testimonios todavía no están habilitados"
+            texto={pagina === 'carga'
+                ? 'Se habilitan cuando termine la temporada. Ahí vas a poder contar lo que viviste en tu GCX.'
+                : 'Se habilitan cuando termine la temporada. Ahí vas a poder leer lo que vivió cada GCX.'}
+            boton="Volver al inicio"
+            onBoton={onInicio}
+        />
     </div>
 );
 
@@ -319,6 +342,22 @@ export const linkDeTestimonio = (groupId: string, testimonioId: string): string 
 export type Vista = 'movil' | 'tablet' | 'compu';
 
 const vistaDe = (ancho: number): Vista => (ancho < ANCHO_MOVIL ? 'movil' : ancho < 1024 ? 'tablet' : 'compu');
+
+/**
+ * Si /testimonios-gcx está prendida desde Sistemas, para mostrar o no
+ * "Dejar mi testimonio" en las otras pantallas: con la carga apagada, ese
+ * botón llevaría derecho al cartel. null mientras se pregunta; si la base no
+ * contesta, false (mejor no ofrecer un botón que quizás no anda).
+ */
+export const useCargaHabilitada = (): boolean | null => {
+    const [habilitada, setHabilitada] = useState<boolean | null>(null);
+    useEffect(() => {
+        let vivo = true;
+        getTemporadaTestimonios().then(r => { if (vivo) setHabilitada(r.ok ? r.habilitado.carga : false); });
+        return () => { vivo = false; };
+    }, []);
+    return habilitada;
+};
 
 export const useVista = (): Vista => {
     // Se mide en el PRIMER render: arrancando en 'compu', un teléfono

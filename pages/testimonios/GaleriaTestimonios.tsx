@@ -5,9 +5,9 @@ import {
     diaYMes, getGruposTestimonios, type GrupoGaleria, type Temporada,
 } from '../../services/testimonios';
 import {
-    C, Cara, ESTILOS, esqueleto, fondoDePortada, ID_TESTIMONIOS, IconoChatChico, IconoCompartir,
+    C, Cara, CartelNoHabilitado, ESTILOS, esqueleto, fondoDePortada, ID_TESTIMONIOS, IconoChatChico, IconoCompartir,
     IconoEquis, IconoFlecha, IconoLapiz, IconoLupa, IconoLupaSin, IconoReloj, IconoSinConexion,
-    linkDeGrupo, PASTELES, TarjetaEstado, useVista,
+    linkDeGrupo, PASTELES, TarjetaEstado, useCargaHabilitada, useVista,
 } from './piezas';
 
 /**
@@ -42,6 +42,9 @@ const GaleriaTestimonios: React.FC = () => {
     const [temporada, setTemporada] = useState<Temporada | null>(null);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
+    /** Sistemas tiene apagada la galería: se muestra el cartel y nada más. */
+    const [apagada, setApagada] = useState(false);
+    const cargaHabilitada = useCargaHabilitada();
     const [foco, setFoco] = useState(false);
     const [compartiendo, setCompartiendo] = useState<GrupoGaleria | null>(null);
 
@@ -56,10 +59,12 @@ const GaleriaTestimonios: React.FC = () => {
         if (mio !== pedido.current) return;
         setCargando(false);
         if (!r.ok) {
+            if (r.motivo === 'no_habilitado') { setApagada(true); return; }
             // Un fallo no es "no hay GCX" (instrucciones, 7.9).
             setError(true);
             return;
         }
+        setApagada(false);
         setTemporada(r.temporada);
         setGrupos(r.grupos);
     }, []);
@@ -119,6 +124,15 @@ const GaleriaTestimonios: React.FC = () => {
         navigate(`/testimonios/${g.id}`, { state: { q: buscado } });
     };
 
+    if (apagada) {
+        return (
+            <div id={ID_TESTIMONIOS} className="min-h-screen" style={{ background: C.fondo }}>
+                <style>{ESTILOS}</style>
+                <CartelNoHabilitado pagina="galeria" onInicio={() => navigate('/')} />
+            </div>
+        );
+    }
+
     return (
         <div id={ID_TESTIMONIOS} className="min-h-screen" style={{ background: C.fondo }}>
             <style>{ESTILOS}</style>
@@ -131,8 +145,9 @@ const GaleriaTestimonios: React.FC = () => {
                     {temporada?.etiqueta ?? ''}
                 </p>
 
-                {/* Dejar el propio, mientras el plazo esté abierto. */}
-                {temporada?.cargaAbierta && (
+                {/* Dejar el propio, mientras el plazo esté abierto y Sistemas
+                    tenga prendida la carga. */}
+                {temporada?.cargaAbierta && cargaHabilitada && (
                     <div style={{ marginTop: 22, background: '#fff', borderRadius: 26, padding: vista === 'movil' ? 18 : '18px 18px 18px 24px', boxShadow: '0 1px 2px rgba(0,0,0,.04)', display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 16 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-.01em' }}>¿Fuiste parte de un GCX esta temporada?</p>

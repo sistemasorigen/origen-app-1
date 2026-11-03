@@ -7,7 +7,7 @@ import {
     mensajeDeMotivo, publicarTestimonio, type Falla, type MiGrupo, type Temporada,
 } from '../../services/testimonios';
 import {
-    C, Cara, esqueleto, FilaAnfitrion, fondoDePortada, HojaModal, IconoCalendarioCerrado, IconoPersonas,
+    C, Cara, CartelNoHabilitado, esqueleto, FilaAnfitrion, fondoDePortada, HojaModal, IconoCalendarioCerrado, IconoPersonas,
     IconoReloj, IconoSinConexion, IconoTilde, ESTILOS, ID_TESTIMONIOS, LogoGoogle, PantallaAviso, PASTELES,
     ROTULO, Ruedita, botonGris, botonNegro,
 } from './piezas';
@@ -86,6 +86,12 @@ const DejarTestimonio: React.FC = () => {
     const [grupos, setGrupos] = useState<MiGrupo[] | null>(null);
     const [miNombre, setMiNombre] = useState<string | null>(null);
     const [errorGrupos, setErrorGrupos] = useState(false);
+    /**
+     * Si Sistemas tiene apagada esta página (los botones de
+     * /panel-admin?tab=testimonios). null: todavía no se sabe. La base corta
+     * igual; esto es para mostrar el cartel antes de pedir que se inicie sesión.
+     */
+    const [cargaApagada, setCargaApagada] = useState<boolean | null>(null);
 
     // ── Lo que hace la persona ──────────────────────────────────────────
     const [sel, setSel] = useState<string | null>(null);
@@ -138,7 +144,10 @@ const DejarTestimonio: React.FC = () => {
     const cargarTemporada = useCallback(async () => {
         setErrorTemporada(false);
         const r = await getTemporadaTestimonios();
-        if (r.ok) setTemporada(r.temporada); else setErrorTemporada(true);
+        if (r.ok) {
+            setTemporada(r.temporada);
+            setCargaApagada(!r.habilitado.carga);
+        } else setErrorTemporada(true);
     }, []);
 
     const cargarGrupos = useCallback(async () => {
@@ -146,10 +155,13 @@ const DejarTestimonio: React.FC = () => {
         setErrorGrupos(false);
         const r = await getMisGruposTestimonios();
         if (!r.ok) {
+            // La apagaron mientras tanto: el cartel, no un error.
+            if (r.motivo === 'no_habilitado') { setCargaApagada(true); return; }
             // Un fallo no es "no tenés GCX" (instrucciones 7.9).
             if (r.motivo !== 'sin_sesion') setErrorGrupos(true);
             return;
         }
+        setCargaApagada(false);
         setTemporada(r.temporada);
         setMiNombre(r.miNombre);
         setGrupos(r.grupos);
@@ -232,6 +244,12 @@ const DejarTestimonio: React.FC = () => {
             return;
         }
         // Los que tienen pantalla propia en el diseño, van a ella.
+        if (r.motivo === 'no_habilitado') {
+            // Sistemas la apagó con el formulario abierto. El borrador queda.
+            setConsintiendo(false);
+            setCargaApagada(true);
+            return;
+        }
         if (r.motivo === 'fuera_de_plazo') {
             setConsintiendo(false);
             // Sin strictNullChecks la unión no se angosta: se lee como Falla.
@@ -259,10 +277,11 @@ const DejarTestimonio: React.FC = () => {
     };
 
     // ── Qué pantalla ────────────────────────────────────────────────────
-    type Pantalla = 'cargando' | 'login' | 'error' | 'cerrado' | 'sinGcx' | 'form' | 'enviado';
+    type Pantalla = 'cargando' | 'login' | 'error' | 'noHabilitado' | 'cerrado' | 'sinGcx' | 'form' | 'enviado';
     const pantalla: Pantalla =
         !temporada && errorTemporada ? 'error'
-            : !temporada ? 'cargando'
+            : cargaApagada ? 'noHabilitado'
+            : !temporada || cargaApagada === null ? 'cargando'
                 : !temporada.cargaAbierta ? 'cerrado'
                     : cargandoSesion ? 'cargando'
                         : !user ? 'login'
@@ -335,6 +354,9 @@ const DejarTestimonio: React.FC = () => {
                     <div style={esqueleto({ height: 200, marginTop: 30, borderRadius: 26 })} />
                 </div>
             )}
+
+            {/* ── Apagada desde Sistemas ─────────────────────────────── */}
+            {pantalla === 'noHabilitado' && <CartelNoHabilitado pagina="carga" onInicio={() => navigate('/')} />}
 
             {/* ── Sin GCX, plazo cerrado y error ─────────────────────── */}
             {(pantalla === 'sinGcx' || pantalla === 'cerrado' || pantalla === 'error') && (

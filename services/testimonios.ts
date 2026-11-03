@@ -33,6 +33,8 @@ export type MotivoTestimonios =
     | 'ya_publicado' | 'texto_invalido' | 'sin_consentimiento' | 'tope' | 'sin_nombre'
     | 'no_existe' | 'no_es_tuyo' | 'motivo_largo'
     | 'no_autorizado' | 'accion_invalida' | 'estado_invalido'
+    /** La página está apagada desde Sistemas (sql/testimonios_habilitar.sql). */
+    | 'no_habilitado' | 'pagina_invalida'
     | 'red' | 'no_disponible';
 
 export interface Falla {
@@ -364,9 +366,33 @@ async function llamarConTemporada<T extends object>(
 
 // ── Lo público (anda sin sesión) ────────────────────────────────────────
 
-/** La temporada vigente, si la carga está abierta y hasta cuándo. */
+/**
+ * Las dos páginas que Sistemas prende y apaga desde /panel-admin?tab=testimonios:
+ * 'galeria' es /testimonios y /testimonios/:id; 'carga' es /testimonios-gcx.
+ * Apagada, la página se abre pero muestra el cartel de "todavía no están
+ * habilitados". Lo decide el botón, nunca una fecha.
+ */
+export type PaginaTestimonios = 'galeria' | 'carga';
+
+export interface Habilitado {
+    galeria: boolean;
+    carga: boolean;
+}
+
+/**
+ * Si la base no manda `habilitado` es que sql/testimonios_habilitar.sql
+ * todavía no está aplicado, y entonces la base tampoco corta nada: la
+ * pantalla hace lo mismo que la base, abierta.
+ */
+const habilitadoDe = (x: unknown): Habilitado => {
+    const h = obj(x);
+    if (!h) return { galeria: true, carga: true };
+    return { galeria: h.galeria !== false, carga: h.carga !== false };
+};
+
+/** La temporada vigente, si la carga está abierta y hasta cuándo, y qué páginas están prendidas. */
 export const getTemporadaTestimonios = () =>
-    llamarConTemporada('testimonios_temporada', {}, () => ({}));
+    llamarConTemporada('testimonios_temporada', {}, d => ({ habilitado: habilitadoDe(d.habilitado) }));
 
 /**
  * La galería: todos los GCX aprobados de la temporada vigente, tengan o no
@@ -468,6 +494,33 @@ export const getTestimoniosAdmin = (f: FiltrosModeracion = {}) =>
         };
     });
 
+export interface EstadoPagina {
+    pagina: PaginaTestimonios;
+    habilitada: boolean;
+    /** timestamptz ISO de la última vez que alguien la tocó; null si nadie. */
+    cambiado: string | null;
+    /** El nombre de quien la tocó. */
+    cambiadoPor: string | null;
+}
+
+/** Cómo están los dos botones. */
+export const getHabilitacionTestimonios = () =>
+    llamar('testimonios_admin_habilitacion', {}, d => ({
+        paginas: lista(d.paginas).map((p): EstadoPagina => ({
+            pagina: txt(p.pagina) as PaginaTestimonios,
+            habilitada: si(p.habilitada),
+            cambiado: txtONull(p.cambiado),
+            cambiadoPor: txtONull(p.cambiado_por),
+        })),
+    }));
+
+/** Prende o apaga una de las dos páginas. */
+export const habilitarPaginaTestimonios = (pagina: PaginaTestimonios, habilitada: boolean) =>
+    llamar('testimonios_admin_habilitar', { p_pagina: pagina, p_habilitada: habilitada }, d => ({
+        habilitada: si(d.habilitada),
+        sinCambios: si(d.sin_cambios),
+    }));
+
 /** eliminar (de verdad, con sus corazones) · rechazar el pedido · ocultar · mostrar. */
 export const resolverTestimonio = (testimonioId: string, accion: AccionModeracion) =>
     llamar('testimonios_admin_resolver', { p_id: testimonioId, p_accion: accion }, d => ({
@@ -519,6 +572,8 @@ export const mensajeDeMotivo = (f: { motivo?: MotivoTestimonios; limite?: number
         case 'no_autorizado': return 'No tenés permiso para hacer esto. Lo administra Sistemas.';
         case 'accion_invalida': return 'Esa acción no existe.';
         case 'estado_invalido': return 'No se puede hacer eso en el estado en que está. Recargá y probá de nuevo.';
+        case 'no_habilitado': return 'Los testimonios todavía no están habilitados. Se habilitan cuando termine la temporada.';
+        case 'pagina_invalida': return 'Esa página no existe.';
         case 'no_disponible': return 'Los testimonios todavía no están disponibles: falta instalar su base (sql/testimonios_gcx.sql).';
         case 'red':
         default: return 'No pudimos hablar con el servidor. Revisá la conexión y probá de nuevo.';

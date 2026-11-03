@@ -97,6 +97,12 @@ ALTER TABLE public.groups DISABLE TRIGGER trigger_assign_co_host_role;
 ALTER TABLE public.groups DISABLE TRIGGER completar_nombre_de_anfitriones;
 ALTER TABLE public.group_registrations DISABLE TRIGGER notify_host_new_registration;
 ALTER TABLE public.group_registrations DISABLE TRIGGER trigger_gcx_welcome;
+-- Con sql/testimonios_habilitar.sql instalado, las dos páginas prendidas
+-- dentro de la transacción: esta suite prueba lo de adentro, no los botones
+-- (esos están en PROBAR_testimonios_habilitar.sql).
+IF to_regclass('public.testimonios_habilitacion') IS NOT NULL THEN
+    EXECUTE 'UPDATE public.testimonios_habilitacion SET habilitada = true';
+END IF;
 
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at)
 SELECT x, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
