@@ -604,7 +604,7 @@ PERFORM pg_temp.chk('P19', 'notif_enviar_prueba · el aviso de prueba se manda i
 -- ══════════════════════════════════════════════════════════════════════════
 PERFORM pg_temp.sesion(NULL);
 -- Las programadas las crea Sistemas: no son parte de la semilla.
-PERFORM pg_temp.chk('E1', 'el catálogo tiene las 23 alertas automáticas', '23 automáticas',
+PERFORM pg_temp.chk('E1', 'el catálogo tiene las 24 alertas automáticas', '24 automáticas',
     (SELECT count(*) || ' automáticas' FROM public.notif_alertas WHERE tipo = 'automatica'));
 
 -- Ojo: esto corre después de P16, que pausó gcx_inscripcion_aprobada a

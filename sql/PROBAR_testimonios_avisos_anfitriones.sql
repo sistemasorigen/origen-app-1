@@ -326,7 +326,7 @@ PERFORM pg_temp.chk('G3', 'usa sólo sus propias variables', 'sí',
             regexp_matches(a.titulo_plantilla || ' ' || a.mensaje_plantilla, '\{([a-z_]+)\}', 'g') m
       WHERE a.clave = 'testimonios_nuevo_en_tu_gcx'
         AND NOT (m[1] = ANY (a.variables))));
-PERFORM pg_temp.chk('G4', 'el catálogo quedó con 23 automáticas', '23',
+PERFORM pg_temp.chk('G4', 'el catálogo quedó con 24 automáticas', '24',
     (SELECT count(*)::text FROM public.notif_alertas WHERE tipo = 'automatica'));
 PERFORM pg_temp.chk('G5', 'las tres alertas de testimonios, activas y sin eliminar', '3',
     (SELECT count(*)::text FROM public.notif_alertas

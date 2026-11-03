@@ -32,6 +32,44 @@ import { safeUUID } from './uuidUtils';
 // ── Tipos ───────────────────────────────────────────────────────────────
 
 export type EstadoTarea = 'esperando' | 'en_proceso' | 'completada';
+
+/** Cada cuánto se repite una tarea dentro de su plazo. */
+export type Frecuencia =
+    | 'todos_los_dias' | 'dia_por_medio' | 'cada_semana' | 'semana_por_medio' | 'por_mes';
+
+/**
+ * A qué alcanza editar, eliminar o reasignar desde una repetición.
+ * 'las_que_faltan' toca las de HOY EN ADELANTE sin completar: las completadas
+ * no se tocan nunca.
+ */
+export type AlcanceSerie = 'solo_esta' | 'las_que_faltan';
+
+/** Una opción del selector de repetición, como la calcula la base. */
+export interface OpcionRepeticion {
+    frecuencia: Frecuencia;
+    /** "Cada semana", "Día por medio"… */
+    nombre: string;
+    /** Cuántas veces caería en el plazo. */
+    veces: number;
+    /** Entra al menos dos veces y no pasa el tope de 200. */
+    disponible: boolean;
+    /** Daría más de 200: la base la rechaza. */
+    superaTope: boolean;
+}
+
+/** El plazo y la frecuencia de una serie. */
+export interface Serie {
+    id: string;
+    frecuencia: Frecuencia;
+    /** "Cada semana". */
+    frecuenciaTexto: string;
+    /** 'YYYY-MM-DD'. */
+    desde: string;
+    hasta: string;
+    /** Cuál de todas es esta repetición, y cuántas hay. */
+    numero: number;
+    total: number;
+}
 export type EstadoSolicitud = 'nueva' | 'aceptada' | 'rechazada' | 'asignada';
 
 /** Lo que la base puede contestar en vez de ok, más 'red'. */
@@ -47,6 +85,9 @@ export type MotivoAgenda =
     | 'es_quien_dirige' | 'no_es_miembro' | 'mismo_sub'
     | 'solicitud_inexistente' | 'solicitud_ajena' | 'solicitud_no_aceptada' | 'ya_revisada'
     | 'accion_desconocida' | 'texto_corto' | 'limite_diario' | 'archivado'
+    // Plazos y repeticiones (sql/agenda_plazos_y_repeticiones.sql).
+    | 'plazo_invalido' | 'repeticion_no_disponible' | 'demasiadas_repeticiones'
+    | 'serie_completada' | 'alcance_invalido' | 'serie_invalida'
     | 'red';
 
 export type Falla = {
@@ -178,6 +219,25 @@ export interface Tarea {
     nombre: string;
     /** 'YYYY-MM-DD'. Para mostrarla, parsearla con fechaDesdeIso. */
     fecha: string;
+    /**
+     * Tarea CON PLAZO: el último día ('YYYY-MM-DD'). null = de un día.
+     * Una con plazo es UNA tarea que se completa cualquier día del plazo, y
+     * se ve en todos los días que abarca. Siempre es todo el día.
+     */
+    fechaHasta: string | null;
+    /**
+     * A qué serie pertenece, si es una repetición. Cada repetición es una
+     * tarea de un día con su propio estado.
+     */
+    serie: Serie | null;
+    /**
+     * Sin completar y con su último día ya pasado. SÓLO las que tienen plazo
+     * y las repeticiones: una tarea de un día de las de siempre nunca se
+     * marca vencida. No es un estado: el estado sigue siendo el de siempre.
+     */
+    vencida: boolean;
+    /** Días hasta el último día de la tarea. Negativo si ya pasó. */
+    diasRestantes: number;
     todoElDia: boolean;
     /** 'HH:MM' en 24 h, o null si es todo el día. */
     horaDesde: string | null;
@@ -271,6 +331,18 @@ export interface DatosDeTarea {
     /** 'HH:MM'. Se ignoran si todoElDia. */
     horaDesde: string | null;
     horaHasta: string | null;
+    /**
+     * CON PLAZO: el último día ('YYYY-MM-DD'), posterior a `fecha` y hasta un
+     * año después. null = de un día, como siempre. Sin `frecuencia`, una
+     * tarea con plazo es siempre todo el día (el horario se ignora).
+     */
+    fechaHasta?: string | null;
+    /**
+     * CON REPETICIÓN: necesita `fechaHasta`. La base crea una tarea por cada
+     * día de la frecuencia dentro del plazo. Sólo al CREAR: una tarea que ya
+     * existe no se convierte en serie (devuelve 'serie_invalida').
+     */
+    frecuencia?: Frecuencia | null;
 }
 
 // ── Fechas ──────────────────────────────────────────────────────────────
@@ -455,6 +527,12 @@ export const mensajeDeMotivo = (motivo: MotivoAgenda, falla?: Pick<Falla, 'canti
         case 'completada': return 'Ya está completada. Para cambiarle el equipo, primero volvela a En proceso.';
         case 'sin_sub': return 'Se puede completar cuando esté asignada a un sub-departamento.';
         case 'estado_invalido': return 'Ese estado no se puede elegir.';
+        case 'plazo_invalido': return 'El último día tiene que ser posterior al primero, y el plazo no puede pasar de un año.';
+        case 'repeticion_no_disponible': return 'Esa repetición no entra dos veces en el plazo. Alargá el plazo o elegí otra.';
+        case 'demasiadas_repeticiones': return 'Son más de 200 repeticiones. Acortá el plazo o espaciá la repetición.';
+        case 'serie_completada': return 'No queda ninguna repetición por hacer de hoy en adelante.';
+        case 'alcance_invalido': return 'Esa opción no se puede usar acá.';
+        case 'serie_invalida': return 'Una tarea que ya existe no se puede convertir en una que se repite. Creá una nueva.';
         case 'rango_invalido': return 'Elegí un período válido.';
         case 'rango_grande': return 'El período es muy largo. Elegí uno más corto.';
         case 'en_uso': return falla?.cantidad
@@ -528,6 +606,10 @@ const tarea = (t: Crudo): Tarea => {
         prioridad: prio ? { id: txt(prio.id), nombre: txt(prio.nombre), color: txt(prio.color), orden: num(prio.orden) } : null,
         nombre: txt(t.nombre),
         fecha: txt(t.fecha),
+        fechaHasta: txtONull(t.fecha_hasta),
+        serie: serie(t.serie),
+        vencida: t.vencida === true,
+        diasRestantes: num(t.dias_restantes),
         todoElDia: t.todo_el_dia === true,
         horaDesde: txtONull(t.hora_desde),
         horaHasta: txtONull(t.hora_hasta),
@@ -548,6 +630,27 @@ const tarea = (t: Crudo): Tarea => {
 };
 
 const tareas = (v: unknown): Tarea[] => lista(v).map(tarea);
+
+const serie = (v: unknown): Serie | null => {
+    const s = obj(v);
+    return s ? {
+        id: txt(s.id),
+        frecuencia: txt(s.frecuencia) as Frecuencia,
+        frecuenciaTexto: txt(s.frecuencia_texto),
+        desde: txt(s.desde),
+        hasta: txt(s.hasta),
+        numero: num(s.numero),
+        total: num(s.total),
+    } : null;
+};
+
+const opcionesRepeticion = (v: unknown): OpcionRepeticion[] => lista(v).map(o => ({
+    frecuencia: txt(o.frecuencia) as Frecuencia,
+    nombre: txt(o.nombre),
+    veces: num(o.veces),
+    disponible: o.disponible === true,
+    superaTope: o.supera_tope === true,
+}));
 
 const subdepartamento = (s: Crudo): Subdepartamento => ({
     id: txt(s.id), nombre: txt(s.nombre), color: txt(s.color),
@@ -729,35 +832,89 @@ const argsDeTarea = (datos: DatosDeTarea) => ({
     p_todo_el_dia: datos.todoElDia,
     p_desde: datos.todoElDia ? null : datos.horaDesde,
     p_hasta: datos.todoElDia ? null : datos.horaHasta,
+    p_fecha_hasta: datos.fechaHasta ?? null,
 });
+
+/**
+ * Qué repeticiones entran en un plazo, y cuántas veces daría cada una. La
+ * misma cuenta que usa la base para aceptar o rechazar: no se rehace acá.
+ * Una opción está `disponible` si entra al menos DOS veces y no pasa de 200.
+ * Con un plazo inválido (hasta <= desde, o más de un año) devuelve
+ * 'plazo_invalido'.
+ */
+export const getRepeticionesPosibles = (desde: string, hasta: string) =>
+    llamar<{ dias: number; opciones: OpcionRepeticion[] }>('agenda_repeticiones_posibles',
+        { p_desde: desde, p_hasta: hasta },
+        d => ({ dias: num(d.dias), opciones: opcionesRepeticion(d.opciones) }));
 
 /**
  * Crea una tarea. El estado lo pone la base: sin sub-departamento queda
  * 'esperando'; con uno, 'en_proceso'. Con solicitudId, la solicitud tiene
  * que estar aceptada y pasa a 'asignada'.
  * `yaExistia`: era un reintento y la tarea ya estaba guardada.
+ *
+ * Con `frecuencia`, crea una SERIE: `id` es el id de la serie (no el de una
+ * tarea) y la respuesta trae `serie` y `tareas`, una por repetición, en vez
+ * de `tarea`. Manda UN solo aviso al equipo, no uno por repetición.
  */
 export const crearTarea = (datos: DatosDeTarea & { id?: string; departamentoId: string; solicitudId?: string | null }) =>
-    llamar<{ tarea: Tarea; yaExistia: boolean }>('agenda_crear_tarea', {
+    llamar<{ tarea: Tarea | null; tareas: Tarea[]; yaExistia: boolean; veces: number }>('agenda_crear_tarea', {
         p_id: datos.id ?? nuevoId(),
         p_dep: datos.departamentoId,
         ...argsDeTarea(datos),
         p_solicitud: datos.solicitudId ?? null,
-    }, d => ({ tarea: tarea(obj(d.tarea) ?? {}), yaExistia: d.ya_existia === true }));
+        p_frecuencia: datos.frecuencia ?? null,
+    }, d => {
+        const unas = tareas(d.tareas);
+        return {
+            tarea: obj(d.tarea) ? tarea(obj(d.tarea) as Crudo) : (unas[0] ?? null),
+            tareas: unas,
+            yaExistia: d.ya_existia === true,
+            veces: num(d.veces) || unas.length,
+        };
+    });
 
-/** Cambiarle el equipo a una completada devuelve 'completada'. */
-export const editarTarea = (id: string, datos: DatosDeTarea) =>
-    llamar<{ tarea: Tarea }>('agenda_editar_tarea', { p_id: id, ...argsDeTarea(datos) },
-        d => ({ tarea: tarea(obj(d.tarea) ?? {}) }));
+/**
+ * Cambiarle el equipo a una completada devuelve 'completada'.
+ *
+ * En una repetición, `alcance`:
+ *   · 'solo_esta' (por defecto) — toca esa repetición y nada más.
+ *   · 'las_que_faltan' — las de HOY EN ADELANTE sin completar. Si además se
+ *     mandan `fechaHasta` y `frecuencia`, recalcula los días de la serie:
+ *     borra las que faltan y crea las nuevas. Las completadas no se tocan.
+ * Sin ninguna por hacer devuelve 'serie_completada'; en algo que no es una
+ * serie, 'alcance_invalido'.
+ */
+export const editarTarea = (id: string, datos: DatosDeTarea, alcance: AlcanceSerie = 'solo_esta') =>
+    llamar<{ tarea: Tarea | null; tareas: Tarea[] }>('agenda_editar_tarea', {
+        p_id: id,
+        ...argsDeTarea(datos),
+        p_frecuencia: datos.frecuencia ?? null,
+        p_alcance: alcance,
+    }, d => ({
+        tarea: obj(d.tarea) ? tarea(obj(d.tarea) as Crudo) : null,
+        tareas: tareas(d.tareas),
+    }));
 
 /** null = sacarla de todo equipo (vuelve a 'esperando'). */
-export const reasignarTarea = (id: string, subdepartamentoId: string | null) =>
-    llamar<{ tarea: Tarea }>('agenda_reasignar_tarea', { p_id: id, p_sub_nuevo: subdepartamentoId },
-        d => ({ tarea: tarea(obj(d.tarea) ?? {}) }));
+export const reasignarTarea = (id: string, subdepartamentoId: string | null,
+                               alcance: AlcanceSerie = 'solo_esta') =>
+    llamar<{ tarea: Tarea | null; tareas: Tarea[]; reasignadas: number }>('agenda_reasignar_tarea', {
+        p_id: id, p_sub_nuevo: subdepartamentoId, p_alcance: alcance,
+    }, d => ({
+        tarea: obj(d.tarea) ? tarea(obj(d.tarea) as Crudo) : null,
+        tareas: tareas(d.tareas),
+        reasignadas: num(d.reasignadas) || 1,
+    }));
 
-/** Si venía de una solicitud, la solicitud vuelve a 'aceptada'. */
-export const eliminarTarea = (id: string) =>
-    llamar('agenda_eliminar_tarea', { p_id: id }, sinDatos);
+/**
+ * Si venía de una solicitud, la solicitud vuelve a 'aceptada'.
+ * Con alcance 'las_que_faltan' borra las repeticiones de hoy en adelante sin
+ * completar; las completadas quedan como historial.
+ */
+export const eliminarTarea = (id: string, alcance: AlcanceSerie = 'solo_esta') =>
+    llamar<{ eliminadas: number }>('agenda_eliminar_tarea', { p_id: id, p_alcance: alcance },
+        d => ({ eliminadas: num(d.eliminadas) || 1 }));
 
 // Carpetas
 

@@ -79,6 +79,9 @@ DECLARE
         'agenda_guardar_prioridad', 'agenda_guardar_subdepartamento', 'agenda_mi_acceso',
         'agenda_mis_solicitudes', 'agenda_mis_tareas', 'agenda_mover_miembro',
         'agenda_ordenar_prioridades', 'agenda_prioridades_sugeridas', 'agenda_quitar_miembro',
+        -- Desde el 2026-11-03: el formulario pregunta qué repeticiones entran
+        -- en un plazo (sql/agenda_plazos_y_repeticiones.sql).
+        'agenda_repeticiones_posibles',
         'agenda_reasignar_tarea', 'agenda_revisar_solicitud', 'agenda_solicitudes_departamento',
         'agenda_subdepartamento', 'agenda_tarea', 'agenda_tareas_departamento',
         'agenda_tareas_subdepartamento'];

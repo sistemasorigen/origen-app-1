@@ -160,7 +160,7 @@ PERFORM pg_temp.chk('F2', 'usa sólo sus propias variables', 'sí',
             regexp_matches(a.titulo_plantilla || ' ' || a.mensaje_plantilla, '\{([a-z_]+)\}', 'g') m
       WHERE a.clave = 'testimonios_pedido_resuelto'
         AND NOT (m[1] = ANY (a.variables))));
-PERFORM pg_temp.chk('F3', 'el catálogo quedó con 23 automáticas', '23',
+PERFORM pg_temp.chk('F3', 'el catálogo quedó con 24 automáticas', '24',
     (SELECT count(*)::text FROM public.notif_alertas WHERE tipo = 'automatica'));
 
 
