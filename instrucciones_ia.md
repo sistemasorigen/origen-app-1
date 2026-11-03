@@ -2795,13 +2795,17 @@ Diseño de la pantalla: `design-claude/Sistemas - Gestion de notificaciones.dc.h
 Cada fila tiene `clave`, `nombre`, `descripcion_evento`, `destinatario_texto`,
 `variables[]`, `titulo_plantilla`, `mensaje_plantilla`, `url_plantilla`,
 `type_legacy` (el `type` con el que se sigue escribiendo en
-`app_notifications`, para no romper los íconos ni los filtros), `activa`,
+`app_notifications`, para no romper los íconos ni los filtros; es lo ÚNICO que
+decide el dibujo de la fila en /notificaciones, en el mapa `ICONOS` de
+`pages/user/Notificaciones.tsx`, y `PROBAR_notif_catalogo` E3 no deja que una
+alerta apunte a un tipo que la app no sabe dibujar), `activa`,
 `no_molestar` + `no_molestar_desde/hasta`, `max_por_dia`, y las columnas de
 las **programadas** (`siempre_activa`, `desde`, `hasta`, `cada_n_dias`,
 `horas[]`, `audiencia_*`), que hoy están en NULL.
 
 **20 alertas automáticas** sembradas, con el texto exacto que ya mandaba cada
-productor. `app_notifications.alerta_clave` dice de qué alerta salió cada
+productor (hoy son **23**: las tres de testimonios se sumaron después, ver la
+sección 41). `app_notifications.alerta_clave` dice de qué alerta salió cada
 aviso (NULL en los de antes).
 
 ### El emisor
@@ -3168,20 +3172,23 @@ Cada una contesta `{ ok, … }` o `{ ok: false, motivo }`.
   probar cualquier fecha; las gemelas y las piezas no las ejecuta nadie de
   afuera.
 
-### Los dos avisos
+### Los tres avisos
 **A Sistemas, cuando alguien pide eliminar.**
 Alerta automática `testimonios_eliminacion_solicitada` (área Sistemas,
-apagable, `type_legacy = 'ADMIN'`, abre `/panel-admin?tab=testimonios`). La
-emite `testimonios_solicitar_eliminacion` con `notif_emitir` a cada
-SUPER_ADMIN, **una vez** por pedido (pedirlo de nuevo mientras está pendiente
-no vuelve a avisar).
+apagable, `type_legacy = 'ADMIN'`). La emite `testimonios_solicitar_eliminacion`
+con `notif_emitir` a cada SUPER_ADMIN, **una vez** por pedido (pedirlo de nuevo
+mientras está pendiente no vuelve a avisar). Desde el **2026-11-03** abre
+`/panel-admin?tab=testimonios&id=<id>`, así la moderación resalta esa tarjeta y
+no hay que buscarla entre todas: el id se pasa AL EMITIR, como en
+`sistemas_reporte_problema`, y la plantilla del catálogo queda en la página.
 
 **A la persona, cuando Sistemas resuelve su pedido.** Alerta automática
 `testimonios_pedido_resuelto` (área GCX, apagable, `type_legacy = 'info'`,
 abre `/perfil/testimonios`), desde el 2026-11-02:
 `sql/testimonios_aviso_resolucion.sql` (pruebas `PROBAR_`, 19 casos; deshacer
 `ROLLBACK_`). Un solo renglón del catálogo para los dos finales —lo que cambia
-es la variable `resultado`, "fue eliminado" o "sigue publicado"—, porque dos
+es la variable `resultado`, "se dio de baja con éxito" (lo eliminaron) o
+"sigue publicado" (lo rechazaron)—, porque dos
 alertas distintas para el mismo hecho serían dos interruptores para apagar lo
 mismo. La emite `testimonios_admin_resolver` SÓLO a quien escribió el
 testimonio y SÓLO cuando lo que se resuelve es un pedido de eliminación:
@@ -3191,9 +3198,37 @@ texto del testimonio**: el GCX y en qué quedó, nada más. Lo que hace falta
 para avisar (`autor_id`, el nombre del GCX y si había pedido) se lee ANTES del
 DELETE: después ya no hay a quién avisarle ni de qué.
 
-El catálogo pasa a tener **22** automáticas (las pruebas de Notificaciones que
-contaban 21 fijas se actualizaron: `PROBAR_notif_catalogo` E1,
-`PROBAR_notif_preferencias` E1 y `PROBAR_notif_programadas` R23).
+**A quien dirige el GCX, cuando alguien deja un testimonio.** Alerta
+automática `testimonios_nuevo_en_tu_gcx` (área GCX, apagable,
+`type_legacy = 'TESTIMONIO_NUEVO'`), desde el 2026-11-03:
+`sql/testimonios_avisos_anfitriones.sql` (pruebas `PROBAR_`, 41 casos; deshacer
+`ROLLBACK_`). La emite `testimonios_publicar_en` al publicar uno NUEVO, al
+anfitrión (`host_id`) y al co-anfitrión (`co_host_id`), **una vez por persona**
+(si fueran la misma cuenta, un solo aviso) y **nunca a quien lo escribió**: el
+anfitrión que publica en su propio GCX no se avisa a sí mismo, y el
+co-anfitrión sí recibe. Reintentar con el mismo texto (`ya_existia`) no vuelve
+a avisar, y volver a mostrar uno oculto o rechazar un pedido tampoco: eso no
+pasa por publicar.
+
+- **Si el aviso falla, el testimonio IGUAL queda publicado**: va en su propio
+  `BEGIN … EXCEPTION`. Es el único emisor de la app que lo hace, y la razón es
+  que publicar es lo que la persona vino a hacer; avisar es una cortesía y no
+  puede voltearlo. Lo prueba B1–B3, rompiendo la escritura del aviso a
+  propósito con un CHECK dentro de la transacción.
+- **El aviso no lleva el texto**: quién y de qué GCX, nada más. El nombre es el
+  que se muestra en la página pública (`testimonios_nombre_publico`): de una
+  menor dice "Sofía G.", sin apellido.
+- El link (`/testimonios/<grupo>?testimonio=<id>`) se pasa al emitir y abre ese
+  testimonio desplegado y resaltado, con la ruta que ya existía.
+- `TESTIMONIO_NUEVO` es un `type` nuevo: le suma el globo con la cita
+  (`MessageSquareQuote`) al mapa `ICONOS` de `pages/user/Notificaciones.tsx`.
+  Sin ese renglón caería en la campana genérica, y `PROBAR_notif_catalogo` E3
+  lo marcaría.
+
+El catálogo pasa a tener **23** automáticas (las pruebas que contaban 22 fijas
+se actualizaron: `PROBAR_notif_catalogo` E1 y E3,
+`PROBAR_notif_preferencias` E1, `PROBAR_notif_programadas` R23 y
+`PROBAR_testimonios_aviso_resolucion` F3).
 
 ### Pruebas de Notificaciones independientes de la fecha y de los datos reales
 (2026-11-02) `PROBAR_notif_programadas`: `pg_temp.prog` arranca el reloj
