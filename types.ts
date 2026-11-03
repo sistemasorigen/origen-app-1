@@ -1748,6 +1748,30 @@ export interface ReportesGCXTemporada {
     porModalidad: Record<ModalidadGrupo, ReporteModalidadGCX>;
     /** Totales de género sobre personas únicas, para las notas y la cobertura. */
     demografia: ResumenDemograficoReporte;
+    /**
+     * Lo crudo de la temporada, para recalcular lo que depende de fechas en un
+     * período más corto (pages/reportes/periodoGCX.ts) sin volver a la base.
+     */
+    crudo: CrudoReportesGCX;
+}
+
+/** Una reunión cargada, con quiénes fueron y a quiénes les tocaba. */
+export interface ReunionCrudaGCX {
+    groupId: string;
+    fecha: string;   // 'YYYY-MM-DD'
+    /** Cómo fue, en los grupos híbridos; null en los demás. */
+    modo: ModoReunion | null;
+    /** Ids de asistencia presentes, sin repetir (la pareja con "-partner"). */
+    presentes: string[];
+    /** A quiénes les tocaba esa reunión (padronDeReunion). */
+    padron: string[];
+}
+
+export interface CrudoReportesGCX {
+    grupos: Array<{ id: string; modalidad: ModalidadGrupo }>;
+    /** Una por persona de cada inscripción aprobada: el titular y la pareja. */
+    personas: Array<{ clave: string; idAsistencia: string; groupId: string }>;
+    reuniones: ReunionCrudaGCX[];
 }
 
 /**

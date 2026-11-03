@@ -98,11 +98,20 @@ export const TituloTarjeta: React.FC<{
     /** Botones de descarga. Van debajo de `extra` en la misma columna
      *  derecha: la leyenda explica el gráfico y esto se lo lleva. */
     descargas?: React.ReactNode;
-}> = ({ titulo, detalle, extra, descargas }) => (
+    /**
+     * Qué fechas mira el gráfico, cuando no es lo de siempre: "26 oct – 1 nov
+     * 2026 · por semana", o "De toda la temporada" en los que no dependen del
+     * período. Sin esto, la tarjeta se ve como siempre.
+     */
+    alcance?: string | null;
+}> = ({ titulo, detalle, extra, descargas, alcance }) => (
     <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
             <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>{titulo}</p>
             <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>{detalle}</p>
+            {alcance && (
+                <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>{alcance}</p>
+            )}
         </div>
         {(extra || descargas) && (
             <div className="flex flex-col items-end gap-2 shrink-0">

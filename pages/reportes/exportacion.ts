@@ -18,6 +18,7 @@
 import * as XLSX from 'xlsx';
 import { ReportesGCXTemporada, TemporadaGCX, EdadesPorCategoriaFila } from '../../types';
 import { NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
+import { Agrupacion, POR_AGRUPACION, Rango, TramoDeCarga } from './periodoGCX';
 
 // ── Fechas ──────────────────────────────────────────────────────────────
 // Viven acá y no en la pantalla porque las usan las dos: el eje del
@@ -57,6 +58,12 @@ export interface HojaExcel {
     /** Nombre de la pestaña. Se recorta y limpia antes de escribir. */
     nombre: string;
     filas: Array<Record<string, string | number>>;
+    /**
+     * Renglones sueltos arriba de la tabla: la temporada, el período y la
+     * agrupación. Sólo cuando se mira algo distinto de "Toda la temporada" por
+     * días; así, el Excel de siempre sale igual que siempre.
+     */
+    encabezado?: string[];
 }
 
 export interface ContextoExport {
@@ -65,6 +72,15 @@ export interface ContextoExport {
     /** Rango etario elegido en pantalla, que recorta el gráfico de edades. */
     edadMin: number;
     edadMax: number;
+    /**
+     * El período elegido, si no es toda la temporada. Con él, los datos que
+     * recibe hojasDe ya vienen recortados (vistaDelPeriodo).
+     */
+    periodo?: { rango: Rango; texto: string } | null;
+    /** Cómo se agrupan los gráficos con eje de tiempo. Sin esto, por días. */
+    agrupacion?: Agrupacion;
+    /** "Días con asistencia cargada" agrupado, tal como se ve. */
+    tramosCalendario?: TramoDeCarga[];
 }
 
 const NOMBRE_TEMPORADA: Record<TemporadaGCX, string> = { S1: '1', S2: '2', S3: '3' };
@@ -246,7 +262,47 @@ const hojaCalendario = (d: ReportesGCXTemporada): HojaExcel[] => {
     return [{ nombre: 'Días con asistencia', filas }];
 };
 
-const hojaTabla = (d: ReportesGCXTemporada): HojaExcel[] => [{
+/**
+ * El calendario por semana o por mes, tal como se ve: una hoja con una fila
+ * por barra —las que quedaron en cero también— y otra normalizada, una fila
+ * por grupo y por tramo, para filtrar como la de días.
+ */
+const hojasCalendarioAgrupado = (tramos: TramoDeCarga[], agrupacion: Agrupacion): HojaExcel[] => {
+    const tramo = agrupacion === 'meses' ? 'Mes' : 'Semana';
+    const totales = tramos.map(t => ({
+        [tramo]: t.etiqueta,
+        Desde: fechaCompleta(t.desde),
+        Hasta: fechaCompleta(t.hasta),
+        'Reuniones cargadas': t.Cargaron,
+        'Reuniones sin cargar': t.NoCargaron,
+        'Porcentaje cargado': t.Cargaron + t.NoCargaron > 0 ? `${t.porcentaje}%` : 'Ninguna reunión',
+    }));
+    const porGrupo: Array<Record<string, string | number>> = [];
+    tramos.forEach(t => {
+        t.lista.forEach(g => porGrupo.push({
+            [tramo]: t.etiqueta,
+            Grupo: g.nombre,
+            'Veces que cargó': g.presentes.length,
+            'Veces que no cargó': t.faltantes.find(f => f.id === g.id)?.veces ?? 0,
+            'Asistentes de cada vez': g.presentes.join(', '),
+            'Cupo del grupo': g.capacidad || 'Sin cupo cargado',
+        }));
+        t.faltantes.filter(f => !t.lista.some(g => g.id === f.id)).forEach(f => porGrupo.push({
+            [tramo]: t.etiqueta,
+            Grupo: f.nombre,
+            'Veces que cargó': 0,
+            'Veces que no cargó': f.veces,
+            'Asistentes de cada vez': 'Sin dato',
+            'Cupo del grupo': f.capacidad || 'Sin cupo cargado',
+        }));
+    });
+    return [
+        { nombre: `Días con asistencia ${POR_AGRUPACION[agrupacion]}`, filas: totales },
+        { nombre: `Días con asistencia, grupos`, filas: porGrupo },
+    ];
+};
+
+const hojaTabla = (d: ReportesGCXTemporada, ctx: ContextoExport): HojaExcel[] => [{
     nombre: 'Detalle por grupo',
     filas: d.tablaGrupos.map(f => ({
         Grupo: f.nombre,
@@ -259,7 +315,9 @@ const hojaTabla = (d: ReportesGCXTemporada): HojaExcel[] => [{
         Inscriptos: f.inscriptos,
         Cupo: f.capacidad,
         Ocupación: f.capacidad > 0 ? `${porcentaje(f.inscriptos, f.capacidad)}%` : 'Sin cupo cargado',
-        '¿Reporta asistencia?': f.reportaAsistencia ? 'Sí' : 'No',
+        // Es lo único de la tabla que depende de fechas: con un período,
+        // dice si cargó alguna reunión en ese período.
+        [ctx.periodo ? '¿Reportó asistencia en el período?' : '¿Reporta asistencia?']: f.reportaAsistencia ? 'Sí' : 'No',
     })),
 }];
 
@@ -287,7 +345,58 @@ export const ORDEN_GRAFICOS: ClaveGrafico[] = [
     'grupoDetalle', 'calendario', 'tabla',
 ];
 
+/**
+ * Qué parte de cada gráfico sigue el período. 'temporada': no depende de
+ * fechas y es siempre de toda la temporada. 'periodo': se recorta al período.
+ * 'agrupado': además se agrupa por días, semanas o meses.
+ */
+export const ALCANCE_GRAFICO: Record<ClaveGrafico, 'temporada' | 'periodo' | 'agrupado'> = {
+    indicadores: 'temporada',
+    asistencia: 'periodo',
+    reportan: 'periodo',
+    cobertura: 'temporada',
+    genero: 'temporada',
+    edades: 'temporada',
+    masReportan: 'periodo',
+    noReportan: 'periodo',
+    grupoDetalle: 'periodo',
+    calendario: 'agrupado',
+    tabla: 'temporada',
+};
+
+/** Los renglones de arriba de cada hoja: temporada, período y agrupación. */
+const encabezadoDe = (clave: ClaveGrafico, ctx: ContextoExport): string[] => {
+    const lineas = [`Temporada ${NOMBRE_TEMPORADA[ctx.temporada]} de ${ctx.anio} · ${TITULO_GRAFICO[clave]}`];
+    const alcance = ALCANCE_GRAFICO[clave];
+    const periodo = ctx.periodo ? `Período: ${ctx.periodo.texto}` : 'Período: toda la temporada';
+    if (alcance === 'temporada') {
+        lineas.push(clave === 'cobertura' && ctx.periodo
+            // Género y edades son de la temporada; la fila de asistencia, del período.
+            ? `De toda la temporada, salvo la fila de asistencia (${periodo.toLowerCase()})`
+            : clave === 'tabla' && ctx.periodo
+                ? `De toda la temporada, salvo "¿Reportó asistencia en el período?" (${periodo.toLowerCase()})`
+                : 'De toda la temporada: no depende del período elegido');
+    } else {
+        lineas.push(periodo);
+    }
+    if (alcance === 'agrupado') lineas.push(`Agrupado ${POR_AGRUPACION[ctx.agrupacion ?? 'dias']}`);
+    return lineas;
+};
+
 export const hojasDe = (
+    clave: ClaveGrafico,
+    datos: ReportesGCXTemporada,
+    edades: EdadesPorCategoriaFila[],
+    ctx: ContextoExport
+): HojaExcel[] => {
+    const hojas = hojasSinEncabezado(clave, datos, edades, ctx);
+    // "Toda la temporada" por días: el Excel de siempre, sin renglones extra.
+    if (!ctx.periodo && (ctx.agrupacion ?? 'dias') === 'dias') return hojas;
+    const encabezado = encabezadoDe(clave, ctx);
+    return hojas.map(h => ({ ...h, encabezado }));
+};
+
+const hojasSinEncabezado = (
     clave: ClaveGrafico,
     datos: ReportesGCXTemporada,
     edades: EdadesPorCategoriaFila[],
@@ -303,8 +412,11 @@ export const hojasDe = (
         case 'masReportan': return hojaMasReportan(datos);
         case 'noReportan': return hojaNoReportan(datos);
         case 'grupoDetalle': return hojaGrupoDetalle(datos);
-        case 'calendario': return hojaCalendario(datos);
-        case 'tabla': return hojaTabla(datos);
+        case 'calendario':
+            return ctx.agrupacion && ctx.agrupacion !== 'dias' && ctx.tramosCalendario
+                ? hojasCalendarioAgrupado(ctx.tramosCalendario, ctx.agrupacion)
+                : hojaCalendario(datos);
+        case 'tabla': return hojaTabla(datos, ctx);
     }
 };
 
@@ -346,9 +458,17 @@ export const descargarExcel = (hojas: HojaExcel[], archivo: string) => {
         // Una hoja sin filas igual se crea, con sus encabezados: que la
         // pestaña exista y esté vacía dice "no hubo datos", que falte parece
         // un error de la descarga.
-        const hoja = h.filas.length > 0
-            ? XLSX.utils.json_to_sheet(h.filas)
-            : XLSX.utils.aoa_to_sheet([['Sin datos para esta temporada']]);
+        let hoja: XLSX.WorkSheet;
+        if (h.encabezado?.length) {
+            // El encabezado arriba, un renglón en blanco y la tabla.
+            hoja = XLSX.utils.aoa_to_sheet(h.encabezado.map(l => [l]));
+            if (h.filas.length > 0) XLSX.utils.sheet_add_json(hoja, h.filas, { origin: h.encabezado.length + 1 });
+            else XLSX.utils.sheet_add_aoa(hoja, [['Sin datos para este período']], { origin: h.encabezado.length + 1 });
+        } else {
+            hoja = h.filas.length > 0
+                ? XLSX.utils.json_to_sheet(h.filas)
+                : XLSX.utils.aoa_to_sheet([['Sin datos para esta temporada']]);
+        }
         const ancho = anchos(h.filas);
         if (ancho) hoja['!cols'] = ancho;
         XLSX.utils.book_append_sheet(libro, hoja, nombreDePestana(h.nombre, usados));
@@ -357,13 +477,22 @@ export const descargarExcel = (hojas: HojaExcel[], archivo: string) => {
     XLSX.writeFile(libro, archivo);
 };
 
-/** Reportes-GCX-temporada-1-2026-Asistencia-de-personas.xlsx */
+/**
+ * Reportes-GCX-temporada-1-2026-Asistencia-de-personas.xlsx. Con un período,
+ * sus fechas van en el nombre (…-2026-10-26-al-2026-11-01-…), y si se agrupa
+ * por semana o por mes, también (…-por-semana-…): dos descargas distintas no
+ * pueden llamarse igual.
+ */
 export const nombreArchivo = (ctx: ContextoExport, titulo: string, extension: string) => {
-    const limpio = titulo
+    const limpiar = (s: string) => s
         // Sin tildes ni ñ: el archivo viaja por WhatsApp y mail, donde un
         // nombre con acentos vuelve como "Asistencia%20de%20d%C3%ADas".
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-    return `Reportes-GCX-temporada-${NOMBRE_TEMPORADA[ctx.temporada]}-${ctx.anio}-${limpio}.${extension}`;
+    const partes = [`Reportes-GCX-temporada-${NOMBRE_TEMPORADA[ctx.temporada]}-${ctx.anio}`];
+    if (ctx.periodo) partes.push(`${ctx.periodo.rango.desde}-al-${ctx.periodo.rango.hasta}`);
+    if (ctx.agrupacion && ctx.agrupacion !== 'dias') partes.push(limpiar(POR_AGRUPACION[ctx.agrupacion]));
+    partes.push(limpiar(titulo));
+    return `${partes.join('-')}.${extension}`;
 };

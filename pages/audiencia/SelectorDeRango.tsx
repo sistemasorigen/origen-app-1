@@ -169,11 +169,28 @@ interface Props {
     permitirFuturo?: boolean;
     /** Cómo se llama lo que se cuenta, en el resumen y en cada día. */
     nombreDelConteo?: { uno: string; varios: string };
+    /**
+     * El primer y el último día que se pueden elegir ('YYYY-MM-DD'). Los de
+     * afuera se ven pero no se tocan, y el calendario no navega más allá de
+     * sus meses. Los usa Reportes GCX para quedarse dentro de la temporada;
+     * sin ellos, el selector se comporta como siempre.
+     */
+    minimo?: string;
+    maximo?: string;
+    /** Cómo se nombra el rango en el botón. Sin esto, etiquetaDeRango. */
+    etiquetaDelBoton?: (r: Rango) => string;
+    /**
+     * En escritorio, el panel cuelga desde el borde izquierdo del botón. Con
+     * 'derecha', desde el derecho: para un botón pegado al lado derecho de la
+     * pantalla, donde el panel de 704 px se saldría.
+     */
+    alinearPanel?: 'izquierda' | 'derecha';
 }
 
 const SelectorDeRango: React.FC<Props> = ({
     valor, onCambiar, serviciosPorDia, atajos,
     permitirFuturo = false, nombreDelConteo = { uno: 'servicio', varios: 'servicios' },
+    minimo, maximo, etiquetaDelBoton, alinearPanel = 'izquierda',
 }) => {
     const [abierto, setAbierto] = useState(false);
     const [desde, setDesde] = useState<string | null>(valor.desde);
@@ -194,7 +211,16 @@ const SelectorDeRango: React.FC<Props> = ({
      * Hasta qué mes se puede avanzar. Sin futuro, el mes de hoy; con futuro,
      * sin tope: Math.min contra Infinity devuelve el otro lado.
      */
-    const topeDeMes = permitirFuturo ? Infinity : mesDe(hoy);
+    const topeDeMes = Math.min(permitirFuturo ? Infinity : mesDe(hoy), maximo ? mesDe(maximo) : Infinity);
+    /** Hasta qué mes se puede retroceder. Sin `minimo`, sin piso. */
+    const pisoDeMes = minimo ? mesDe(minimo) : -Infinity;
+    /**
+     * El mes de la derecha, dentro del piso y el tope. En escritorio el de la
+     * izquierda también tiene que caer adentro, así que el de la derecha va
+     * por lo menos un mes después del piso. Sin `minimo` es sólo el tope de
+     * siempre: Math.max contra -Infinity devuelve el otro lado.
+     */
+    const encuadrar = (m: number) => Math.min(Math.max(m, esMovil ? pisoDeMes : pisoDeMes + 1), topeDeMes);
 
     useBloqueoDeFondo(abierto && esMovil);
 
@@ -204,7 +230,7 @@ const SelectorDeRango: React.FC<Props> = ({
         setMesVisible(v => {
             const primero = esMovil ? v : v - 1;
             if (m >= primero && m <= v) return v;
-            return Math.min(esMovil ? m : m + 1, topeDeMes);
+            return encuadrar(esMovil ? m : m + 1);
         });
     };
 
@@ -213,7 +239,7 @@ const SelectorDeRango: React.FC<Props> = ({
         setHasta(valor.hasta);
         setEditando('nuevo');
         setSobre(null);
-        setMesVisible(Math.min(mesDe(valor.hasta), topeDeMes));
+        setMesVisible(encuadrar(mesDe(valor.hasta)));
         setBarrido(b => b + 1);
         setAbierto(true);
     };
@@ -269,7 +295,7 @@ const SelectorDeRango: React.FC<Props> = ({
         setHasta(r.hasta);
         setEditando('nuevo');
         setSobre(null);
-        setMesVisible(Math.min(mesDe(r.hasta), topeDeMes));
+        setMesVisible(encuadrar(mesDe(r.hasta)));
         setBarrido(b => b + 1);
     };
 
@@ -326,8 +352,12 @@ const SelectorDeRango: React.FC<Props> = ({
                         <button
                             type="button"
                             onClick={() => setMesVisible(v => v - 1)}
+                            // Sin `minimo` no hay piso y el botón queda como siempre.
+                            disabled={minimo ? meses[0] <= pisoDeMes : undefined}
                             aria-label="Mes anterior"
-                            className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[#0a0a0a] transition-colors hover:bg-black/[.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+                            className={`flex h-9 w-9 flex-none items-center justify-center rounded-full text-[#0a0a0a] transition-colors hover:bg-black/[.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]${
+                                minimo ? ' disabled:cursor-default disabled:text-black/20 disabled:hover:bg-transparent' : ''
+                            }`}
                         >
                             <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={2} />
                         </button>
@@ -356,7 +386,8 @@ const SelectorDeRango: React.FC<Props> = ({
                         if (dia === null) return <span key={`h${k}`} />;
                         const iso = `${y}-${dos(m + 1)}-${dos(dia)}`;
                         const columna = k % 7;
-                        const bloqueado = iso > hoy && !permitirFuturo;
+                        const bloqueado = (iso > hoy && !permitirFuturo)
+                            || (!!minimo && iso < minimo) || (!!maximo && iso > maximo);
                         const esHoy = iso === hoy;
                         const esIni = iso === puntaA;
                         const esFin = iso === puntaB;
@@ -533,7 +564,7 @@ const SelectorDeRango: React.FC<Props> = ({
                 }`}
             >
                 <span className="sr-only">Rango de fechas: </span>
-                <span className="min-w-0 flex-1 truncate">{etiquetaDeRango(valor)}</span>
+                <span className="min-w-0 flex-1 truncate">{(etiquetaDelBoton ?? etiquetaDeRango)(valor)}</span>
                 <CalendarDays className="h-[17px] w-[17px] flex-none text-black/[.62]" strokeWidth={2} aria-hidden />
             </button>
 
@@ -541,7 +572,7 @@ const SelectorDeRango: React.FC<Props> = ({
                 <div
                     role="dialog"
                     aria-label="Elegir el rango de fechas"
-                    className="rango-anim absolute left-0 top-[calc(100%+8px)] z-40 w-[min(704px,calc(100vw-32px))] overflow-hidden rounded-[22px] border border-[#ecebe8] bg-white shadow-[0_18px_50px_rgba(0,0,0,.14)]"
+                    className={`rango-anim absolute ${alinearPanel === 'derecha' ? 'right-0' : 'left-0'} top-[calc(100%+8px)] z-40 w-[min(704px,calc(100vw-32px))] overflow-hidden rounded-[22px] border border-[#ecebe8] bg-white shadow-[0_18px_50px_rgba(0,0,0,.14)]`}
                     style={{ animation: 'rango-panel 160ms ease-out both' }}
                 >
                     <div className="px-5 pb-4 pt-5">{panel}</div>

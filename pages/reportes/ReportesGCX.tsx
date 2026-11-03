@@ -16,15 +16,23 @@
 // components/Reportes/PiezasTablero.tsx: los comparte con la pantalla de
 // comparación entre temporadas, que tiene que dibujar exactamente lo mismo.
 // ════════════════════════════════════════════════════════════════════════
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia, ProgresoReportesGCX } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia, ProgresoReportesGCX, DEFAULT_SEASON_SETTINGS } from '../../types';
 import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
+import { db } from '../../services/dbService';
+import SelectorDeRango, { etiquetaDeRango } from '../audiencia/SelectorDeRango';
+import {
+    Agrupacion, AGRUPACIONES, NOMBRE_AGRUPACION, POR_AGRUPACION, Rango, TramoDeCarga, TramoDelGrupo,
+    agrupacionValida, agruparCalendario, agruparDiasDelGrupo, atajosDeTemporada, diasDelRango,
+    frasePeriodo, isoDe, limitesDeTemporada, mismoRango, periodoDeLaUrl, rangoDeToda, tramosDelPeriodo,
+    vistaDelPeriodo,
+} from './periodoGCX';
 import {
     C, FUENTE, NOMBRE_TEMPORADA, TEMPORADAS, EjeCategoria, RAMPA_AZUL, COLOR_RESTO,
     Tarjeta, TituloTarjeta, NotaCobertura, Esqueleto, Kpi, Torta, FilaLeyenda,
@@ -108,6 +116,78 @@ const TooltipDia: React.FC<{ active?: boolean; payload?: Array<{ payload: DiaDeC
                             {g.nombre}
                         </p>
                     ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
+ * Tooltip de "Días con asistencia cargada" por semana o por mes.
+ *
+ * Cuenta lo mismo que el de un día, pero de todos los días del tramo: qué
+ * grupos cargaron y cuántas veces, con los presentes de cada vez contra su
+ * cupo, y quiénes faltaron y cuántas veces. La lista va completa, como en el
+ * de un día; con muchos grupos pasa a dos columnas para que entre a lo alto.
+ *
+ * El porcentaje es sobre el total del tramo (cargadas sobre las que
+ * tocaban), nunca el promedio de los porcentajes de cada día.
+ */
+const TooltipTramo: React.FC<{ active?: boolean; payload?: Array<{ payload: TramoDeCarga }> }> = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const t = payload[0].payload;
+    const total = t.Cargaron + t.NoCargaron;
+    const ancho = t.lista.length + t.faltantes.length > 14;
+
+    return (
+        <div
+            className={`px-3 py-2.5 ${ancho ? 'w-[540px]' : 'w-[310px]'}`}
+            style={{ background: '#fff', border: `1px solid ${C.borde}`, borderRadius: 10, fontFamily: FUENTE }}
+        >
+            <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{t.titulo}</p>
+            <p className="mt-0.5 m-0 text-[12px] font-medium" style={{ color: C.apagado }}>
+                {total === 0
+                    ? 'Ningún grupo cargó asistencia'
+                    : `${t.Cargaron} de ${total} ${total === 1 ? 'reunión cargada' : 'reuniones cargadas'} · ${t.porcentaje}%`}
+            </p>
+
+            {t.lista.length > 0 && (
+                <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+                    <div className="flex items-baseline gap-3">
+                        <span className="flex-1 min-w-0 text-[11px] font-semibold" style={{ color: C.azul }}>
+                            Cargaron ({t.lista.length} {t.lista.length === 1 ? 'grupo' : 'grupos'})
+                        </span>
+                        <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.tenue }}>veces · asistieron / cupo</span>
+                    </div>
+                    <div className={ancho ? 'grid grid-cols-2 gap-x-5' : ''}>
+                        {t.lista.map(g => (
+                            <div key={g.id} className="flex items-baseline gap-2 mt-1 min-w-0">
+                                <span className="flex-1 min-w-0 text-[12px] leading-[1.5] font-medium truncate" style={{ color: C.medio }}>
+                                    {g.nombre}
+                                </span>
+                                <span className="shrink-0 text-[11.5px] font-semibold tabular-nums" style={{ color: C.tenue }}>{g.presentes.length}×</span>
+                                <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.tinta }}>
+                                    {g.presentes.join(' · ')}{g.capacidad > 0 ? `/${g.capacidad}` : ''}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {t.faltantes.length > 0 && (
+                <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
+                    <p className="m-0 mb-1 text-[11px] font-semibold" style={{ color: C.apagado }}>
+                        No cargaron ({t.NoCargaron} {t.NoCargaron === 1 ? 'vez' : 'veces'}, {t.faltantes.length} {t.faltantes.length === 1 ? 'grupo' : 'grupos'})
+                    </p>
+                    <div className={ancho ? 'grid grid-cols-2 gap-x-5' : ''}>
+                        {t.faltantes.map(g => (
+                            <div key={g.id} className="flex items-baseline gap-2 mt-1 min-w-0">
+                                <span className="flex-1 min-w-0 text-[12px] leading-[1.5] font-medium truncate" style={{ color: C.tenue }}>{g.nombre}</span>
+                                <span className="shrink-0 text-[11.5px] font-semibold tabular-nums" style={{ color: C.tenue }}>{g.veces}×</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -223,6 +303,77 @@ const TooltipDiaGrupo: React.FC<{ active?: boolean; payload?: Array<{ payload: D
     );
 };
 
+/**
+ * Tooltip de la línea de tiempo de un grupo por semana o por mes: cuántas de
+ * sus fechas cargó, sobre las del tramo, y cada fecha con su gente.
+ */
+const TooltipTramoGrupo: React.FC<{ active?: boolean; payload?: Array<{ payload: TramoDelGrupo & { personas: number } }> }> = ({ active, payload }) => {
+    if (!active || !payload?.length) return null;
+    const t = payload[0].payload;
+
+    return (
+        <div
+            className="px-3 py-2.5 min-w-[230px]"
+            style={{ background: '#fff', border: `1px solid ${C.borde}`, borderRadius: 10, fontFamily: FUENTE }}
+        >
+            <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{t.titulo}</p>
+            <p className="mt-0.5 m-0 text-[12px] font-semibold" style={{ color: t['Cargó'] > 0 ? C.azul : C.apagado }}>
+                {t.dias.length === 0
+                    ? 'No le tocaba reunirse'
+                    : `Cargó ${t['Cargó']} de ${t.dias.length} ${t.dias.length === 1 ? 'reunión' : 'reuniones'} · ${t.porcentaje}%`}
+            </p>
+            {t.dias.map(d => (
+                <p key={d.fecha} className="mt-1 m-0 text-[12px] font-medium" style={{ color: d.cargada ? C.medio : C.tenue }}>
+                    {fechaLarga(d.fecha)}:{' '}
+                    {d.cargada
+                        ? `${d.presentes} ${d.presentes === 1 ? 'presente' : 'presentes'}${t.personas > 0 ? ` de ${t.personas}` : ''}`
+                        : 'sin cargar'}
+                </p>
+            ))}
+        </div>
+    );
+};
+
+/**
+ * El control "Días · Semanas · Meses" del encabezado. Mismo dibujo que las
+ * pastillas de temporada: es un control del mismo tablero.
+ */
+const ControlAgrupacion: React.FC<{ valor: Agrupacion; onCambiar: (a: Agrupacion) => void; deshabilitado?: boolean }> = ({ valor, onCambiar, deshabilitado }) => (
+    <div
+        role="group"
+        aria-label="Agrupar los gráficos con fechas por"
+        className="grid grid-cols-3 gap-[3px] rounded-[10px] p-[3px] w-full md:flex md:w-auto"
+        style={{ background: '#f4f5f7', border: `1px solid ${C.borde}` }}
+    >
+        {AGRUPACIONES.map(a => (
+            <button
+                key={a}
+                type="button"
+                disabled={deshabilitado}
+                onClick={() => onCambiar(a)}
+                aria-pressed={valor === a}
+                className="h-8 px-3.5 rounded-[7px] flex items-center justify-center text-[13.5px] font-semibold transition-colors disabled:cursor-default"
+                style={valor === a ? { background: C.azul, color: '#fff' } : { color: deshabilitado ? C.tenue : '#4b5563' }}
+            >
+                {NOMBRE_AGRUPACION[a]}
+            </button>
+        ))}
+    </div>
+);
+
+/** Lo que trae la URL al entrar: un link compartido o una recarga. */
+const leerUrl = (p: URLSearchParams) => {
+    const t = p.get('temporada');
+    const a = Number(p.get('anio'));
+    return {
+        temporada: (TEMPORADAS as string[]).includes(t || '') ? (t as TemporadaGCX) : null,
+        anio: Number.isInteger(a) && a >= 2020 && a <= 2100 ? a : null,
+        desde: p.get('desde'),
+        hasta: p.get('hasta'),
+        por: p.get('por'),
+    };
+};
+
 const GRUPOS_POR_PAGINA = 7;
 
 /**
@@ -258,6 +409,10 @@ interface PropsModalidad {
     temporada: TemporadaGCX;
     anio: number;
     onVerGrupo: (groupId: string) => void;
+    /** "del 26 de octubre al 1 de noviembre", si se mira un período; null con toda la temporada. */
+    enElPeriodo?: string | null;
+    /** La bajada de la sección con el período ("26 oct – 1 nov 2026"). */
+    alcance?: string | null;
 }
 
 const TAMANO_TORTA = 148;
@@ -374,7 +529,7 @@ const TortaFrecuencia: React.FC<{
 };
 
 /** Una modalidad: sus gráficos, filtrados. */
-const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> = ({ modalidad, datos, cargando, temporada, anio, onVerGrupo }) => {
+const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> = ({ modalidad, datos, cargando, temporada, anio, onVerGrupo, enElPeriodo }) => {
     const [elegido, setElegido] = useState('');
 
     const reporte = datos?.porModalidad[modalidad];
@@ -468,7 +623,9 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                     // va nadie, cuando lo que pasa es que no arrancó la carga.
                     <SinDatos
                         titulo="Ningún grupo híbrido cargó asistencia"
-                        detalle="El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente."
+                        detalle={enElPeriodo
+                            ? `No hay ninguna reunión cargada ${enElPeriodo}. Probá con un período más largo.`
+                            : 'El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente.'}
                     />
                 ) : (
                     <>
@@ -564,7 +721,9 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
                         ) : reportan.reportan === 0 ? (
                             <SinDatos
                                 titulo={`Ningún grupo ${nombre.singular} cargó asistencia`}
-                                detalle="El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente."
+                                detalle={enElPeriodo
+                                    ? `No hay ninguna reunión cargada ${enElPeriodo}. Probá con un período más largo.`
+                                    : 'El gráfico aparece con la primera carga. Desde ahí, los grupos que no carguen cuentan a su gente como ausente.'}
                             />
                         ) : (
                             <>
@@ -600,7 +759,7 @@ const BloqueModalidad: React.FC<PropsModalidad & { modalidad: ModalidadGrupo }> 
  * es cuánta gente va en persona y cuánta online.
  */
 const SeccionModalidad: React.FC<PropsModalidad> = (props) => {
-    const { datos, cargando, temporada, anio } = props;
+    const { datos, cargando, temporada, anio, alcance } = props;
     const temporadaSinGrupos = !cargando && !!datos && datos.kpis.totalGrupos === 0;
 
     return (
@@ -612,6 +771,7 @@ const SeccionModalidad: React.FC<PropsModalidad> = (props) => {
                 <p className="mt-1.5 text-[12.5px] font-medium" style={{ color: C.apagado }}>
                     Los mismos indicadores, separados según dónde se reúne cada grupo.
                 </p>
+                {alcance && <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>{alcance}</p>}
             </div>
 
             {temporadaSinGrupos ? (
@@ -635,13 +795,18 @@ const SeccionModalidad: React.FC<PropsModalidad> = (props) => {
 
 // ── Pantalla ────────────────────────────────────────────────────────────
 
-const ReportesGCX: React.FC<{ currentUser: User }> = () => {
+const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Se lee una sola vez, al entrar: después la URL la escribe la pantalla.
+    const [urlInicial] = useState(() => leerUrl(searchParams));
 
     const anioActual = new Date().getFullYear();
-    const [anio, setAnio] = useState(anioActual);
-    const [temporada, setTemporada] = useState<TemporadaGCX>('S1');
-    const [datos, setDatos] = useState<ReportesGCXTemporada | null>(null);
+    const [anio, setAnio] = useState(urlInicial.anio ?? anioActual);
+    const [temporada, setTemporada] = useState<TemporadaGCX>(urlInicial.temporada ?? 'S1');
+    // Lo que trajo el servicio, de toda la temporada. `datos`, más abajo, es
+    // lo que se dibuja: lo mismo recortado al período elegido.
+    const [datosTemporada, setDatos] = useState<ReportesGCXTemporada | null>(null);
     const [cargando, setCargando] = useState(true);
     const [fallo, setFallo] = useState(false);
 
@@ -678,6 +843,111 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
     }, [temporada, anio]);
 
     useEffect(() => { cargar(); }, [cargar]);
+
+    // ── Período y agrupación ────────────────────────────────────────────
+    // El período se elige DENTRO de la temporada: al cambiar el año o la
+    // temporada vuelve a "Toda la temporada" (null). La agrupación, no: es
+    // una preferencia de cada persona y se queda.
+    const [periodo, setPeriodo] = useState<Rango | null>(null);
+    /** El período que pidió la URL al entrar: se aplica cuando llega su temporada. */
+    const periodoPedido = useRef(urlInicial.desde || urlInicial.hasta ? { desde: urlInicial.desde, hasta: urlInicial.hasta } : null);
+
+    const cambiarAnio = (a: number) => { setAnio(a); setPeriodo(null); periodoPedido.current = null; };
+    const cambiarTemporada = (t: TemporadaGCX) => { setTemporada(t); setPeriodo(null); periodoPedido.current = null; };
+
+    const claveAgrupacion = `reportes.gcx.agrupacion.${currentUser?.id ?? 'sin-sesion'}`;
+    const [agrupacion, setAgrupacion] = useState<Agrupacion>(() => {
+        if (urlInicial.por) return agrupacionValida(urlInicial.por);
+        try { return agrupacionValida(localStorage.getItem(claveAgrupacion)); } catch { return 'dias'; }
+    });
+    const cambiarAgrupacion = (a: Agrupacion) => {
+        setAgrupacion(a);
+        try { localStorage.setItem(claveAgrupacion, a); } catch { /* sin storage, vale sólo para esta visita */ }
+    };
+
+    // De qué día a qué día va la temporada, con los datos ya llegados. Mientras
+    // carga no hay límites: lo de antes es de la temporada anterior.
+    const hoy = isoDe(new Date());
+    const configTemporada = (db.getAppConfig()?.groupsConfig?.seasonSettings ?? DEFAULT_SEASON_SETTINGS).seasons?.[temporada];
+    const limites = useMemo(
+        () => (!cargando && datosTemporada ? limitesDeTemporada(datosTemporada, anio, configTemporada) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [cargando, datosTemporada, anio, configTemporada?.startDate, configTemporada?.endDate]
+    );
+    const todaDesde = limites ? rangoDeToda(limites, hoy)?.desde : undefined;
+    const todaHasta = limites ? rangoDeToda(limites, hoy)?.hasta : undefined;
+    const toda = useMemo<Rango | null>(() => (todaDesde && todaHasta ? { desde: todaDesde, hasta: todaHasta } : null), [todaDesde, todaHasta]);
+    /** Lo que se está mirando: el período elegido o la temporada entera. */
+    const rango = periodo ?? toda;
+
+    // El período del link se aplica una vez, cuando llegan los datos de su
+    // temporada. Inválido o fuera de la temporada: "Toda la temporada".
+    useEffect(() => {
+        if (cargando || !periodoPedido.current) return;
+        const pedido = periodoPedido.current;
+        periodoPedido.current = null;
+        const r = toda ? periodoDeLaUrl(pedido.desde, pedido.hasta, toda) : null;
+        setPeriodo(r && toda && !mismoRango(r, toda) ? r : null);
+    }, [cargando, toda]);
+
+    // La URL dice lo que se ve, para recargar o compartir el link. El período
+    // necesita su temporada al lado: sola, una fecha de octubre no se puede
+    // leer en la Primera. Sin período, la URL no lleva ni año ni temporada,
+    // como antes.
+    useEffect(() => {
+        if (periodoPedido.current) return;
+        setSearchParams(prev => {
+            const p = new URLSearchParams(prev);
+            p.set('por', agrupacion);
+            if (periodo) {
+                p.set('temporada', temporada);
+                p.set('anio', String(anio));
+                p.set('desde', periodo.desde);
+                p.set('hasta', periodo.hasta);
+            } else {
+                ['temporada', 'anio', 'desde', 'hasta'].forEach(k => p.delete(k));
+            }
+            return p;
+        }, { replace: true });
+    }, [periodo, agrupacion, temporada, anio, cargando, setSearchParams]);
+
+    const elegirPeriodo = (r: Rango) => setPeriodo(toda && mismoRango(r, toda) ? null : r);
+
+    /**
+     * Lo que se dibuja. Con "Toda la temporada" son los datos del servicio tal
+     * cual: así el tablero de siempre da exactamente lo de siempre. Con un
+     * período, lo mismo recalculado sólo con sus reuniones.
+     */
+    const datos = useMemo(
+        () => (datosTemporada && periodo ? vistaDelPeriodo(datosTemporada, periodo) : datosTemporada),
+        [datosTemporada, periodo]
+    );
+
+    /** Reuniones cargadas por día, para el punto de cada día del calendario. */
+    const reunionesPorDia = useMemo(() => {
+        const m = new Map<string, number>();
+        (datosTemporada?.asistenciaPorFecha || []).forEach(d => m.set(d.fecha, d.grupos.length));
+        return m;
+    }, [datosTemporada]);
+    const atajos = useMemo(() => (toda ? atajosDeTemporada(toda, hoy) : []), [toda, hoy]);
+
+    const agrupado = agrupacion !== 'dias';
+    const muchosDias = !agrupado && !!rango && diasDelRango(rango) > 62;
+    const tramos = useMemo(
+        () => (rango && agrupacion !== 'dias' ? tramosDelPeriodo(rango, agrupacion) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [rango?.desde, rango?.hasta, agrupacion]
+    );
+
+    // Las bajadas: qué fechas mira cada gráfico cuando no es lo de siempre.
+    const textoPeriodo = periodo ? etiquetaDeRango(periodo) : null;
+    const enElPeriodo = periodo ? frasePeriodo(periodo) : null;
+    const alcancePeriodo = textoPeriodo;
+    const alcanceAgrupado = (() => {
+        const s = [textoPeriodo, agrupado ? POR_AGRUPACION[agrupacion] : null].filter(Boolean).join(' · ');
+        return s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+    })();
+    const alcanceTemporada = periodo ? 'De toda la temporada' : null;
 
     // La barra no aparece de inmediato: con la base cacheada el tablero
     // vuelve en decenas de milisegundos y sería un parpadeo. Si llega antes
@@ -752,11 +1022,22 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
     const sinDatoEdad = resumenEdad?.sinDato ?? 0;
     const totalEdad = resumenEdad?.personas ?? 0;
 
+    /** "Días con asistencia cargada" por semana o por mes (vacío con "Días"). */
+    const tramosDeCarga = useMemo(
+        () => (datos && tramos.length ? agruparCalendario(datos.asistenciaPorFecha, tramos) : []),
+        [datos, tramos]
+    );
+
     // ── Descargas ───────────────────────────────────────────────────────
     // Qué gráfico se está imprimiendo. null = el tablero completo.
     const [imprimiendo, setImprimiendo] = useState<ClaveGrafico | null>(null);
 
-    const contextoExport: ContextoExport = { temporada, anio, edadMin, edadMax };
+    const contextoExport: ContextoExport = {
+        temporada, anio, edadMin, edadMax,
+        periodo: periodo ? { rango: periodo, texto: etiquetaDeRango(periodo) } : null,
+        agrupacion,
+        tramosCalendario: tramosDeCarga,
+    };
 
     const bajarExcel = useCallback((clave: ClaveGrafico | null) => {
         if (!datos) return;
@@ -767,7 +1048,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
             clave ? TITULO_GRAFICO[clave] : 'todos los graficos',
             'xlsx'
         ));
-    }, [datos, edades, temporada, anio, edadMin, edadMax]);
+    }, [datos, edades, temporada, anio, edadMin, edadMax, periodo, agrupacion, tramosDeCarga]);
 
     /**
      * El PDF sale del diálogo de impresión del navegador ("Guardar como
@@ -850,6 +1131,16 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
 
     const intervaloGrupo = Math.max(0, Math.ceil(diasDelGrupo.length / 10) - 1);
 
+    const tramosDelGrupo = useMemo(
+        () => (grupoActual && tramos.length
+            ? agruparDiasDelGrupo(grupoActual.dias, tramos).map(x => ({ ...x, personas: grupoActual.personas }))
+            : []),
+        [grupoActual, tramos]
+    );
+    // Las etiquetas de semana son largas ("26 oct – 1 nov"): una de cada N
+    // para que no se pisen. Los meses entran todos.
+    const intervaloTramos = agrupacion === 'semanas' ? Math.max(0, Math.ceil(tramos.length / 9) - 1) : 0;
+
     // ── Calendario de carga de asistencia ───────────────────────────────
     const diasDeCarga = useMemo<DiaDeCarga[]>(() => (datos?.asistenciaPorFecha || []).map(d => ({
         fecha: d.fecha,
@@ -931,8 +1222,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                         </p>
                         {/* Los selectores no van al papel, así que sin esto la hoja
                             no diría de qué temporada es. */}
-                        <p className="solo-impresion mt-1.5 text-[13px] font-semibold" style={{ color: C.medio }}>
-                            Temporada {NOMBRE_TEMPORADA[temporada]} de {anio}
+                        {/* Con un período, se ve también en pantalla: es lo que dice
+                            de qué fechas son los números. */}
+                        <p className={`${periodo ? '' : 'solo-impresion '}mt-1.5 text-[13px] font-semibold`} style={{ color: C.medio }}>
+                            Temporada {NOMBRE_TEMPORADA[temporada]} de {anio}{textoPeriodo ? ` · ${textoPeriodo}` : ''}
                         </p>
                     </div>
 
@@ -940,7 +1233,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                     <div className="no-print flex items-center gap-1 rounded-[10px] p-1" style={{ background: '#f4f5f7', border: `1px solid ${C.borde}` }}>
                         <button
                             type="button"
-                            onClick={() => setAnio(a => a - 1)}
+                            onClick={() => cambiarAnio(anio - 1)}
                             aria-label="Año anterior"
                             className="w-8 h-8 rounded-[7px] bg-white flex items-center justify-center transition-colors hover:bg-slate-50"
                             style={{ border: `1px solid ${C.borde}` }}
@@ -950,7 +1243,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                         <span className="min-w-[66px] text-center text-[15px] font-semibold" style={{ color: C.tinta }}>{anio}</span>
                         <button
                             type="button"
-                            onClick={() => setAnio(a => a + 1)}
+                            onClick={() => cambiarAnio(anio + 1)}
                             aria-label="Año siguiente"
                             className="w-8 h-8 rounded-[7px] bg-white flex items-center justify-center transition-colors hover:bg-slate-50"
                             style={{ border: `1px solid ${C.borde}` }}
@@ -967,7 +1260,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                 <button
                                     key={t}
                                     type="button"
-                                    onClick={() => setTemporada(t)}
+                                    onClick={() => cambiarTemporada(t)}
                                     aria-pressed={temporada === t}
                                     className="w-[38px] h-8 rounded-[7px] flex items-center justify-center text-[14px] font-semibold transition-colors"
                                     style={temporada === t
@@ -1000,6 +1293,42 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                         </button>
                     </div>
                 </div>
+
+                {/* Período y agrupación: debajo del año y la temporada, porque
+                    se eligen dentro de ellos. En el teléfono, a todo el ancho. */}
+                {(cargando || (hayGrupos && toda && rango)) && (
+                    <div className="no-print max-w-[1440px] mx-auto mt-4 flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-x-6 md:gap-y-2.5">
+                        <div className="flex items-center gap-2.5">
+                            <span className="hidden md:inline text-[12.5px] font-medium" style={{ color: C.apagado }}>Período</span>
+                            <div className="w-full md:w-[270px]">
+                                {!cargando && toda && rango ? (
+                                    <SelectorDeRango
+                                        valor={rango}
+                                        onCambiar={elegirPeriodo}
+                                        serviciosPorDia={reunionesPorDia}
+                                        atajos={atajos}
+                                        nombreDelConteo={{ uno: 'reunión cargada', varios: 'reuniones cargadas' }}
+                                        minimo={toda.desde}
+                                        maximo={toda.hasta}
+                                        etiquetaDelBoton={r => (mismoRango(r, toda) ? 'Toda la temporada' : etiquetaDeRango(r))}
+                                        // El botón va del lado derecho de la pantalla.
+                                        alinearPanel="derecha"
+                                    />
+                                ) : (
+                                    // Mientras carga, el lugar del botón: el encabezado no salta.
+                                    <div className="h-[42px] w-full rounded-full bg-[#f2f2f0]" aria-hidden="true" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2.5">
+                            <span className="hidden md:inline text-[12.5px] font-medium" style={{ color: C.apagado }}>Ver por</span>
+                            <ControlAgrupacion valor={agrupacion} onCambiar={cambiarAgrupacion} deshabilitado={cargando} />
+                            {muchosDias && !cargando && (
+                                <span className="text-[12px] font-semibold" style={{ color: '#b45309' }}>Muchos días: probá Semanas</span>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="max-w-[1440px] mx-auto px-7 py-6">
@@ -1057,6 +1386,11 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             ? 'Todo lo de abajo responde al año y la temporada elegidos en el encabezado.'
                                             : `Temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio} · todavía no arrancó.`}
                                 </p>
+                                {alcanceTemporada && hayGrupos && (
+                                    <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>
+                                        {alcanceTemporada}: estos indicadores no dependen de las fechas.
+                                    </p>
+                                )}
                             </div>
                             {!cargando && datos && descargas('indicadores')}
                         </div>
@@ -1093,7 +1427,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     {temporada !== 'S1' && (
                                         <button
                                             type="button"
-                                            onClick={() => setTemporada(temporadaAnterior)}
+                                            onClick={() => cambiarTemporada(temporadaAnterior)}
                                             className="mt-3.5 self-start text-[12.5px] font-semibold hover:underline"
                                             style={{ color: C.azul }}
                                         >
@@ -1171,6 +1505,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     titulo="Asistencia de personas"
                                     detalle="Qué parte de los inscriptos está asistiendo."
                                     descargas={descargas('asistencia')}
+                                    alcance={alcancePeriodo}
                                 />
                                 {cargando ? (
                                     <div className="flex items-center gap-6 mt-[22px] flex-1">
@@ -1179,8 +1514,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     </div>
                                 ) : baseAsistencia === 0 || (reportan?.reportan ?? 0) === 0 ? (
                                     <SinDatos
-                                        titulo="Todavía no hay asistencia cargada"
-                                        detalle={`Ningún grupo reportó reuniones en la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio}. El gráfico aparece con la primera carga.`}
+                                        titulo={enElPeriodo ? 'No hay asistencia cargada en el período' : 'Todavía no hay asistencia cargada'}
+                                        detalle={enElPeriodo
+                                            ? `Ningún grupo reportó reuniones ${enElPeriodo}. Probá con un período más largo.`
+                                            : `Ningún grupo reportó reuniones en la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio}. El gráfico aparece con la primera carga.`}
                                     />
                                 ) : (
                                     <>
@@ -1192,7 +1529,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             temporada. Cada persona cuenta una vez aunque esté en más de un grupo, y sus veces son las
                                             reuniones cargadas a las que fue, sumando todos sus grupos. Quien fue a todas las reuniones
                                             de sus grupos cuenta en "A todas" aunque hayan sido pocas.
-                                            {asistencia!.sinCarga > 0 && ` De las que no asisten, ${asistencia!.sinCarga} están sólo en los ${reportan?.noReportan ?? 0} grupos que nunca cargaron asistencia y cuentan como ausentes.`}
+                                            {asistencia!.sinCarga > 0 && ` De las que no asisten, ${asistencia!.sinCarga} están sólo en los ${reportan?.noReportan ?? 0} grupos que nunca cargaron asistencia${enElPeriodo ? ' en el período' : ''} y cuentan como ausentes.`}
+                                            {enElPeriodo && ` Cuenta sólo las reuniones ${enElPeriodo}.`}
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1203,6 +1541,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     titulo="Reporte de asistencia"
                                     detalle="Cantidad de Grupos que reportan asistencias."
                                     descargas={descargas('reportan')}
+                                    alcance={alcancePeriodo}
                                 />
                                 {cargando ? (
                                     <div className="flex items-center gap-6 mt-[22px] flex-1">
@@ -1217,7 +1556,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         <NotaCobertura>
                                             Sobre los {reportan!.total} grupos activos de la temporada. Las veces son los días con
                                             asistencia cargada. "A todas" es el grupo que cargó todas las reuniones que le tocaban
-                                            hasta hoy según su día de encuentro, aunque hayan sido pocas.
+                                            {enElPeriodo ? ` ${enElPeriodo}` : ' hasta hoy'} según su día de encuentro, aunque hayan sido pocas.
                                         </NotaCobertura>
                                     </>
                                 )}
@@ -1228,6 +1567,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     titulo="Cobertura de los datos"
                                     detalle="Qué parte del padrón alimenta cada gráfico."
                                     descargas={descargas('cobertura')}
+                                    alcance={alcanceTemporada}
                                 />
                                 {cargando ? (
                                     <div className="mt-[22px] flex-1"><Esqueleto alto={60} /><div className="mt-4"><Esqueleto alto={60} /></div></div>
@@ -1261,6 +1601,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     detalle="Inscriptos por categoría de grupo, ordenados de mayor a menor."
                                     extra={<LeyendaGenero />}
                                     descargas={descargas('genero')}
+                                    alcance={alcanceTemporada}
                                 />
                                 {cargando ? (
                                     <div className="mt-[22px]"><Esqueleto alto={ALTO_GRAFICO - 60} /></div>
@@ -1291,6 +1632,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     detalle="Edad promedio de hombres y mujeres en cada categoría."
                                     extra={<LeyendaGenero />}
                                     descargas={descargas('edades')}
+                                    alcance={alcanceTemporada}
                                 />
 
                                 <div className="flex items-center gap-3 mt-4 rounded-[10px] px-3.5 py-2.5" style={{ background: C.fondo }}>
@@ -1354,6 +1696,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     titulo="Quiénes reportan más"
                                     detalle="Reuniones cargadas por cada grupo de la temporada."
                                     descargas={descargas('masReportan')}
+                                    alcance={alcancePeriodo}
                                 />
                                 {cargando ? (
                                     <div className="flex items-center gap-6 mt-[22px] flex-1">
@@ -1362,8 +1705,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     </div>
                                 ) : tortaMasReportan.total === 0 ? (
                                     <SinDatos
-                                        titulo="Nadie cargó todavía"
-                                        detalle={`Ninguno de los ${datos!.kpis.totalGrupos} grupos de la temporada registró reuniones.`}
+                                        titulo={enElPeriodo ? 'Nadie cargó en el período' : 'Nadie cargó todavía'}
+                                        detalle={enElPeriodo
+                                            ? `Ninguno de los ${datos!.kpis.totalGrupos} grupos de la temporada registró reuniones ${enElPeriodo}.`
+                                            : `Ninguno de los ${datos!.kpis.totalGrupos} grupos de la temporada registró reuniones.`}
                                     />
                                 ) : (
                                     <>
@@ -1400,6 +1745,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     titulo="Quiénes no reportan"
                                     detalle="Reuniones que cada grupo debía cargar y no cargó."
                                     descargas={descargas('noReportan')}
+                                    alcance={alcancePeriodo}
                                 />
                                 {cargando ? (
                                     <div className="flex items-center gap-6 mt-[22px] flex-1">
@@ -1411,7 +1757,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                     // no como un gráfico vacío.
                                     <SinDatos
                                         titulo="No falta ninguna reunión"
-                                        detalle={`Los ${datos!.kpis.totalGrupos} grupos de la temporada cargaron todas las reuniones que les correspondían hasta hoy.`}
+                                        detalle={`Los ${datos!.kpis.totalGrupos} grupos de la temporada cargaron todas las reuniones que les correspondían ${enElPeriodo ?? 'hasta hoy'}.`}
                                     />
                                 ) : (
                                     <>
@@ -1451,6 +1797,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                 titulo="Un grupo en detalle"
                                 detalle="Elegí un grupo de la temporada para ver su asistencia y su disciplina de carga."
                                 descargas={descargas('grupoDetalle')}
+                                alcance={alcancePeriodo}
                                 extra={!cargando && gruposPorNombre.length > 0 ? (
                                     <select
                                         value={grupoActual?.groupId ?? ''}
@@ -1506,8 +1853,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                                         etiqueta="asistió"
                                                     />
                                                     <div className="min-w-0 flex-1">
-                                                        <FilaLeyenda primera color={C.azul} nombre="Asistió alguna vez" valor={grupoActual.asistieron} />
-                                                        <FilaLeyenda color={C.azulClaro} nombre="Nunca asistió" valor={grupoActual.personas - grupoActual.asistieron} />
+                                                        <FilaLeyenda primera color={C.azul} nombre={enElPeriodo ? 'Asistió en el período' : 'Asistió alguna vez'} valor={grupoActual.asistieron} />
+                                                        <FilaLeyenda color={C.azulClaro} nombre={enElPeriodo ? 'No asistió' : 'Nunca asistió'} valor={grupoActual.personas - grupoActual.asistieron} />
                                                         <div className="h-px my-3.5" style={{ background: C.bordeSuave }} />
                                                         <div className="flex items-center gap-2.5">
                                                             <span className="flex-1 text-[12.5px] font-medium" style={{ color: C.apagado }}>Inscriptos</span>
@@ -1529,7 +1876,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                                 <div style={{ height: 148 }} className="flex">
                                                     <SinDatos
                                                         titulo="Todavía no le toca"
-                                                        detalle="Su día de encuentro no cayó ninguna vez desde que arrancó, o no tiene día de encuentro cargado."
+                                                        detalle={enElPeriodo
+                                                            ? `Su día de encuentro no cayó ninguna vez ${enElPeriodo}, o no tiene día de encuentro cargado.`
+                                                            : 'Su día de encuentro no cayó ninguna vez desde que arrancó, o no tiene día de encuentro cargado.'}
                                                     />
                                                 </div>
                                             ) : (
@@ -1568,11 +1917,13 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
                                                     <p className="m-0 text-[13px] font-semibold" style={{ color: C.tinta }}>
-                                                        Sus días de encuentro, uno por uno
+                                                        {agrupado ? `Sus días de encuentro, ${POR_AGRUPACION[agrupacion]}` : 'Sus días de encuentro, uno por uno'}
                                                     </p>
                                                     <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>
-                                                        Cada barra es una fecha en la que le tocaba reunirse. Pasá el mouse para ver
-                                                        cuánta gente fue.
+                                                        {agrupado
+                                                            ? `Cada barra suma las fechas en las que le tocaba reunirse esa ${agrupacion === 'meses' ? 'mes' : 'semana'}: cuántas cargó y cuántas no. Pasá el mouse para ver cada fecha.`
+                                                            : <>Cada barra es una fecha en la que le tocaba reunirse. Pasá el mouse para ver
+                                                        cuánta gente fue.</>}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-4 shrink-0">
@@ -1587,6 +1938,30 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
 
                                             <div className="mt-4" style={{ height: 190 }}>
                                                 <ResponsiveContainer width="100%" height="100%">
+                                                    {agrupado ? (
+                                                        // Por semana o mes: cuántas fechas cargó y cuántas
+                                                        // no, así que el eje Y vuelve a hacer falta.
+                                                        <BarChart data={tramosDelGrupo} margin={{ left: 0, right: 8, top: 4, bottom: 4 }} barGap={2}>
+                                                            <CartesianGrid vertical={false} stroke={C.bordeSuave} />
+                                                            <XAxis
+                                                                dataKey="etiqueta"
+                                                                interval={intervaloTramos}
+                                                                tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }}
+                                                                axisLine={false}
+                                                                tickLine={false}
+                                                            />
+                                                            <YAxis
+                                                                width={28}
+                                                                allowDecimals={false}
+                                                                tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }}
+                                                                axisLine={false}
+                                                                tickLine={false}
+                                                            />
+                                                            <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={<TooltipTramoGrupo />} />
+                                                            <Bar dataKey="Cargó" fill={C.azul} radius={[3, 3, 0, 0]} maxBarSize={agrupacion === 'meses' ? 36 : 22} />
+                                                            <Bar dataKey="No cargó" fill={C.azulClaro} radius={[3, 3, 0, 0]} maxBarSize={agrupacion === 'meses' ? 36 : 22} />
+                                                        </BarChart>
+                                                    ) : (
                                                     <BarChart data={diasDelGrupo} margin={{ left: 0, right: 8, top: 4, bottom: 4 }} barGap={2}>
                                                         <CartesianGrid vertical={false} stroke={C.bordeSuave} />
                                                         <XAxis
@@ -1602,6 +1977,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                                         <Bar dataKey="Cargó" fill={C.azul} radius={[3, 3, 0, 0]} maxBarSize={11} />
                                                         <Bar dataKey="No cargó" fill={C.azulClaro} radius={[3, 3, 0, 0]} maxBarSize={11} />
                                                     </BarChart>
+                                                    )}
                                                 </ResponsiveContainer>
                                             </div>
                                         </div>
@@ -1612,7 +1988,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         es sobre las {grupoActual.personas} personas inscriptas del grupo — cada pareja cuenta
                                         como dos — y basta con figurar presente en una reunión para contar como que asistió.
                                         El de la derecha es sobre las {grupoActual.esperadas} veces que cayó su día de encuentro
-                                        desde que arrancó hasta hoy: 100% es que cargó todas, 0% que no cargó ninguna. Si el
+                                        {enElPeriodo ? ` ${enElPeriodo}, sin pasar de hoy` : ' desde que arrancó hasta hoy'}: 100% es que cargó todas, 0% que no cargó ninguna. Si el
                                         grupo nunca cargó asistencia, todas sus personas cuentan como que no asistieron.
                                         La línea de tiempo llega hasta hoy, no hasta el fin de temporada: los encuentros
                                         que todavía no pasaron no son reuniones sin cargar.
@@ -1627,6 +2003,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                 descargas={descargas('calendario')}
                                 titulo="Días con asistencia cargada"
                                 detalle="Cuáles reportaron y cuáles debían reportar y no lo hicieron. Pasá el mouse por una barra para ver los nombres."
+                                alcance={alcanceAgrupado}
                                 extra={!cargando && diasDeCarga.length > 0 ? (
                                     <div className="flex items-center gap-4 shrink-0">
                                         {([['Cargaron', C.azul], ['No cargaron', C.azulClaro]] as const).map(([t, c]) => (
@@ -1643,8 +2020,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                             ) : diasDeCarga.length === 0 ? (
                                 <div style={{ height: 240 }} className="flex">
                                     <SinDatos
-                                        titulo="Ningún grupo cargó asistencia todavía"
-                                        detalle={`En la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio} no hay ninguna reunión registrada. La primera carga dibuja la primera barra.`}
+                                        titulo={enElPeriodo ? 'Ningún grupo cargó asistencia en el período' : 'Ningún grupo cargó asistencia todavía'}
+                                        detalle={enElPeriodo
+                                            ? `No hay ninguna reunión registrada ${enElPeriodo}. Probá con un período más largo.`
+                                            : `En la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio} no hay ninguna reunión registrada. La primera carga dibuja la primera barra.`}
                                     />
                                 </div>
                             ) : (
@@ -1655,11 +2034,11 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         son rankings de categorías, que es otra cosa. */}
                                     <div className="mt-[22px]" style={{ height: 300 }}>
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={diasDeCarga} margin={{ left: 0, right: 8, top: 4, bottom: 4 }} barGap={2}>
+                                            <BarChart data={agrupado ? tramosDeCarga : diasDeCarga} margin={{ left: 0, right: 8, top: 4, bottom: 4 }} barGap={2}>
                                                 <CartesianGrid vertical={false} stroke={C.bordeSuave} />
                                                 <XAxis
                                                     dataKey="etiqueta"
-                                                    interval={intervaloEje}
+                                                    interval={agrupado ? intervaloTramos : intervaloEje}
                                                     tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }}
                                                     axisLine={false}
                                                     tickLine={false}
@@ -1671,14 +2050,14 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                                     axisLine={false}
                                                     tickLine={false}
                                                 />
-                                                <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={<TooltipDia />} />
+                                                <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={agrupado ? <TooltipTramo /> : <TooltipDia />} />
                                                 {/* Mismo par de azules que las tortas de arriba:
                                                     el pleno es lo que pasó, el claro lo que
                                                     faltó. No se apilan — apiladas, la altura
                                                     total sería "grupos de ese día" y taparía
                                                     justo la comparación que interesa. */}
-                                                <Bar dataKey="Cargaron" fill={C.azul} radius={[3, 3, 0, 0]} maxBarSize={9} />
-                                                <Bar dataKey="NoCargaron" name="No cargaron" fill={C.azulClaro} radius={[3, 3, 0, 0]} maxBarSize={9} />
+                                                <Bar dataKey="Cargaron" fill={C.azul} radius={[3, 3, 0, 0]} maxBarSize={!agrupado ? 9 : agrupacion === 'meses' ? 36 : 22} />
+                                                <Bar dataKey="NoCargaron" name="No cargaron" fill={C.azulClaro} radius={[3, 3, 0, 0]} maxBarSize={!agrupado ? 9 : agrupacion === 'meses' ? 36 : 22} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -1689,8 +2068,10 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                         {fechaCorta(diasDeCarga[diasDeCarga.length - 1].fecha)}, y {resumenCarga.faltas}{' '}
                                         {resumenCarga.faltas === 1 ? 'reunión que quedó sin cargar' : 'reuniones que quedaron sin cargar'}.{' '}
                                         La barra clara cuenta sólo los grupos que se reúnen ESE día de la semana y ya estaban
-                                        vigentes en esa fecha — un grupo de los lunes no falta un jueves. Sólo aparecen los días con
-                                        al menos una carga: un día en el que nadie reportó nada todavía no está en el eje.
+                                        vigentes en esa fecha — un grupo de los lunes no falta un jueves.{' '}
+                                        {agrupado
+                                            ? `Cada barra suma las de sus días, ${POR_AGRUPACION[agrupacion]}: entran sólo los días con al menos una carga, y ${agrupacion === 'meses' ? 'un mes' : 'una semana'} sin ninguna queda en cero.`
+                                            : 'Sólo aparecen los días con al menos una carga: un día en el que nadie reportó nada todavía no está en el eje.'}
                                     </NotaCobertura>
                                 </>
                             )}
@@ -1703,6 +2084,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                             temporada={temporada}
                             anio={anio}
                             onVerGrupo={id => navigate(`/reportes/gcx/${id}`)}
+                            enElPeriodo={enElPeriodo}
+                            alcance={alcancePeriodo}
                         />
 
                         {/* ── Tabla ── */}
@@ -1715,6 +2098,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = () => {
                                             ? 'Cargando los grupos…'
                                             : `${filasTabla.length} ${filasTabla.length === 1 ? 'grupo' : 'grupos'} en la temporada ${NOMBRE_TEMPORADA[temporada]} de ${anio}.`}
                                     </p>
+                                    {alcanceTemporada && (
+                                        <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>{alcanceTemporada}</p>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2.5 shrink-0">
                                     <div className="h-9 px-3.5 rounded-[9px] flex items-center gap-2.5 min-w-[230px]" style={{ border: `1px solid ${C.borde}` }}>

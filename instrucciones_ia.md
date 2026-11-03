@@ -2215,6 +2215,52 @@ propia del Día del Niño y no se puede probar sin cámara).
 - No se muestra el "origen" de una inscripción (solicitud propia o carga
   manual): el esquema no lo guarda. Solo se distingue la derivación.
 
+### Período dentro de la temporada y "Días · Semanas · Meses" (2026-11-03)
+- **El año y la temporada siguen igual.** Debajo, el mismo `SelectorDeRango`
+  de Audiencia elige un período **dentro** de la temporada, y un control
+  agrupa los gráficos con eje de tiempo por días, semanas o meses.
+- **Sin consultas nuevas ni SQL.** `getReportesGCX` devuelve además `crudo`:
+  cada reunión con sus presentes y su padrón, y las personas de cada
+  inscripción. Es lo que ya traía `_cargarBaseReportesGCX`, guardado sin
+  sumar. `pages/reportes/periodoGCX.ts` (puro) recalcula con eso:
+  `vistaDelPeriodo`, `tramosDelPeriodo`, `agruparCalendario`,
+  `agruparDiasDelGrupo`, `atajosDeTemporada`, `limitesDeTemporada`.
+- **Con "Toda la temporada" se dibuja lo del servicio tal cual.**
+  `vistaDelPeriodo` sobre la temporada entera da exactamente lo mismo, y está
+  probado con los datos reales de la Primera, la Segunda y la Tercera 2026.
+  Si se toca una cuenta del servicio (`getAsistenciaPersonas`,
+  `getGruposQueReportan`, `getCargaPorGrupo`), hay que tocar su copia en
+  `periodoGCX.ts`.
+- **Qué sigue el período.** Se agrupan "Días con asistencia cargada" y la
+  línea de tiempo de "Un grupo en detalle". Siguen el período sin agruparse
+  Asistencia de personas, Reporte de asistencia, Quiénes reportan más y
+  Quiénes no reportan, las tortas de "Un grupo en detalle" y Por modalidad.
+  Panorama, Cobertura, Género, Edades y Detalle por grupo son de la temporada
+  y, con un período, lo dicen ("De toda la temporada").
+- **Las reuniones esperadas son las del período**: las fechas de su día de
+  encuentro dentro del período, sin pasar de hoy.
+- **Agrupar suma, nunca promedia.** Una semana suma las barras de sus días y
+  su porcentaje se calcula sobre ese total. Las semanas van de lunes a
+  domingo, recortadas al período. Las semanas o meses sin cargas quedan en
+  cero.
+- **Los límites de la temporada** salen de la configuración de temporadas,
+  estirados si hay reuniones o fechas de encuentro afuera. Ejemplo: la
+  Tercera 2026 empieza el 3/10 porque ese día hay una carga.
+- **URL y preferencia.** `?por=dias|semanas|meses` va siempre en la URL.
+  `?desde&hasta` va solo con un período, junto con `temporada` y `anio`:
+  sin ellos no se puede leer el período al recargar. La agrupación se guarda
+  en localStorage con el id del usuario (`reportes.gcx.agrupacion.<id>`).
+  Cambiar el año o la temporada vuelve a "Toda la temporada"; la agrupación
+  se queda.
+- **Excel.** Con "Toda la temporada" por días sale igual que antes. Si no,
+  cada hoja lleva un encabezado: temporada, período o "De toda la
+  temporada", y la agrupación. El nombre del archivo lleva las fechas y el
+  "por semana" o "por mes".
+- `SelectorDeRango` sumó props opcionales para esto: `minimo`, `maximo`,
+  `etiquetaDelBoton` y `alinearPanel`. Sin ellas se ve y funciona como
+  siempre; se comparó el HTML con el de antes.
+- Comparar temporadas y el detalle de un grupo no usan el período.
+
 ---
 
 ## 32. BIENVENIDA

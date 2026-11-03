@@ -6,7 +6,7 @@ import { comprimirImagen } from '../src/utils/nocturna';
 import { padronDeReunion } from '../src/utils/asistencia';
 import { registrar } from '../src/utils/diagnostico';
 import type { CompromisoGCX } from '../src/utils/gruposMismoDia';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, ReunionCrudaGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -77,6 +77,11 @@ interface BaseReportesGCX {
     // base) y agrupar del lado de quien consume sale más barato que decidir
     // acá una forma que después no sirva.
     reuniones: Array<{ groupId: string; fecha: string; presentes: number }>;
+    // Las mismas reuniones, con QUIÉNES: los presentes (sin repetir) y el
+    // padrón (a quiénes les tocaba). Es lo que deja recalcular la asistencia
+    // de un período dentro de la temporada sin volver a la base: los mapas de
+    // arriba ya vienen sumados para la temporada entera.
+    reunionesDetalle: ReunionCrudaGCX[];
 }
 
 // Cachea la PROMESA, no el resultado: si los cinco gráficos del tablero
@@ -6753,7 +6758,7 @@ export const supabaseService = {
         });
 
         if (grupos.length === 0) {
-          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, posiblesPorPersona: new Map(), posiblesPorPersonaPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [] };
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, posiblesPorPersona: new Map(), posiblesPorPersonaPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [], reunionesDetalle: [] };
         }
 
         const idsGrupos = grupos.map((g: any) => g.id);
@@ -6812,6 +6817,7 @@ export const supabaseService = {
         });
         const presentesPorReunion: number[] = [];
         const reuniones: Array<{ groupId: string; fecha: string; presentes: number }> = [];
+        const reunionesDetalle: ReunionCrudaGCX[] = [];
         (resAsistencias.data || []).forEach((a: any) => {
           gruposQueReportan.add(a.group_id);
           const presentes = Array.isArray(a.present_members) ? a.present_members : [];
@@ -6839,6 +6845,13 @@ export const supabaseService = {
               groupId: a.group_id,
               fecha: String(a.date).split('T')[0],
               presentes: presentes.length,
+            });
+            reunionesDetalle.push({
+              groupId: a.group_id,
+              fecha: String(a.date).split('T')[0],
+              modo,
+              presentes: [...idsDeLaReunion],
+              padron: [...padron],
             });
           }
         });
@@ -6878,7 +6891,7 @@ export const supabaseService = {
           });
         }
 
-        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, posiblesPorPersona, posiblesPorPersonaPorModo, usuarios, categorias, presentesPorReunion, reuniones };
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, posiblesPorPersona, posiblesPorPersonaPorModo, usuarios, categorias, presentesPorReunion, reuniones, reunionesDetalle };
       } catch (err) {
         console.error('[ReportesGCX] Excepción cargando la base:', err);
         return null;
@@ -7467,6 +7480,15 @@ export const supabaseService = {
       kpis, asistenciaPersonas, gruposQueReportan, generoPorCategoria, edadesPorCategoria, asistenciaPorFecha, cargaPorGrupo, tablaGrupos,
       porModalidad: { presencial, online, hibrido },
       demografia: resumenDemografico(base, 'genero'),
+      // Para el período dentro de la temporada (pages/reportes/periodoGCX.ts):
+      // con esto la pantalla recalcula lo que depende de fechas sin pedir
+      // nada nuevo. No cambia ningún número de arriba.
+      crudo: {
+        grupos: base.grupos.map((g: any) => ({ id: g.id, modalidad: supabaseService._modalidadDeFila(g) })),
+        personas: base.inscripciones.flatMap((r: any) => personasDeInscripcion(r)
+          .map(p => ({ clave: p.clave, idAsistencia: p.idAsistencia, groupId: r.group_id }))),
+        reuniones: base.reunionesDetalle,
+      },
     };
   },
 
