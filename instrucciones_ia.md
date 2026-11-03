@@ -2339,16 +2339,19 @@ propia del Día del Niño y no se puede probar sin cámara).
   con las cuentas en `inscripcionesGCX.ts` (puro).
 - **Comportamiento:** sigue el período y se agrupa por días, semanas o meses.
   Por días muestra todos los días del rango, también los que tienen cero.
-- **Series.** Cuentan **personas**: la pareja suma una más, igual que
-  "Inscripciones totales".
-  - "Se anotaron": inscripciones creadas en la fecha, en cualquier estado.
-    La fecha es la menor entre `timestamp` y `approved_at`, porque en la
-    Tercera 2026 hay 13 con el alta registrada horas después de la
-    aprobación.
-  - "Quedaron aprobadas": aprobadas hoy, por `approved_at`. Las aprobadas sin
-    fecha van en la nota.
-  - "Cambiaron de grupo": derivaciones aprobadas (`transfer_from_group_id`).
-    Se dibujan sólo si hay alguna.
+- **Una sola serie: "Inscripciones nuevas"** (decisión de Ignacio, 2026-11-03).
+  Cuenta cada inscripción una vez, en la fecha en que se hizo, en cualquier
+  estado (pendientes y rechazadas también).
+  - **No vuelve a contar a quien ya estaba inscripto.** Por eso no hay serie
+    de aprobaciones (contaba otra vez a gente que se había anotado antes) y
+    las derivaciones (`transfer_from_group_id`) quedan afuera.
+  - **Quien se anota en dos grupos son dos inscripciones,** cada una en su
+    grupo y su fecha. Una inscripción de pareja es **una**: acá no se cuentan
+    personas como en "Inscripciones totales".
+  - **La fecha** es la menor entre `timestamp` y `approved_at`: en la Tercera
+    2026 hay 13 con el alta registrada horas después de su aprobación.
+  - **Tercera 2026:** 388 inscripciones nuevas (374 aprobadas, 12 pendientes,
+    2 rechazadas) y 1 derivación afuera.
 - **Bajas: no se muestran.** Las inscripciones borradas no dejan fila, y
   `group_dropout_requests` no las cubre: desde septiembre de 2026 hay 0
   pedidos y 35 borrados en `audit_logs`.

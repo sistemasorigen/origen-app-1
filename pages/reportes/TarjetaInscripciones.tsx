@@ -1,8 +1,9 @@
 // ════════════════════════════════════════════════════════════════════════
 // /reportes/gcx — la tarjeta "Inscripciones".
 //
-// Cuánta gente se anotó y cuánta quedó aprobada, por día, semana o mes, con
-// los eventos y servicios especiales marcados sobre la misma línea de tiempo.
+// Cuántas inscripciones nuevas hubo por día, semana o mes, con los eventos
+// y servicios especiales marcados sobre la misma línea de tiempo. Cuenta sólo
+// lo nuevo: no vuelve a contar a quien ya estaba inscripto.
 // Las cuentas viven en inscripcionesGCX.ts (puro); acá sólo se dibuja.
 //
 // Las marcas acompañan, no explican: la bajada lo dice. Una barra alta al
@@ -17,9 +18,7 @@ import { fechaCorta } from './exportacion';
 
 /** Los colores de las series y de las marcas. Las marcas no son azules: no son una serie más. */
 export const COLOR_INSC = {
-    anotaron: C.azul,
-    aprobadas: '#93c5fd',
-    cambiaron: '#9ca3af',
+    nuevas: C.azul,
     evento: '#c2410c',
     servicio: '#7c3aed',
 } as const;
@@ -53,11 +52,11 @@ const MarcaEnEje: React.FC<{ viewBox?: { x: number; y: number }; eventos: number
 };
 
 /**
- * El tooltip: el rango, cuántos se anotaron y cuántos se aprobaron, la
- * lista completa de grupos (sin tope, como los demás tooltips del tablero)
- * y lo que pasó en esas fechas.
+ * El tooltip: el rango, cuántas inscripciones nuevas hubo, la lista completa
+ * de grupos con las suyas (sin tope, como los demás tooltips del tablero) y
+ * lo que pasó en esas fechas.
  */
-const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ payload: TramoDeInscripciones }>; conCambios: boolean }> = ({ active, payload, conCambios }) => {
+const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ payload: TramoDeInscripciones }> }> = ({ active, payload }) => {
     if (!active || !payload?.length) return null;
     const t = payload[0].payload;
     const marcas = [...t.eventos, ...t.servicios].sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -67,8 +66,7 @@ const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ paylo
         <div className={`px-3 py-2.5 max-w-[calc(100vw-40px)] ${dos ? 'w-[280px] sm:w-[560px]' : 'w-[280px] sm:w-[320px]'}`} style={{ background: '#fff', border: `1px solid ${C.borde}`, borderRadius: 10, fontFamily: FUENTE }}>
             <p className="m-0 text-[12.5px] font-semibold" style={{ color: C.tinta }}>{t.titulo}</p>
             <p className="mt-0.5 m-0 text-[12px] font-medium" style={{ color: C.apagado }}>
-                {t['Se anotaron']} {t['Se anotaron'] === 1 ? 'se anotó' : 'se anotaron'} · {t['Quedaron aprobadas']} {t['Quedaron aprobadas'] === 1 ? 'quedó aprobada' : 'quedaron aprobadas'}
-                {conCambios && t['Cambiaron de grupo'] > 0 && ` · ${t['Cambiaron de grupo']} cambiaron de grupo`}
+                {t['Inscripciones nuevas']} {t['Inscripciones nuevas'] === 1 ? 'inscripción nueva' : 'inscripciones nuevas'}
             </p>
             {t.grupos.length > 0 && (
                 <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.bordeSuave}` }}>
@@ -76,7 +74,7 @@ const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ paylo
                         <span className="flex-1 min-w-0 text-[11px] font-semibold" style={{ color: C.azul }}>
                             En {t.grupos.length} {t.grupos.length === 1 ? 'grupo' : 'grupos'}
                         </span>
-                        <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.tenue }}>se anotaron · aprobadas</span>
+                        <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.tenue }}>nuevas</span>
                     </div>
                     <div className={dos ? 'grid grid-cols-1 sm:grid-cols-2 gap-x-5' : ''}>
                         {t.grupos.map(g => (
@@ -85,7 +83,7 @@ const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ paylo
                                     {g.nombre}<span style={{ color: C.tenue }}> · {g.categoria}</span>
                                 </span>
                                 <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.tinta }}>
-                                    {g.seAnotaron} · {g.aprobadas}{g.cambiaron ? ` · ${g.cambiaron}↔` : ''}
+                                    {g.nuevas}
                                 </span>
                             </div>
                         ))}
@@ -111,7 +109,7 @@ const TooltipInscripciones: React.FC<{ active?: boolean; payload?: Array<{ paylo
 export interface PropsInscripciones {
     cargando: boolean;
     serie: TramoDeInscripciones[];
-    resumen: { seAnotaron: number; aprobadas: number; cambiaron: number; sinFecha: number; derivacionesNoAprobadas: number; pendientes: number };
+    resumen: { nuevas: number; pendientes: number; rechazadas: number; derivaciones: number };
     /** Las marcas del rango, en orden, para la lista de abajo. */
     marcas: Marca[];
     agrupacion: Agrupacion;
@@ -131,8 +129,7 @@ export interface PropsInscripciones {
 }
 
 const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
-    const conCambios = p.resumen.cambiaron > 0;
-    const vacio = p.resumen.seAnotaron + p.resumen.aprobadas + p.resumen.cambiaron === 0;
+    const vacio = p.resumen.nuevas === 0;
     const n = p.serie.length;
     const intervalo = p.agrupacion === 'dias' ? Math.max(0, Math.ceil(n / 12) - 1)
         : p.agrupacion === 'semanas' ? Math.max(0, Math.ceil(n / 9) - 1) : 0;
@@ -143,16 +140,14 @@ const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
         <Tarjeta data-grafico="inscripciones" className={`px-[22px] py-5 mt-4 ${p.className || ''}`}>
             <TituloTarjeta
                 titulo="Inscripciones"
-                junto={p.cargando ? undefined : `${p.resumen.seAnotaron} se anotaron · ${p.resumen.aprobadas} aprobadas`}
-                detalle="Personas que se anotaron y que quedaron aprobadas en los grupos de la temporada. Cada pareja cuenta como dos, igual que en Inscripciones totales."
+                junto={p.cargando ? undefined : `${p.resumen.nuevas} ${p.resumen.nuevas === 1 ? 'inscripción nueva' : 'inscripciones nuevas'}`}
+                detalle="Inscripciones nuevas en los grupos de la temporada, por la fecha en que se hicieron. No vuelve a contar a quien ya estaba inscripto."
                 alcance={p.alcance}
                 descargas={p.descargas}
                 extra={!p.cargando ? (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 shrink-0">
                         {([
-                            ['Se anotaron', COLOR_INSC.anotaron, false],
-                            ['Quedaron aprobadas', COLOR_INSC.aprobadas, false],
-                            ...(conCambios ? [['Cambiaron de grupo', COLOR_INSC.cambiaron, false]] : []),
+                            ['Inscripciones nuevas', COLOR_INSC.nuevas, false],
                             ...(p.verMarcas ? [['Eventos', COLOR_INSC.evento, true], ['Servicios', COLOR_INSC.servicio, true]] : []),
                         ] as Array<[string, string, boolean]>).map(([t, c, r]) => (
                             <div key={t} className="flex items-center gap-[7px]">
@@ -205,7 +200,7 @@ const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
             ) : vacio ? (
                 <div style={{ height: 220 }} className="flex">
                     <SinDatos
-                        titulo={p.enElPeriodo ? 'Nadie se anotó en el período' : 'Todavía no se anotó nadie'}
+                        titulo={p.enElPeriodo ? 'No hubo inscripciones nuevas en el período' : 'Todavía no hay inscripciones'}
                         detalle={p.enElPeriodo
                             ? `No hay inscripciones ${p.enElPeriodo}${p.categoria ? ' en esta categoría' : ''}. Probá con un período más largo.`
                             : `Los grupos de la temporada todavía no tienen inscripciones${p.categoria ? ' en esta categoría' : ''}.`}
@@ -219,7 +214,7 @@ const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
                                 <CartesianGrid vertical={false} stroke={C.bordeSuave} />
                                 <XAxis dataKey="etiqueta" interval={intervalo} tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }} axisLine={false} tickLine={false} />
                                 <YAxis width={32} allowDecimals={false} tick={{ ...EjeCategoria, fontSize: 11.5, fill: C.apagado }} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={<TooltipInscripciones conCambios={conCambios} />} />
+                                <Tooltip cursor={{ fill: 'rgba(37,99,235,.05)' }} content={<TooltipInscripciones />} />
                                 {conMarcas.map(t => (
                                     <ReferenceLine
                                         key={t.desde}
@@ -230,9 +225,7 @@ const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
                                         label={<MarcaEnEje eventos={t.eventos.length} servicios={t.servicios.length} />}
                                     />
                                 ))}
-                                <Bar dataKey="Se anotaron" fill={COLOR_INSC.anotaron} radius={[3, 3, 0, 0]} maxBarSize={ancho} />
-                                <Bar dataKey="Quedaron aprobadas" fill={COLOR_INSC.aprobadas} radius={[3, 3, 0, 0]} maxBarSize={ancho} />
-                                {conCambios && <Bar dataKey="Cambiaron de grupo" fill={COLOR_INSC.cambiaron} radius={[3, 3, 0, 0]} maxBarSize={ancho} />}
+                                <Bar dataKey="Inscripciones nuevas" fill={COLOR_INSC.nuevas} radius={[3, 3, 0, 0]} maxBarSize={ancho} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -261,13 +254,16 @@ const TarjetaInscripciones: React.FC<PropsInscripciones> = (p) => {
 
                     <NotaCobertura>
                         {p.arrancaAntes && `Incluye las semanas antes de que empiecen los grupos: la primera inscripción es del ${fechaCorta(p.arrancaAntes)}. `}
-                        "Se anotaron" cuenta las inscripciones creadas en cada fecha, aprobadas o no
-                        {p.resumen.pendientes > 0 && ` (${p.resumen.pendientes} siguen pendientes)`}; "Quedaron aprobadas", el día en que se aprobaron.{' '}
-                        Una derivación desde otro grupo no es gente nueva:{' '}
-                        {conCambios ? 'va aparte, en "Cambiaron de grupo".' : 'no entra en ninguna de las dos series.'}
-                        {p.resumen.derivacionesNoAprobadas > 0 && ` Hay ${p.resumen.derivacionesNoAprobadas} ${p.resumen.derivacionesNoAprobadas === 1 ? 'derivación pendiente' : 'derivaciones pendientes'}.`}{' '}
-                        Las inscripciones borradas (las bajas, y el lugar de origen de una derivación) ya no existen y no se pueden contar.
-                        {p.resumen.sinFecha > 0 && ` ${p.resumen.sinFecha} ${p.resumen.sinFecha === 1 ? 'aprobada sin fecha registrada' : 'aprobadas sin fecha registrada'}: no se ubican en ninguna barra.`}{' '}
+                        Cada inscripción cuenta una vez, en la fecha en que se hizo: quien se anota en dos grupos son dos inscripciones,
+                        y una inscripción de pareja es una. No vuelve a contar a quien ya estaba inscripto: por eso no se cuentan las aprobaciones
+                        {p.resumen.derivaciones > 0
+                            ? ` ni ${p.resumen.derivaciones === 1 ? 'la derivación' : `las ${p.resumen.derivaciones} derivaciones`} desde otro grupo.`
+                            : ' ni las derivaciones desde otro grupo.'}
+                        {(p.resumen.pendientes > 0 || p.resumen.rechazadas > 0) && ` Incluye las que todavía no se aprobaron (${[
+                            p.resumen.pendientes ? `${p.resumen.pendientes} ${p.resumen.pendientes === 1 ? 'pendiente' : 'pendientes'}` : '',
+                            p.resumen.rechazadas ? `${p.resumen.rechazadas} ${p.resumen.rechazadas === 1 ? 'rechazada' : 'rechazadas'}` : '',
+                        ].filter(Boolean).join(', ')}).`}{' '}
+                        Las inscripciones borradas (las bajas) ya no existen y no se pueden contar.{' '}
                         Las marcas muestran qué pasó en esas fechas; no prueban que haya causado las inscripciones.
                     </NotaCobertura>
                 </>

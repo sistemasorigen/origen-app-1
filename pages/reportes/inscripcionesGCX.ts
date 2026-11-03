@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════════
-// /reportes/gcx — el gráfico de Inscripciones: cuánta gente se anotó y
-// cuánta quedó aprobada, por día, semana o mes, con los eventos y servicios
-// de esas fechas marcados encima.
+// /reportes/gcx — el gráfico de Inscripciones: cuántas inscripciones
+// nuevas hubo por día, semana o mes, con los eventos y servicios de esas
+// fechas marcados encima.
 //
 // Puro, como periodoGCX.ts: trabaja sobre lo que el servicio ya trajo
 // (crudo.inscripciones y getMarcasReportesGCX). Cambiar el período, la
@@ -106,24 +106,27 @@ export const armarMarcas = (m: MarcasReportesGCX | null, r: Rango): Marca[] => {
 };
 
 // ── La serie ────────────────────────────────────────────────────────────
+//
+// Decisión de Ignacio (2026-11-03): el gráfico cuenta INSCRIPCIONES NUEVAS,
+// una por inscripción, en la fecha en que se creó. No cuenta a los que ya
+// estaban inscriptos: por eso no hay una serie de aprobaciones (volvía a
+// contar a gente que se había anotado antes) y las derivaciones quedan
+// afuera (son alguien que ya estaba en otro grupo). Quien se anota en dos
+// grupos son dos inscripciones, cada una en su fecha y su grupo. Una
+// inscripción de pareja es UNA inscripción.
 
 export interface GrupoDelTramo {
     groupId: string;
     nombre: string;
     categoria: string;
-    seAnotaron: number;
-    aprobadas: number;
-    cambiaron: number;
+    /** Inscripciones nuevas en ese grupo, en el tramo. */
+    nuevas: number;
 }
 
 /** Una barra de Inscripciones: un día, una semana o un mes. */
 export interface TramoDeInscripciones extends Tramo {
-    /** Personas que se anotaron (cualquier estado), sin las derivaciones. */
-    'Se anotaron': number;
-    /** Personas cuya inscripción quedó aprobada en esas fechas (approved_at), sin las derivaciones. */
-    'Quedaron aprobadas': number;
-    /** Derivaciones desde otro grupo aprobadas en esas fechas: la misma persona cambiando de grupo. */
-    'Cambiaron de grupo': number;
+    /** Inscripciones creadas en el tramo (en cualquier estado), sin las derivaciones. */
+    'Inscripciones nuevas': number;
     /** Grupo por grupo, lista completa, para el tooltip. */
     grupos: GrupoDelTramo[];
     eventos: Marca[];
@@ -138,16 +141,13 @@ const deLaCategoria = (crudo: Pick<CrudoReportesGCX, 'inscripciones' | 'grupos'>
     return lista.filter(i => grupos.has(i.groupId));
 };
 
+/** Una inscripción nueva: no es una derivación desde otro grupo. */
+const esNueva = (i: InscripcionCrudaGCX) => !i.derivada;
+
 /**
- * La serie del gráfico. Cuenta PERSONAS como "Inscripciones totales": la
- * pareja de una inscripción suma una más.
- *
- *  · Se anotaron: inscripciones creadas en el tramo, aprobadas o no
- *    (pendientes y rechazadas también: se anotaron). Una derivación no:
- *    es alguien que ya estaba en otro grupo.
- *  · Quedaron aprobadas: las aprobadas hoy, por el día en que se aprobaron.
- *    Las aprobadas sin fecha no se ubican (ver resumenDeInscripciones).
- *  · Cambiaron de grupo: las derivaciones aprobadas, por su aprobación.
+ * La serie del gráfico: cuántas inscripciones nuevas se crearon en cada día,
+ * semana o mes, aprobadas o no (pendientes y rechazadas también: alguien se
+ * anotó). Cada inscripción cuenta una vez.
  *
  * Las inscripciones borradas (bajas, o el origen de una derivación) no
  * existen más y no se pueden contar.
@@ -161,37 +161,28 @@ export const serieDeInscripciones = (p: {
     const { crudo, tramos, categoriaId, marcas } = p;
     const nombreCategoria = new Map((crudo.categorias || []).map(c => [c.id, c.nombre]));
     const grupo = new Map(crudo.grupos.map(g => [g.id, g]));
-    const lista = deLaCategoria(crudo, categoriaId);
+    const lista = deLaCategoria(crudo, categoriaId).filter(esNueva);
     return tramos.map(t => {
-        const en = (f: string | null) => !!f && f >= t.desde && f <= t.hasta;
         const porGrupo = new Map<string, GrupoDelTramo>();
-        const sumar = (i: InscripcionCrudaGCX, campo: 'seAnotaron' | 'aprobadas' | 'cambiaron') => {
+        let nuevas = 0;
+        lista.forEach(i => {
+            if (!i.alta || i.alta < t.desde || i.alta > t.hasta) return;
+            nuevas += 1;
             const g = grupo.get(i.groupId);
             const fila = porGrupo.get(i.groupId) || {
                 groupId: i.groupId,
                 nombre: g?.nombre || 'Sin nombre',
                 categoria: nombreCategoria.get(g?.categoriaId || '') || 'Sin categoría',
-                seAnotaron: 0, aprobadas: 0, cambiaron: 0,
+                nuevas: 0,
             };
-            fila[campo] += i.personas;
+            fila.nuevas += 1;
             porGrupo.set(i.groupId, fila);
-        };
-        let seAnotaron = 0, aprobadas = 0, cambiaron = 0;
-        lista.forEach(i => {
-            if (!i.derivada && en(i.alta)) { seAnotaron += i.personas; sumar(i, 'seAnotaron'); }
-            if (i.estado === 'APPROVED' && en(i.aprobada)) {
-                if (i.derivada) { cambiaron += i.personas; sumar(i, 'cambiaron'); }
-                else { aprobadas += i.personas; sumar(i, 'aprobadas'); }
-            }
         });
         const enTramo = marcas.filter(m => m.fecha >= t.desde && m.fecha <= t.hasta);
         return {
             ...t,
-            'Se anotaron': seAnotaron,
-            'Quedaron aprobadas': aprobadas,
-            'Cambiaron de grupo': cambiaron,
-            grupos: [...porGrupo.values()].sort((a, b) =>
-                (b.seAnotaron + b.aprobadas + b.cambiaron) - (a.seAnotaron + a.aprobadas + a.cambiaron) || a.nombre.localeCompare(b.nombre)),
+            'Inscripciones nuevas': nuevas,
+            grupos: [...porGrupo.values()].sort((a, b) => b.nuevas - a.nuevas || a.nombre.localeCompare(b.nombre)),
             eventos: enTramo.filter(m => m.tipo === 'evento'),
             servicios: enTramo.filter(m => m.tipo === 'servicio'),
         };
@@ -199,10 +190,9 @@ export const serieDeInscripciones = (p: {
 };
 
 /**
- * Los totales del rango, para el título y las notas. `sinFecha` son las
- * aprobadas que no tienen approved_at (inscripciones viejas): no se ubican
- * en ningún tramo y se dicen aparte. `derivacionesPendientes` se cuentan
- * para poder decir por qué no están en ninguna serie.
+ * Los totales del rango, para el título y la nota: las nuevas, cuántas de
+ * ellas siguen pendientes o fueron rechazadas, y las derivaciones que quedaron
+ * afuera.
  */
 export const resumenDeInscripciones = (p: {
     crudo: Pick<CrudoReportesGCX, 'inscripciones' | 'grupos'>;
@@ -210,15 +200,13 @@ export const resumenDeInscripciones = (p: {
     categoriaId: string;
 }) => {
     const en = (f: string | null) => !!f && f >= p.rango.desde && f <= p.rango.hasta;
-    const lista = deLaCategoria(p.crudo, p.categoriaId);
-    const suma = (f: (i: InscripcionCrudaGCX) => boolean) => lista.filter(f).reduce((a, i) => a + i.personas, 0);
+    const lista = deLaCategoria(p.crudo, p.categoriaId).filter(i => en(i.alta));
+    const cuenta = (f: (i: InscripcionCrudaGCX) => boolean) => lista.filter(f).length;
     return {
-        seAnotaron: suma(i => !i.derivada && en(i.alta)),
-        aprobadas: suma(i => !i.derivada && i.estado === 'APPROVED' && en(i.aprobada)),
-        cambiaron: suma(i => i.derivada && i.estado === 'APPROVED' && en(i.aprobada)),
-        sinFecha: suma(i => !i.derivada && i.estado === 'APPROVED' && !i.aprobada),
-        derivacionesNoAprobadas: suma(i => i.derivada && i.estado !== 'APPROVED'),
-        pendientes: suma(i => !i.derivada && i.estado === 'PENDING' && en(i.alta)),
+        nuevas: cuenta(esNueva),
+        pendientes: cuenta(i => esNueva(i) && i.estado === 'PENDING'),
+        rechazadas: cuenta(i => esNueva(i) && i.estado === 'REJECTED'),
+        derivaciones: cuenta(i => !esNueva(i)),
     };
 };
 

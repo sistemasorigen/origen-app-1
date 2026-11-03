@@ -1060,7 +1060,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     const resumenInsc = useMemo(
         () => (datosTemporada && rangoInscripciones
             ? resumenDeInscripciones({ crudo: datosTemporada.crudo, rango: rangoInscripciones, categoriaId: catInsc })
-            : { seAnotaron: 0, aprobadas: 0, cambiaron: 0, sinFecha: 0, derivacionesNoAprobadas: 0, pendientes: 0 }),
+            : { nuevas: 0, pendientes: 0, rechazadas: 0, derivaciones: 0 }),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [datosTemporada, rangoInscripciones?.desde, rangoInscripciones?.hasta, catInsc]
     );
@@ -1174,7 +1174,6 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
             tramos: serieInsc,
             marcas: marcasInsc,
             categoria: categoriasInsc.find(c => c.id === catInsc)?.nombre ?? 'Todas las categorías',
-            sinFecha: resumenInsc.sinFecha,
         },
     };
 
