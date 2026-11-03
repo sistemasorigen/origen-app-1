@@ -21,6 +21,12 @@
 --
 -- Pruebas: sql/PROBAR_testimonios_aviso_resolucion.sql
 -- Deshacer: sql/ROLLBACK_testimonios_aviso_resolucion.sql
+--
+-- ⚠️ YA APLICADO, y SUPERADO. El 2026-11-03 `testimonios_admin_resolver` se
+-- volvió a escribir en sql/testimonios_avisos_anfitriones.sql: el `{resultado}`
+-- de eliminar pasó de "fue eliminado" a "se dio de baja con éxito". Volver a
+-- correr ESTE archivo lo revierte sin avisar. Si hay que tocar el resolver,
+-- partir del otro.
 -- ════════════════════════════════════════════════════════════════════════════
 
 

@@ -125,8 +125,14 @@ PERFORM pg_temp.chk('S10', 'prenderla otra vez: sin_cambios y no pisa cuándo', 
     (v_j->>'sin_cambios') || ' · '
     || CASE WHEN (SELECT cambiado_at FROM public.testimonios_habilitacion WHERE pagina = 'galeria') = v_c THEN 'igual' ELSE 'cambió' END);
 v_j := public.testimonios_admin_habilitacion();
-PERFORM pg_temp.chk('S11', 'el estado de las dos, en orden, con quién la tocó', 'galeria:true:Eva PRUEBA carga:false:',
-    (SELECT string_agg((p->>'pagina') || ':' || (p->>'habilitada') || ':' || COALESCE(p->>'cambiado_por', ''), ' ' ORDER BY o)
+-- El nombre se mira sólo en la página que ESTA prueba acaba de prender. En
+-- 'carga' viaja quien la tocó de verdad en producción (Ignacio ya usó ese
+-- botón), y eso no es algo que la suite tenga que fijar.
+PERFORM pg_temp.chk('S11', 'el estado de las dos, en orden, con quién tocó la galería',
+    'galeria:true:Eva PRUEBA carga:false',
+    (SELECT string_agg((p->>'pagina') || ':' || (p->>'habilitada')
+                || CASE WHEN p->>'pagina' = 'galeria'
+                        THEN ':' || COALESCE(p->>'cambiado_por', '') ELSE '' END, ' ' ORDER BY o)
        FROM jsonb_array_elements(v_j->'paginas') WITH ORDINALITY x(p, o)));
 PERFORM pg_temp.chk('S12', 'el estado no manda ids ni emails', 'ninguno',
     CASE WHEN v_j::text ~ (eva::text || '|@') THEN 'manda' ELSE 'ninguno' END);
@@ -194,7 +200,10 @@ PERFORM pg_temp.chk('X5', 'las públicas siguen siendo SECURITY DEFINER', '6',
         AND proname IN ('testimonios_temporada', 'testimonios_grupos', 'testimonios_grupo',
                         'testimonios_corazon', 'testimonios_mis_grupos', 'testimonios_publicar')));
 -- Las huellas de las _en antes de este archivo (producción, 2026-11-03).
-PERFORM pg_temp.chk('X6', 'lo de adentro (_en) no cambió', 'corazon:5ce11 grupo:c8dac grupos:0b725 mis_grupos:466c5 publicar:542de temporada:b714c',
+-- `publicar` cambió ese mismo día, DESPUÉS y por otro motivo: avisarle al
+-- anfitrión y al co-anfitrión (sql/testimonios_avisos_anfitriones.sql). Las
+-- otras cinco siguen con la huella de antes, que es lo que este caso cuida.
+PERFORM pg_temp.chk('X6', 'lo de adentro (_en) no cambió', 'corazon:5ce11 grupo:c8dac grupos:0b725 mis_grupos:466c5 publicar:8f6f0 temporada:b714c',
     (SELECT string_agg(replace(replace(proname, 'testimonios_', ''), '_en', '') || ':' || left(md5(pg_get_functiondef(oid)), 5), ' ' ORDER BY proname)
        FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname LIKE 'testimonios\_%\_en'));
 

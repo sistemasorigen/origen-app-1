@@ -379,8 +379,10 @@ PERFORM pg_temp.chk('E8', 'el aviso: uno a cada SUPER_ADMIN y a nadie más',
            AND NOT ((u.role)::text = 'SUPER_ADMIN' OR COALESCE(u.roles, '{}') && ARRAY['SUPER_ADMIN'])) || ' · '
     || CASE WHEN EXISTS (SELECT 1 FROM public.app_notifications WHERE alerta_clave = 'testimonios_eliminacion_solicitada' AND user_id = eva) THEN 'Eva sí' ELSE 'Eva NO' END || ' · '
     || CASE WHEN EXISTS (SELECT 1 FROM public.app_notifications WHERE alerta_clave = 'testimonios_eliminacion_solicitada' AND user_id = ana) THEN 'Ana SÍ' ELSE 'Ana no' END);
+-- Desde el 2026-11-03 el link lleva el id, así la moderación resalta la
+-- tarjeta y no hay que buscarla (sql/testimonios_avisos_anfitriones.sql).
 PERFORM pg_temp.chk('E9', 'el texto del aviso y a dónde lleva',
-    'Pedido para eliminar un testimonio · Ana Gómez PRUEBA pidió eliminar su testimonio de "PRUEBA Testimonios Uno". Ya no se ve mientras lo revisás. · /panel-admin?tab=testimonios',
+    'Pedido para eliminar un testimonio · Ana Gómez PRUEBA pidió eliminar su testimonio de "PRUEBA Testimonios Uno". Ya no se ve mientras lo revisás. · /panel-admin?tab=testimonios&id=' || t_ana1::text,
     (SELECT title || ' · ' || message || ' · ' || action_url FROM public.app_notifications
       WHERE alerta_clave = 'testimonios_eliminacion_solicitada' AND user_id = eva ORDER BY created_at DESC LIMIT 1));
 SELECT count(*) INTO v_n FROM public.app_notifications WHERE alerta_clave = 'testimonios_eliminacion_solicitada';

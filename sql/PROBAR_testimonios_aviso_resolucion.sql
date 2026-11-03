@@ -95,7 +95,7 @@ v_j := public.testimonios_admin_resolver(t1, 'eliminar');
 PERFORM pg_temp.chk('A1', 'eliminar un pedido de eliminación', 'true',
     (v_j->>'ok'));
 PERFORM pg_temp.chk('A2', 'le llega UN aviso a quien escribió, con el GCX y en qué quedó',
-    'Revisamos tu pedido § Tu testimonio de GCX PRUEBA de los testimonios fue eliminado. § /perfil/testimonios',
+    'Revisamos tu pedido § Tu testimonio de GCX PRUEBA de los testimonios se dio de baja con éxito. § /perfil/testimonios',
     pg_temp.avisos(dalia));
 PERFORM pg_temp.chk('A3', 'no le llega a nadie más', '(ninguno) · (ninguno)',
     pg_temp.avisos(sixto) || ' · ' || pg_temp.avisos(tere));
@@ -160,7 +160,7 @@ PERFORM pg_temp.chk('F2', 'usa sólo sus propias variables', 'sí',
             regexp_matches(a.titulo_plantilla || ' ' || a.mensaje_plantilla, '\{([a-z_]+)\}', 'g') m
       WHERE a.clave = 'testimonios_pedido_resuelto'
         AND NOT (m[1] = ANY (a.variables))));
-PERFORM pg_temp.chk('F3', 'el catálogo quedó con 22 automáticas', '22',
+PERFORM pg_temp.chk('F3', 'el catálogo quedó con 23 automáticas', '23',
     (SELECT count(*)::text FROM public.notif_alertas WHERE tipo = 'automatica'));
 
 

@@ -14,6 +14,7 @@ import {
     Inbox,
     Info,
     Megaphone,
+    MessageSquareQuote,
     MessageSquareReply,
     MoreHorizontal,
     Pin,
@@ -89,6 +90,9 @@ const ICONOS: Record<string, React.ElementType> = {
     PUSH_PRUEBA: BellRing,
     // Las que programa Sistemas (sql/notif_programadas.sql).
     PROGRAMADA: Megaphone,
+    // Un testimonio nuevo en el GCX que dirigís
+    // (sql/testimonios_avisos_anfitriones.sql).
+    TESTIMONIO_NUEVO: MessageSquareQuote,
 };
 
 const iconoDe = (tipo: string): React.ElementType => ICONOS[tipo] || Bell;

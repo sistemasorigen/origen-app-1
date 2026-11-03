@@ -604,7 +604,7 @@ PERFORM pg_temp.chk('P19', 'notif_enviar_prueba · el aviso de prueba se manda i
 -- ══════════════════════════════════════════════════════════════════════════
 PERFORM pg_temp.sesion(NULL);
 -- Las programadas las crea Sistemas: no son parte de la semilla.
-PERFORM pg_temp.chk('E1', 'el catálogo tiene las 22 alertas automáticas', '22 automáticas',
+PERFORM pg_temp.chk('E1', 'el catálogo tiene las 23 alertas automáticas', '23 automáticas',
     (SELECT count(*) || ' automáticas' FROM public.notif_alertas WHERE tipo = 'automatica'));
 
 -- Ojo: esto corre después de P16, que pausó gcx_inscripcion_aprobada a
@@ -627,7 +627,8 @@ PERFORM pg_temp.chk('E3', 'todas las alertas apuntan a un type que la app sabe d
             'REGISTRATION_APPROVED', 'REGISTRATION_REJECTED', 'GROUP_APPROVED', 'GROUP_REJECTED',
             'attendance_reminder', 'REPORTE_PROBLEMA', 'SOLICITUD_DATOS', 'PEDIDO_LISTO', 'PUSH_PRUEBA',
             'AGENDA_TAREA_ASIGNADA', 'AGENDA_TAREA_COMPLETADA', 'AGENDA_SOLICITUD_NUEVA', 'AGENDA_SOLICITUD_REVISADA',
-            'PROGRAMADA')));   -- el megáfono de pages/user/Notificaciones.tsx
+            'PROGRAMADA',          -- el megáfono de pages/user/Notificaciones.tsx
+            'TESTIMONIO_NUEVO')));  -- el globo con la cita, del mismo mapa
 
 PERFORM pg_temp.chk('E4', 'todas las plantillas usan sólo sus propias variables', 'sí',
     (SELECT CASE WHEN count(*) = 0 THEN 'sí' ELSE 'no: ' || string_agg(clave || ' → ' || v, ', ') END
