@@ -2676,6 +2676,57 @@ Quien dirige no va en la tabla de miembros: si es las dos cosas, cuenta una
 vez. Al cambiar quién dirige, el anterior **queda como miembro** (no pierde
 sus tareas).
 
+### Los tres tipos de tarea (`sql/agenda_plazos_y_repeticiones.sql`)
+Desde el **2026-11-03** una tarea puede ser de tres formas. Pruebas en
+`PROBAR_` (89 casos), deshacer en `ROLLBACK_`.
+
+| | Cómo es | Columnas |
+|---|---|---|
+| **De un día** | lo de siempre: un día, todo el día o con horario | `fecha_hasta` NULL, sin serie |
+| **Con plazo** | UNA tarea que se completa cualquier día del rango, y se ve en todos los días que abarca | `fecha` (desde) + `fecha_hasta` (hasta) |
+| **Con plazo y repetición** | el plazo manda, y adentro la tarea cae en días exactos; cada repetición es una tarea de un día con su estado propio | `agenda_series` + una fila por día con `serie_id` y `numero_en_serie` |
+
+- **Las repeticiones son FILAS de `agenda_tareas`**, y esa es la decisión que
+  sostiene todo: la Agenda, los paneles, los permisos, los contadores, el
+  completar y los avisos siguen funcionando sin enterarse de que hay series.
+  Calcularlas al vuelo obligaría a cada pantalla a expandirlas, y no habría
+  dónde guardar que la del martes está hecha y la del jueves no.
+- **CHECKs**: con plazo → `fecha_hasta > fecha`, como mucho 366 días y
+  **siempre todo el día** (un horario no significa nada repartido en seis
+  semanas); una repetición → con serie y SIN `fecha_hasta`; una con plazo
+  nunca pertenece a una serie. `UNIQUE (serie_id, numero_en_serie)`.
+- **Las frecuencias** salen de `agenda_serie_fechas(frecuencia, desde, hasta)`,
+  una sola fuente que usan la validación, la creación y el recálculo:
+  `todos_los_dias` (cada día), `dia_por_medio` (2), `cada_semana` (7),
+  `semana_por_medio` (14) y `por_mes` (el mismo día del mes). "Por mes" se
+  apoya en cómo suma meses Postgres, que ya hace lo que pide la regla: suma
+  siempre desde la fecha ORIGINAL y recorta al último día del mes que no
+  tenga ese número, así del 31/1 sale 28/2 y después **vuelve al 31/3**.
+- **`agenda_repeticiones_posibles(desde, hasta)`** dice qué entra en un plazo
+  y cuántas veces. UNA regla: está disponible si entra **al menos dos veces**
+  —una sola vez no es repetir, es la tarea del primer día—, y de ahí salen
+  solos los mínimos (2 días para todos los días, 3 para día por medio, 8 para
+  cada semana, 15 para semana por medio). Es la ÚNICA cuenta: el formulario
+  la llama, no la rehace. Tope de **200** repeticiones
+  (`demasiadas_repeticiones`); la opción trae `supera_tope` para avisarlo antes.
+- **Editar, eliminar y reasignar** desde una repetición llevan `p_alcance`:
+  `'solo_esta'` o `'las_que_faltan'` (las de HOY EN ADELANTE sin completar).
+  **Las completadas no se tocan nunca**: son historial de algo que alguien
+  hizo. Cambiar el plazo o la frecuencia borra las que faltan y crea las
+  nuevas en la MISMA serie —moverlas una por una sería adivinar qué
+  repetición nueva corresponde a cuál vieja— y después `agenda_serie_renumerar`
+  deja los números en 1..N por fecha, en dos pasadas para no chocar con el
+  índice único. Lo único que una completada puede ver cambiar es su posición.
+- **VENCIDA es un dato calculado**, no un estado: los estados siguen siendo
+  `esperando`, `en_proceso` y `completada`. Está vencida la que no se completó
+  y cuyo último día ya pasó, **sólo** si tiene plazo o es una repetición: una
+  tarea de un día de las de siempre NUNCA se marca vencida. Las RPC devuelven
+  `vencida` y `dias_restantes` (negativo si ya pasó).
+- **Las RPC de rango devuelven lo que SE SUPERPONE** con el rango, no lo que
+  empieza adentro: la del 1/11 al 12/12 se ve también la semana del 20/11. El
+  tope de 100 días de `agenda_mis_tareas` sigue siendo del rango que se pide,
+  no del largo de un plazo.
+
 ### Estados de una tarea (los pone la base)
 `'esperando'` (sin sub-departamento) · `'en_proceso'` (con sub) ·
 `'completada'` (la marcó alguien del equipo, un encargado o SUPER_ADMIN).
@@ -2731,7 +2782,14 @@ ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce
   fecha de hoy en hora argentina), `agenda_tareas_subdepartamento`.
 - **Agenda:** `agenda_mis_tareas` (hasta 100 días; con el interruptor, el
   encargado suma todo su departamento), `agenda_tarea`,
-  `agenda_cambiar_estado_tarea`.
+  `agenda_cambiar_estado_tarea`, `agenda_repeticiones_posibles` (qué
+  repeticiones entran en un plazo; la única abierta de las de plazos).
+  `agenda_crear_tarea` toma además `p_fecha_hasta` y `p_frecuencia`, y
+  `agenda_editar_tarea`, `agenda_eliminar_tarea` y `agenda_reasignar_tarea`
+  toman `p_alcance`. Motivos nuevos: `plazo_invalido`,
+  `repeticion_no_disponible`, `demasiadas_repeticiones`, `serie_completada`,
+  `alcance_invalido` y `serie_invalida` (una tarea que ya existe no se
+  convierte en serie editándola).
 - **Solicitudes:** `agenda_departamentos_para_solicitar`,
   `agenda_crear_solicitud` (10 por persona por día argentino),
   `agenda_mis_solicitudes` (lo que pidió quien llama, para
@@ -2742,45 +2800,69 @@ ya había. Todas devuelven `{ ok, motivo, … }`; `mensajeDeMotivo()` lo traduce
   departamento: una sola validación para crear, editar, reasignar y el
   reemplazo de prioridad), `agenda_valida_campos_tarea`, entre otros.
 
-### Avisos: emails y notificaciones (`sql/agenda_avisos.sql`)
-Pruebas en `sql/PROBAR_agenda_avisos.sql`, deshacer en
-`sql/ROLLBACK_agenda_avisos.sql`. Función: `supabase/functions/send-agenda-aviso/`
-(`armado.ts` arma el HTML de los diseños "Email - Tarea asignada" y
-"Email - Tarea completada", con el logo de Origen centrado arriba).
+### Avisos (`sql/agenda_avisos.sql` + `sql/agenda_avisos_sin_email.sql`)
+Pruebas en `sql/PROBAR_agenda_avisos_sin_email.sql`, deshacer en
+`sql/ROLLBACK_agenda_avisos.sql`.
 
-| Aviso | A quién | Email | App (`type`) |
-|---|---|---|---|
-| Tarea asignada | Quien dirige + los miembros del sub, **sin** los encargados del departamento | Sí | `AGENDA_TAREA_ASIGNADA` → `/agenda?tarea=<id>` |
-| Tarea completada | Los encargados, **menos** quien la completó | Sí | `AGENDA_TAREA_COMPLETADA` → `/agenda?tarea=<id>` |
-| Solicitud nueva | Los encargados (menos quien la pidió, si es uno de ellos) | No | `AGENDA_SOLICITUD_NUEVA` → `/departamentos/<dep>?tab=solicitudes` |
-| Solicitud revisada | Quien la pidió (aceptada o no) | **Nunca** | `AGENDA_SOLICITUD_REVISADA` → `/perfil/solicitudes` (Mi cuenta → Solicitudes; hasta el 2026-10-27 llevaba al formulario `/solicitudes`) |
+**NO HAY EMAILS.** El **2026-10-28**, por decisión de Ignacio,
+`sql/agenda_avisos_sin_email.sql` sacó el canal `'email'` de `agenda_avisos`
+(el CHECK hoy sólo acepta `'app'`), borró `agenda_pedir_emails`,
+`agenda_emails_desde`, el índice del tope diario de 40 y la edge function
+`send-agenda-aviso`, que no está ni en el repo ni desplegada. Nunca salió
+ninguno: los emails se activaban el 2/11 y al 28/10 no había ni una tarea en
+la base. Los diseños `design-claude/Email - Tarea asignada.dc.html` y
+`Email - Tarea completada.dc.html` quedan como material, sin nada que los
+implemente. **Todo lo que hay que decir viaja en el push**, que es el único
+canal que quedó.
+
+| Aviso | A quién | App (`type`) |
+|---|---|---|
+| Tarea asignada | Quien dirige + los miembros del sub, **sin** los encargados del departamento | `AGENDA_TAREA_ASIGNADA` → `/agenda?tarea=<id>` |
+| Tarea completada | Los encargados, **menos** quien la completó | `AGENDA_TAREA_COMPLETADA` → `/agenda?tarea=<id>` |
+| Venció un plazo | Los encargados del departamento | `warning` → `/departamentos/<dep>?tarea=<id>` |
+| Solicitud nueva | Los encargados (menos quien la pidió, si es uno de ellos) | `AGENDA_SOLICITUD_NUEVA` → `/departamentos/<dep>?tab=solicitudes` |
+| Solicitud revisada | Quien la pidió (aceptada o no) | `AGENDA_SOLICITUD_REVISADA` → `/perfil/solicitudes` (Mi cuenta → Solicitudes; hasta el 2026-10-27 llevaba al formulario `/solicitudes`) |
+
+- **El plazo y la repetición viajan en el aviso de "asignada"**, sin tocar la
+  plantilla del catálogo: `agenda_cuando_json` arma las dos variables que ya
+  existían. Un día → "mié 12/11 · Todo el día"; con plazo → "del 1/11 al
+  12/12 · Todo el día"; una serie → "cada semana, del 1/11 al 12/12 · 6
+  veces · Todo el día".
+- **UNA serie avisa UNA sola vez**, no una por repetición. Mientras la RPC
+  crea o reasigna la serie entera pone la marca de transacción
+  `agenda.serie_en_lote`, el trigger se saltea el aviso de esas filas y al
+  terminar `agenda_avisar_serie` manda uno solo, anclado en la primera
+  repetición afectada. "Completada" no se toca: cada repetición se completa
+  por su cuenta y cada una avisa.
+- **`agenda_plazo_vencido`** (automática, área Agenda, apagable,
+  `type_legacy = 'warning'`): "Venció un plazo · «{tarea}» de
+  {subdepartamento} venció el {fecha} sin completarse.". La manda
+  `agenda_plazos_vencidos_tick()` por el cron **`agenda-plazos-vencidos`**
+  (`0 12 * * *` = 9:00 argentinas, SQL directo sin HTTP, como el de las
+  programadas), **sólo** a los encargados y **sólo** para tareas CON PLAZO
+  sin repetición: una serie de 26 mandaría 26 avisos que nadie leería. La
+  reserva se hace antes de emitir en `agenda_plazos_avisados`, con clave
+  `(tarea, fecha_hasta)`: por eso no se repite, y si se cambia el plazo de una
+  tarea ya avisada y vuelve a vencer, **avisa de nuevo**. Busca todas las que
+  falten, no sólo las de ayer, así un día sin cron se recupera solo.
+  Completarla después de vencida no manda nada nuevo, sólo el aviso normal de
+  completada.
 
 - **El circuito:** `trg_agenda_tareas_avisar` (AFTER INSERT/UPDATE) dispara
   "asignada" al crear con sub o cuando cambia `asignada_at` o el sub, y
   "completada" cuando el estado pasa a `'completada'`. Para cada persona
-  registra en `agenda_avisos` un aviso `'app'` (y crea la notificación) y uno
-  `'email'`. Si quedó algún email `'pendiente'`, hace UN `net.http_post` a
-  `send-agenda-aviso` con **sólo** `{tarea_id, tipo}` (clave de Vault,
-  timeout 20000, en su propio `BEGIN … EXCEPTION`: si falla, la tarea se
-  guarda igual y el aviso queda `'pendiente'` con el error).
+  registra en `agenda_avisos` un aviso `'app'` y emite por `notif_emitir`, con
+  la clave de la alerta y las variables en jsonb
+  (`agenda_registrar_avisos(tarea, tipo, users[], clave, vars)` desde el
+  2026-10-29, `sql/notif_catalogo.sql`).
 - **No repetir:** `agenda_avisos` tiene `UNIQUE (tarea_id, user_id, tipo,
   canal)`. Reasignar y volver, o reabrir y completar de nuevo, no le vuelve a
   avisar a nadie que ya tuvo ese aviso.
-- **Fecha de activación:** los emails salen desde el **lunes 2/11/2026 a las
-  00:00 (hora argentina)**: `agenda_emails_desde()` en SQL y
-  `EMAILS_AGENDA_DESDE` / `emailsAgendaActivos()` en `services/agenda.ts`
-  (el mismo instante; si se cambia uno, se cambian los dos). Lo de antes
-  queda `'pausado'` y **no** se manda después. Las notificaciones en la app
-  van desde que se aplicó el SQL. Los textos que prometen email sólo
-  aparecen con `emailsAgendaActivos()`; el solicitante nunca ve promesas de
-  email.
-- **Estados del email:** `'pendiente'` → `'enviado'` (la función lo toma
-  antes de mandarlo: un segundo llamado no repite) | `'error'` (con el
-  motivo legible) | `'tope_diario'` | `'pausado'` | `'sin_email'`. En la
-  tarea quedan `email_asignada_at`, `email_completada_at` y `email_error`.
-- `agenda_avisos` tiene RLS y ningún privilegio para `anon` ni
-  `authenticated`; las funciones del circuito no se pueden ejecutar desde
-  afuera.
+- `agenda_tareas` todavía tiene `email_asignada_at`, `email_completada_at` y
+  `email_error`: quedaron sin uso después del 28/10 y nadie las escribe.
+- `agenda_avisos`, `agenda_series` y `agenda_plazos_avisados` tienen RLS y
+  ningún privilegio para `anon` ni `authenticated`; las funciones del circuito
+  no se pueden ejecutar desde afuera.
 
 ---
 
