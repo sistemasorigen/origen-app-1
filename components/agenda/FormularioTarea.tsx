@@ -42,6 +42,30 @@ const ESPERA_OPCIONES = 350;
 /** Lo que propone "Con plazo" la primera vez. */
 const PLAZO_SUGERIDO = 30;
 
+/**
+ * Las frecuencias de "Un día · ¿Se repite?". Ahí se elige primero cada cuánto
+ * y después hasta cuándo, así que la lista no puede esperar a la base: los
+ * nombres son los de `agenda_frecuencia_texto`. SI ENTRA y CUÁNTAS VECES lo
+ * sigue contestando la base (`getRepeticionesPosibles`) con el "Hasta".
+ */
+const FRECUENCIAS: Array<{ id: Frecuencia; nombre: string }> = [
+    { id: 'todos_los_dias', nombre: 'Todos los días' },
+    { id: 'dia_por_medio', nombre: 'Día por medio' },
+    { id: 'cada_semana', nombre: 'Cada semana' },
+    { id: 'semana_por_medio', nombre: 'Semana por medio' },
+    { id: 'por_mes', nombre: 'Por mes' },
+];
+
+/**
+ * El "Hasta" que se propone al elegir una frecuencia en "Un día": un largo
+ * razonable para cada una (una semana de días, un mes de semanas, tres
+ * meses de meses). Es sólo una propuesta; la persona lo cambia y la base dice
+ * cuántas veces da.
+ */
+const HASTA_SUGERIDO: Record<Frecuencia, number> = {
+    todos_los_dias: 6, dia_por_medio: 12, cada_semana: 28, semana_por_medio: 56, por_mes: 92,
+};
+
 type Campo = 'nombre' | 'sub' | 'carpeta' | 'fecha' | 'plazo' | 'repeticion' | 'horario' | 'prioridad' | 'detalles' | 'general';
 
 /** Qué campo marca cada motivo de la base. */
@@ -176,6 +200,8 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const [error, setError] = useState<{ campo: Campo; texto: string } | null>(null);
 
     const [preguntandoAlcance, setPreguntandoAlcance] = useState(false);
+    /** Si la persona eligió el "Hasta" a mano: entonces ya no se le propone otro. */
+    const [hastaTocado, setHastaTocado] = useState(false);
 
     const enviando = useRef(false);
     const campoNombre = useRef<HTMLInputElement>(null);
@@ -206,7 +232,13 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
     /** Sin repetición, una tarea con plazo es siempre todo el día (lo fuerza la base). */
     const hayHorario = !conPlazo || !!frecuencia;
-    const esSerie = conPlazo && !!frecuencia;
+    /**
+     * Hay un "Hasta" cuando es con plazo, o cuando es de un día y se repite:
+     * las dos formas terminan en la MISMA serie (primer día, frecuencia y
+     * último día), que es lo único que la base conoce.
+     */
+    const usaHasta = conPlazo || !!frecuencia;
+    const esSerie = !!frecuencia;
     const laTarea = tarea ?? null;
     const eraSerie = !!laTarea?.serie;
 
@@ -215,12 +247,21 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const horarioAlReves = hayHorario && !todoElDia && !!horaDesde && !!horaHasta && horaHasta <= horaDesde;
     const horarioMal = horarioIncompleto || horarioAlReves;
 
-    const plazoVacio = conPlazo && !fechaHasta;
-    const plazoAlReves = conPlazo && !!fechaHasta && fechaHasta <= fecha;
-    const plazoLargo = conPlazo && !!fechaHasta && largoDelPlazo(fecha, fechaHasta) > 367;
+    const plazoVacio = usaHasta && !fechaHasta;
+    const plazoAlReves = usaHasta && !!fechaHasta && fechaHasta <= fecha;
+    const plazoLargo = usaHasta && !!fechaHasta && largoDelPlazo(fecha, fechaHasta) > 367;
     const plazoMal = plazoVacio || plazoAlReves || plazoLargo;
 
-    const invalido = sinNombre || !fecha || horarioMal || plazoMal;
+    /**
+     * En "Un día" la frecuencia se elige ANTES que el "Hasta": si no entra,
+     * lo que hay que cambiar es el "Hasta", así que no se la saca (como en
+     * "Con plazo") sino que se dice qué pasa. Lo de si entra es de la base.
+     */
+    const opcionElegida = opciones.find(o => o.frecuencia === frecuencia) ?? null;
+    const repeticionNoEntra = !conPlazo && !!frecuencia && !plazoMal && !buscandoOpciones
+        && !!opcionElegida && !opcionElegida.disponible;
+
+    const invalido = sinNombre || !fecha || horarioMal || plazoMal || repeticionNoEntra;
 
     const errorDe = (c: Campo) => (error?.campo === c ? error.texto : null);
     const errNombre = errorDe('nombre') ?? (tocado && sinNombre ? 'Escribí un nombre para la tarea.' : null);
@@ -232,7 +273,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         plazoAlReves ? 'El último día tiene que ser posterior al primero.'
             : plazoLargo ? 'El plazo no puede pasar de un año.'
                 : tocado && plazoVacio ? 'Elegí hasta qué día.' : null);
-    const errRepeticion = errorDe('repeticion');
+    const errRepeticion = errorDe('repeticion') ?? (repeticionNoEntra
+        ? (opcionElegida?.superaTope
+            ? 'Pasa de 200 repeticiones: elegí un “Hasta” más cercano.'
+            : 'Hasta ese día no entra dos veces: elegí un “Hasta” más lejano.')
+        : null);
 
     /**
      * Lo primero que falta, para el pie de la hoja. Es un RESUMEN que apunta
@@ -243,6 +288,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         : !fecha ? 'Falta el día.'
             : plazoVacio ? 'Falta hasta qué día.'
                 : plazoAlReves || plazoLargo ? 'Revisá el plazo.'
+                    : repeticionNoEntra ? 'Revisá hasta cuándo se repite.'
                     : horarioIncompleto ? 'Falta completar el horario.'
                         : horarioAlReves ? 'Revisá el horario.'
                             : null;
@@ -256,7 +302,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         || todoElDia !== inicial.todoElDia
         || (horaDesde || '') !== (inicial.horaDesde || '')
         || (horaHasta || '') !== (inicial.horaHasta || '')
-        || (conPlazo ? fechaHasta : '') !== (laTarea?.fechaHasta || laTarea?.serie?.hasta || '')
+        || (usaHasta ? fechaHasta : '') !== (laTarea?.fechaHasta || laTarea?.serie?.hasta || '')
         || frecuencia !== (laTarea?.serie?.frecuencia ?? null);
 
     const intentarCerrar = () => {
@@ -278,7 +324,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
      * para no pedirlo con cada dígito de la fecha.
      */
     useEffect(() => {
-        if (!conPlazo || !fechaHasta || plazoMal) { setOpciones([]); return; }
+        if (!usaHasta || !fechaHasta || plazoMal) { setOpciones([]); return; }
         let vivo = true;
         setBuscandoOpciones(true);
         const t = window.setTimeout(async () => {
@@ -288,7 +334,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             setOpciones(r.ok ? r.opciones : []);
         }, ESPERA_OPCIONES);
         return () => { vivo = false; window.clearTimeout(t); };
-    }, [conPlazo, fecha, fechaHasta, plazoMal]);
+    }, [usaHasta, fecha, fechaHasta, plazoMal]);
 
     /**
      * Si cambiaron las fechas y lo que estaba elegido ya no entra, se vuelve
@@ -296,6 +342,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
      * lo rechace recién al guardar.
      */
     useEffect(() => {
+        // Sólo en "Con plazo", donde el plazo va primero. En "Un día" se
+        // avisa en el campo (repeticionNoEntra) y se cambia el "Hasta".
+        if (!conPlazo) return;
         if (!frecuencia || buscandoOpciones || opciones.length === 0) return;
         const o = opciones.find(x => x.frecuencia === frecuencia);
         if (o && o.disponible) return;
@@ -303,18 +352,18 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         setAvisoRepeticion(o && o.superaTope
             ? `“${o.nombre}” pasa de 200 repeticiones en este plazo. Volvió a “No se repite”.`
             : 'La repetición que habías elegido ya no entra en este plazo. Volvió a “No se repite”.');
-    }, [opciones, buscandoOpciones, frecuencia]);
+    }, [opciones, buscandoOpciones, frecuencia, conPlazo]);
 
     const resumen = useMemo(() => resumenDeCuando({
         desde: fecha,
-        hasta: conPlazo ? fechaHasta : null,
+        hasta: usaHasta ? fechaHasta : null,
         frecuencia,
         frecuenciaTexto: opciones.find(o => o.frecuencia === frecuencia)?.nombre ?? null,
         veces: opciones.find(o => o.frecuencia === frecuencia)?.veces ?? null,
         todoElDia: !hayHorario || todoElDia,
         horaDesde,
         horaHasta,
-    }), [fecha, fechaHasta, conPlazo, frecuencia, opciones, hayHorario, todoElDia, horaDesde, horaHasta]);
+    }), [fecha, fechaHasta, usaHasta, frecuencia, opciones, hayHorario, todoElDia, horaDesde, horaHasta]);
 
     /** Cuántas repeticiones quedan por hacer, para el texto del alcance. */
     const pendientes = useMemo(() => (laTarea ? pendientesDeLaSerie(laTarea) : 0), [laTarea]);
@@ -349,7 +398,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
      */
     const plazoQueViaja = (alcance: AlcanceSerie): Pick<DatosDeTarea, 'fechaHasta' | 'frecuencia'> => {
         if (modo === 'crear' || !eraSerie) {
-            return { fechaHasta: conPlazo ? fechaHasta : null, frecuencia: modo === 'crear' ? frecuencia : null };
+            return { fechaHasta: usaHasta ? fechaHasta : null, frecuencia: modo === 'crear' ? frecuencia : null };
         }
         if (alcance === 'solo_esta') return { fechaHasta: null, frecuencia: null };
         return cambiaLaRegla || fecha !== inicial.fecha
@@ -501,7 +550,6 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                             setAvisoRepeticion(null);
                                             if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
                                             if (o.id && !fechaHasta) setFechaHasta(sumarDias(fecha, PLAZO_SUGERIDO));
-                                            if (!o.id) setFrecuencia(null);
                                         }}
                                         className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13.5px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${on ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,.1)]' : 'text-black/[.55] hover:text-[#0a0a0a]'}`}
                                     >
@@ -515,12 +563,19 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
                     <div className={conPlazo ? 'grid gap-2.5 sm:grid-cols-2' : ''}>
                         <label className="flex flex-col gap-1.5">
-                            <span className="text-[13px] font-bold text-black/[.62]">{conPlazo ? 'Desde' : 'Día'}</span>
+                            <span className="text-[13px] font-bold text-black/[.62]">{conPlazo ? 'Desde' : frecuencia ? 'Primer día' : 'Día'}</span>
                             <input
                                 ref={campoFecha}
                                 type="date"
                                 value={fecha}
-                                onChange={e => { setFecha(e.target.value); if (error?.campo === 'fecha') setError(null); }}
+                                onChange={e => {
+                                    setFecha(e.target.value);
+                                    if (error?.campo === 'fecha') setError(null);
+                                    // Un día que se repite: si el "Hasta" era el propuesto, se corre con el día.
+                                    if (!conPlazo && frecuencia && !hastaTocado && e.target.value) {
+                                        setFechaHasta(sumarDias(e.target.value, HASTA_SUGERIDO[frecuencia]));
+                                    }
+                                }}
                                 aria-invalid={!!errFecha}
                                 aria-describedby={errFecha ? `${idBase}-err-fecha` : undefined}
                                 className={CAMPO_CLASE}
@@ -549,11 +604,72 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                         )}
                     </div>
                     {errFecha && <ErrorDeCampo id={`${idBase}-err-fecha`}>{errFecha}</ErrorDeCampo>}
-                    {errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
+                    {conPlazo && errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
                     {conPlazo && !!fechaHasta && !plazoMal && (
                         <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
                             {largoDelPlazo(fecha, fechaHasta)} días
                         </p>
+                    )}
+
+                    {/* Un día · ¿Se repite? Primero cada cuánto, después hasta cuándo.
+                        Sólo al crear: una tarea que ya existe no se vuelve serie. */}
+                    {!conPlazo && !eraSerie && modo === 'crear' && (
+                        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+                            <legend className="mb-1 p-0 text-[13px] font-bold text-black/[.62]">¿Se repite?</legend>
+                            <OpcionDeRepeticion
+                                elegida={frecuencia === null}
+                                titulo="No se repite"
+                                nota="sólo ese día"
+                                onElegir={() => {
+                                    setFrecuencia(null);
+                                    if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
+                                }}
+                            />
+                            {FRECUENCIAS.map(f => {
+                                const esta = frecuencia === f.id;
+                                const nota = !esta ? ''
+                                    : plazoMal || buscandoOpciones || !opcionElegida ? '…'
+                                        : opcionElegida.disponible ? `${opcionElegida.veces} veces`
+                                            : opcionElegida.superaTope ? 'Pasa de 200 repeticiones' : 'No entra dos veces';
+                                return (
+                                    <OpcionDeRepeticion
+                                        key={f.id}
+                                        elegida={esta}
+                                        titulo={f.nombre}
+                                        nota={nota}
+                                        onElegir={() => {
+                                            setFrecuencia(f.id);
+                                            if (!hastaTocado || !fechaHasta || fechaHasta <= fecha) {
+                                                setFechaHasta(sumarDias(fecha, HASTA_SUGERIDO[f.id]));
+                                            }
+                                            if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
+                                        }}
+                                    />
+                                );
+                            })}
+                            {frecuencia && (
+                                <label className="mt-1.5 flex flex-col gap-1.5">
+                                    <span className="text-[13px] font-bold text-black/[.62]">Se repite hasta</span>
+                                    <input
+                                        ref={campoHasta}
+                                        type="date"
+                                        value={fechaHasta}
+                                        min={sumarDias(fecha, 1)}
+                                        onChange={e => {
+                                            setFechaHasta(e.target.value);
+                                            setHastaTocado(true);
+                                            if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
+                                        }}
+                                        aria-invalid={!!errPlazo || repeticionNoEntra}
+                                        aria-describedby={errPlazo ? `${idBase}-err-plazo` : errRepeticion ? `${idBase}-err-rep` : undefined}
+                                        className={CAMPO_CLASE}
+                                        style={conBorde(!!errPlazo || repeticionNoEntra)}
+                                    />
+                                </label>
+                            )}
+                            {errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
+                            {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
+                        </fieldset>
                     )}
 
                     {/* ¿Se repite? Las opciones y los "no" los decide la base. */}

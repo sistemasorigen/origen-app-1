@@ -2759,6 +2759,16 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   `set local role authenticated`, no como postgres. Se piden con 350 ms de espera; las que no
   están disponibles van en gris con su motivo. Si la elegida deja de entrar,
   vuelve a "No se repite" con un aviso.
+  - **"Un día" también se repite** (pedido de Ignacio, 2026-11-03). Debajo
+    del día va "¿Se repite?", con "No se repite" y las cinco frecuencias
+    (nombres fijos en `FRECUENCIAS`; si entra y cuántas veces lo contesta la
+    base). Al elegir una aparece "Se repite hasta", con una propuesta de
+    `HASTA_SUGERIDO` que acompaña al día mientras no se toque a mano.
+  - Al guardar sale la MISMA serie que con "Con plazo": primer día,
+    frecuencia y `fechaHasta`. La base no cambió.
+  - Si no entra dos veces, no se saca la frecuencia: se marca el "Hasta" y no
+    deja guardar.
+  - Sólo al crear: editar una tarea de un día no ofrece repetirla.
   - **Editar una repetición** pregunta "Solo esta / Todas las que faltan (N)".
     Con "Solo esta" NO viajan ni `fechaHasta` ni `frecuencia`: la base
     contestaría `alcance_invalido`.
