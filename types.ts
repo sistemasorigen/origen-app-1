@@ -1780,10 +1780,39 @@ export interface ReunionCrudaGCX {
 }
 
 export interface CrudoReportesGCX {
-    grupos: Array<{ id: string; modalidad: ModalidadGrupo }>;
+    grupos: Array<{ id: string; modalidad: ModalidadGrupo; nombre?: string; categoriaId?: string }>;
     /** Una por persona de cada inscripción aprobada: el titular y la pareja. */
     personas: Array<{ clave: string; idAsistencia: string; groupId: string }>;
     reuniones: ReunionCrudaGCX[];
+    /** Las categorías de grupo, para nombrarlas y filtrar Inscripciones. */
+    categorias?: Array<{ id: string; nombre: string }>;
+    /** Todas las inscripciones de los grupos, con sus fechas (gráfico de Inscripciones). */
+    inscripciones?: InscripcionCrudaGCX[];
+}
+
+/**
+ * Una inscripción, sólo con lo que necesita el gráfico de Inscripciones: sin
+ * nombres ni contactos.
+ */
+export interface InscripcionCrudaGCX {
+    groupId: string;
+    /** Cuándo se anotó: 'YYYY-MM-DD' argentino (la menor entre timestamp y approved_at). */
+    alta: string | null;
+    /** Cuándo quedó aprobada, si hoy está aprobada; null si no lo está o no tiene fecha. */
+    aprobada: string | null;
+    /** 'APPROVED', 'PENDING' o 'REJECTED'. */
+    estado: string;
+    /** 1, o 2 si es una pareja: igual que "Inscripciones totales". */
+    personas: number;
+    /** Una derivación desde otro grupo (transfer_from_group_id): no es gente nueva. */
+    derivada: boolean;
+}
+
+/** Lo que pasó en la iglesia en un rango de fechas, para marcarlo en Inscripciones. */
+export interface MarcasReportesGCX {
+    eventos: Array<{ nombre: string; fecha: string }>;
+    nocturna: Array<{ edicion: number | null; fecha: string }>;
+    servicios: Array<{ nombre: string; fecha: string; categoria: string | null; tipo: string | null }>;
 }
 
 /**

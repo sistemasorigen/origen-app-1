@@ -104,13 +104,18 @@ export const TituloTarjeta: React.FC<{
      * período. Sin esto, la tarjeta se ve como siempre.
      */
     alcance?: string | null;
-}> = ({ titulo, detalle, extra, descargas, alcance }) => (
+    /** Algo corto al lado del título, como el total del gráfico. */
+    junto?: React.ReactNode;
+}> = ({ titulo, detalle, extra, descargas, alcance, junto }) => (
     // En el celular, la leyenda y las descargas van debajo del título: al
     // lado, el título quedaba con una palabra por renglón. Desde 640 px (y en
     // papel) es la fila de siempre.
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-            <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>{titulo}</p>
+            <p className="m-0 text-[15px] font-semibold" style={{ color: C.tinta }}>
+                {titulo}
+                {junto && <span className="ml-2.5 text-[13px] font-semibold" style={{ color: C.apagado }}>{junto}</span>}
+            </p>
             <p className="mt-[5px] text-[12.5px] font-medium" style={{ color: C.tenue }}>{detalle}</p>
             {alcance && (
                 <p className="mt-1.5 text-[12px] font-semibold" style={{ color: C.apagado }}>{alcance}</p>

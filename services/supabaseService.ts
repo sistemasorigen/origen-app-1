@@ -3,10 +3,10 @@ import { supabase } from './supabaseClient';
 import { db } from './dbService';
 import { safeUUID } from './uuidUtils';
 import { comprimirImagen } from '../src/utils/nocturna';
-import { padronDeReunion } from '../src/utils/asistencia';
+import { padronDeReunion, ZONA_ARG } from '../src/utils/asistencia';
 import { registrar } from '../src/utils/diagnostico';
 import type { CompromisoGCX } from '../src/utils/gruposMismoDia';
-import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, ReunionCrudaGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
+import { Group, StoreProduct, StoreOrder, AppConfig, GroupRegistration, InfoPointProduct, Movement, Baptism, ChildPresentation, Loan, MovementType, AppSettings, User, UserRole, ProductType, INFO_POINT_SIZES, GroupCategory, GroupTag, LeaderApplication, AuditLog, DropoutRequest, CoordinatorVariant, TemporadaGCX, AsistenciaPersonasReporte, GruposQueReportanReporte, GeneroPorCategoriaFila, EdadesPorCategoriaFila, TablaGrupoReporteFila, ReportesGCXTemporada, KPIsReportesGCX, DetalleGrupoReporte, MiembroDetalleReporte, CamposReapertura, AsistenciaPorFechaDia, CargaPorGrupoFila, FiltrosReporteGCX, ModalidadGrupo, ReporteModalidadGCX, ModoReunion, ResumenDemograficoReporte, ProgresoReportesGCX, ReunionCrudaGCX, InscripcionCrudaGCX, MarcasReportesGCX, NocturnaConfig, NocturnaInscripcion, NocturnaJoven, NocturnaPayload, NocturnaAltaResultado, NocturnaEdicionResultado, NocturnaGrupo, NocturnaAgregadoResultado, NocturnaComprobanteExtra, NocturnaTribu } from '../types';
 
 // Escapes % and _ so user input is treated as a literal string in SQL LIKE/ILIKE patterns
 const escapeLikePattern = (s: string) => s.replace(/[%_\\]/g, '\\$&');
@@ -82,7 +82,18 @@ interface BaseReportesGCX {
     // de un período dentro de la temporada sin volver a la base: los mapas de
     // arriba ya vienen sumados para la temporada entera.
     reunionesDetalle: ReunionCrudaGCX[];
+    // TODAS las inscripciones de los grupos (aprobadas, pendientes y
+    // rechazadas), sólo con fechas, grupo, estado y cuántas personas son:
+    // para el gráfico de Inscripciones. Sin nombres ni contactos.
+    inscripcionesTodas: InscripcionCrudaGCX[];
 }
+
+/** 'YYYY-MM-DD' en hora argentina, o null. */
+const fechaArg = (v: unknown): string | null => {
+    if (!v) return null;
+    const d = new Date(String(v));
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-CA', { timeZone: ZONA_ARG });
+};
 
 // Cachea la PROMESA, no el resultado: si los cinco gráficos del tablero
 // arrancan a la vez, los cinco esperan la misma consulta en lugar de
@@ -91,6 +102,7 @@ interface BaseReportesGCX {
 // un dato.
 const BASE_REPORTES_TTL_MS = 30_000;
 const baseReportesCache = new Map<string, { momento: number; promesa: Promise<BaseReportesGCX | null> }>();
+const marcasReportesCache = new Map<string, { momento: number; promesa: Promise<MarcasReportesGCX> }>();
 
 // Se prefiere calcular de birth_date, que no se desactualiza, y se cae a
 // users.age cuando no hay fecha. Hacen falta las dos: hoy 333 de 396
@@ -6758,7 +6770,7 @@ export const supabaseService = {
         });
 
         if (grupos.length === 0) {
-          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, posiblesPorPersona: new Map(), posiblesPorPersonaPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [], reunionesDetalle: [] };
+          return { grupos: [], inscripciones: [], gruposQueReportan: new Set(), idsPresentes: new Set(), presentesPorModo: { presencial: new Set(), online: new Set() }, reunionesPorGrupo: new Map(), vecesPresente: new Map(), reunionesPorGrupoPorModo: { presencial: new Map(), online: new Map() }, vecesPorModo: { presencial: new Map(), online: new Map() }, posiblesPorPersona: new Map(), posiblesPorPersonaPorModo: { presencial: new Map(), online: new Map() }, usuarios: new Map(), categorias: [], presentesPorReunion: [], reuniones: [], reunionesDetalle: [], inscripcionesTodas: [] };
         }
 
         const idsGrupos = grupos.map((g: any) => g.id);
@@ -6770,7 +6782,9 @@ export const supabaseService = {
             // approved_at: con qué fecha entró cada persona al grupo. Lo
             // necesita el respaldo del padrón, para las reuniones viejas que
             // no tienen su foto guardada.
-            .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name, approved_at')
+            // timestamp y transfer_from_group_id: cuándo se anotó y si fue una
+            // derivación desde otro grupo, para el gráfico de Inscripciones.
+            .select('id, group_id, user_id, status, partner_data, partner_user_id, email, first_name, last_name, approved_at, timestamp, transfer_from_group_id')
             .in('group_id', idsGrupos),
           // '*' por lo mismo que arriba: meeting_mode todavía puede no existir.
           supabase
@@ -6791,6 +6805,25 @@ export const supabaseService = {
 
         const inscripciones = (resInscripciones.data || [])
           .filter((r: any) => String(r.status || '').toUpperCase() === 'APPROVED');
+
+        // Para el gráfico de Inscripciones. El alta es la menor entre
+        // `timestamp` y `approved_at`: en la Tercera 2026 hay 13 con el alta
+        // registrada horas DESPUÉS de su aprobación, y nadie se aprueba antes
+        // de anotarse. La pareja cuenta como una persona más, igual que
+        // "Inscripciones totales".
+        const inscripcionesTodas: InscripcionCrudaGCX[] = (resInscripciones.data || []).map((r: any) => {
+          const aprobada = String(r.status || '').toUpperCase() === 'APPROVED' ? fechaArg(r.approved_at) : null;
+          const altaRegistrada = fechaArg(r.timestamp);
+          const alta = altaRegistrada && aprobada ? (aprobada < altaRegistrada ? aprobada : altaRegistrada) : (altaRegistrada ?? aprobada);
+          return {
+            groupId: r.group_id,
+            alta,
+            aprobada,
+            estado: String(r.status || '').toUpperCase(),
+            personas: r.partner_data ? 2 : 1,
+            derivada: !!r.transfer_from_group_id,
+          };
+        });
 
         // Un grupo "reporta" si cargó al menos una reunión, aunque haya ido
         // nadie: la fila existe, que es lo que mide este indicador.
@@ -6891,7 +6924,7 @@ export const supabaseService = {
           });
         }
 
-        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, posiblesPorPersona, posiblesPorPersonaPorModo, usuarios, categorias, presentesPorReunion, reuniones, reunionesDetalle };
+        return { grupos, inscripciones, gruposQueReportan, idsPresentes, presentesPorModo, reunionesPorGrupo, vecesPresente, reunionesPorGrupoPorModo, vecesPorModo, posiblesPorPersona, posiblesPorPersonaPorModo, usuarios, categorias, presentesPorReunion, reuniones, reunionesDetalle, inscripcionesTodas };
       } catch (err) {
         console.error('[ReportesGCX] Excepción cargando la base:', err);
         return null;
@@ -7388,6 +7421,53 @@ export const supabaseService = {
   },
 
   /**
+   * Lo que pasó en la iglesia entre dos fechas, para marcarlo sobre el
+   * gráfico de Inscripciones: los eventos visibles, la Nocturna y los
+   * servicios de Audiencia. Una consulta liviana por fuente, sólo con las
+   * columnas que se dibujan (nombre, fecha, categoría y tipo): ninguna trae
+   * datos de personas. Las tres se leen con los permisos de quien entra a
+   * Reportes (eventos visibles y Nocturna: todos; servicios: cualquiera con
+   * sesión).
+   *
+   * Qué servicio es "especial" lo decide la pantalla (inscripcionesGCX.ts):
+   * acá viajan todos los del rango, que son pocos.
+   *
+   * Si una fuente falla, se sigue sin ella: las marcas acompañan al gráfico,
+   * no lo sostienen.
+   */
+  async getMarcasReportesGCX(desde: string, hasta: string): Promise<MarcasReportesGCX> {
+    const clave = `${desde}|${hasta}`;
+    const enCache = marcasReportesCache.get(clave);
+    if (enCache && Date.now() - enCache.momento < BASE_REPORTES_TTL_MS) return enCache.promesa;
+    const promesa = (async (): Promise<MarcasReportesGCX> => {
+      const [eventos, nocturna, servicios] = await Promise.all([
+        supabase.from('eventos_general').select('name, start_date')
+          .eq('is_visible', true).gte('start_date', desde).lte('start_date', hasta),
+        supabase.from('nocturna_config').select('edicion, evento_fecha'),
+        supabase.from('service_statistics').select('name, service_date, category, service_type')
+          .gte('service_date', desde).lte('service_date', hasta),
+      ]);
+      if (eventos.error) console.warn('[ReportesGCX] Eventos sin marcar:', eventos.error.message);
+      if (nocturna.error) console.warn('[ReportesGCX] Nocturna sin marcar:', nocturna.error.message);
+      if (servicios.error) console.warn('[ReportesGCX] Servicios sin marcar:', servicios.error.message);
+      return {
+        eventos: (eventos.data || []).map((e: any) => ({ nombre: e.name || 'Evento', fecha: String(e.start_date || '').slice(0, 10) })),
+        nocturna: (nocturna.data || [])
+          .filter((n: any) => n.evento_fecha)
+          .map((n: any) => ({ edicion: n.edicion ?? null, fecha: String(n.evento_fecha).slice(0, 10) })),
+        servicios: (servicios.data || []).map((s: any) => ({
+          nombre: s.name || '',
+          fecha: String(s.service_date || '').slice(0, 10),
+          categoria: s.category || null,
+          tipo: s.service_type || null,
+        })),
+      };
+    })();
+    marcasReportesCache.set(clave, { momento: Date.now(), promesa });
+    return promesa;
+  },
+
+  /**
    * Todo el tablero de una temporada. Es lo que conviene llamar desde la
    * pantalla: las cinco funciones comparten la misma pasada por la base.
    */
@@ -7484,10 +7564,17 @@ export const supabaseService = {
       // con esto la pantalla recalcula lo que depende de fechas sin pedir
       // nada nuevo. No cambia ningún número de arriba.
       crudo: {
-        grupos: base.grupos.map((g: any) => ({ id: g.id, modalidad: supabaseService._modalidadDeFila(g) })),
+        grupos: base.grupos.map((g: any) => ({
+          id: g.id,
+          modalidad: supabaseService._modalidadDeFila(g),
+          nombre: g.name || 'Sin nombre',
+          categoriaId: g.category_id || '',
+        })),
         personas: base.inscripciones.flatMap((r: any) => personasDeInscripcion(r)
           .map(p => ({ clave: p.clave, idAsistencia: p.idAsistencia, groupId: r.group_id }))),
         reuniones: base.reunionesDetalle,
+        categorias: base.categorias.map(c => ({ id: c.id, nombre: c.name })),
+        inscripciones: base.inscripcionesTodas,
       },
     };
   },

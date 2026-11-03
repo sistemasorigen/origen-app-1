@@ -2246,9 +2246,9 @@ propia del Día del Niño y no se puede probar sin cámara).
 - **Los límites de la temporada** salen de la configuración de temporadas,
   estirados si hay reuniones o fechas de encuentro afuera. Ejemplo: la
   Tercera 2026 empieza el 3/10 porque ese día hay una carga.
-- **URL y preferencia.** `?por=dias|semanas|meses` va siempre en la URL.
-  `?desde&hasta` va solo con un período, junto con `temporada` y `anio`:
-  sin ellos no se puede leer el período al recargar. La agrupación se guarda
+- **URL y preferencia.** `?temporada&anio&por` van siempre en la URL (desde
+  el 2026-11-03; antes `temporada` y `anio` iban sólo con un período).
+  `?desde&hasta` va sólo con un período. La agrupación se guarda
   en localStorage con el id del usuario (`reportes.gcx.agrupacion.<id>`).
   Cambiar el año o la temporada vuelve a "Toda la temporada"; la agrupación
   se queda.
@@ -2313,6 +2313,60 @@ propia del Día del Niño y no se puede probar sin cámara).
     de asistencia de Miembros;
   - son de la temporada la identidad, la ocupación, el co-anfitrión, el
     liderazgo y la ficha.
+
+### Con qué temporada abre (2026-11-03)
+- `temporadaParaAbrir` (`src/utils/temporadaActiva.ts`, pura) decide, en
+  este orden:
+  1. La de la URL, si trae `temporada` y `anio` válidos. Es el caso de
+     "Volver" desde el detalle o de un link compartido.
+  2. La **abierta** (`isOpen`) del `activeYear` de la configuración. Si hay
+     varias, la que ya empezó con el inicio más reciente; si ninguna empezó,
+     la que empieza primero.
+  3. Sin abiertas, la **última que empezó** según los inicios configurados,
+     mirando este año y el anterior. Por ejemplo, el 15/1/2027 abre la
+     Tercera 2026.
+  4. Sin configuración, la de hoy según `getSeasonFromDate`; si hoy no cae en
+     ninguna, la última que empezó con esas fechas fijas.
+- **De dónde sale la configuración.** Se lee con
+  `supabaseService.getAppConfig()`, la misma que usa la app, y `hoy` va en
+  hora argentina.
+- **Mientras se decide**, el tablero no pide nada ni marca ninguna temporada
+  en el encabezado, así que no se ve la Primera un instante.
+- **Una vez decidida**, la temporada y el año quedan en la URL.
+
+### Inscripciones (2026-11-03)
+- **Dónde:** es una tarjeta después de Panorama (`TarjetaInscripciones.tsx`),
+  con las cuentas en `inscripcionesGCX.ts` (puro).
+- **Comportamiento:** sigue el período y se agrupa por días, semanas o meses.
+  Por días muestra todos los días del rango, también los que tienen cero.
+- **Series.** Cuentan **personas**: la pareja suma una más, igual que
+  "Inscripciones totales".
+  - "Se anotaron": inscripciones creadas en la fecha, en cualquier estado.
+    La fecha es la menor entre `timestamp` y `approved_at`, porque en la
+    Tercera 2026 hay 13 con el alta registrada horas después de la
+    aprobación.
+  - "Quedaron aprobadas": aprobadas hoy, por `approved_at`. Las aprobadas sin
+    fecha van en la nota.
+  - "Cambiaron de grupo": derivaciones aprobadas (`transfer_from_group_id`).
+    Se dibujan sólo si hay alguna.
+- **Bajas: no se muestran.** Las inscripciones borradas no dejan fila, y
+  `group_dropout_requests` no las cubre: desde septiembre de 2026 hay 0
+  pedidos y 35 borrados en `audit_logs`.
+- **Rango.** Con "Toda la temporada", el gráfico arranca en la **primera
+  inscripción** (13/9 en la Tercera 2026), y el calendario deja elegir desde
+  ahí. Los demás gráficos siguen con su "Toda la temporada" de siempre.
+- **Marcas.** Salen de `getMarcasReportesGCX`, con una consulta por fuente y
+  sólo nombre, fecha, categoría y tipo:
+  - eventos visibles de `eventos_general`;
+  - la Nocturna de `nocturna_config`, sin repetirla si ya es un evento;
+  - servicios de `service_statistics` de categoría Evento, Conferencia o
+    CXV, o domingos con tipo distinto de "Tradicional". Un domingo sin tipo
+    cuenta como tradicional (por ejemplo, "Santa Cena" del 11/10).
+- **Marcas en pantalla.** Se apagan con el interruptor "Eventos y servicios",
+  se listan en "En este período" y no se presentan como causa.
+- **Filtro por categoría.** Sólo afecta a este gráfico y va en la URL como
+  `?catInsc=`.
+- **Excel.** Hojas "Inscripciones" y "Eventos y servicios".
 
 ### El tablero en el celular (2026-11-03)
 - **Umbral.** Por debajo de 640 px (`sm`), el tablero, el detalle y Comparar

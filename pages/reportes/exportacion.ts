@@ -19,6 +19,7 @@ import * as XLSX from 'xlsx';
 import { ReportesGCXTemporada, TemporadaGCX, EdadesPorCategoriaFila } from '../../types';
 import { NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { Agrupacion, DiaDeCalendario, POR_AGRUPACION, Rango, TramoDeCarga } from './periodoGCX';
+import type { Marca, TramoDeInscripciones } from './inscripcionesGCX';
 
 // ── Fechas ──────────────────────────────────────────────────────────────
 // Viven acá y no en la pantalla porque las usan las dos: el eje del
@@ -43,6 +44,7 @@ export const fechaCompleta = (iso: string) => {
 /** Cada gráfico del tablero, con la clave que usa la pantalla para imprimirlo. */
 export type ClaveGrafico =
     | 'indicadores'
+    | 'inscripciones'
     | 'asistencia'
     | 'reportan'
     | 'cobertura'
@@ -83,6 +85,8 @@ export interface ContextoExport {
     tramosCalendario?: TramoDeCarga[];
     /** "Días con asistencia cargada" por día, con las reuniones que correspondían (calendarioDeCarga). */
     diasCalendario?: DiaDeCalendario[];
+    /** El gráfico de Inscripciones tal como se ve: sus barras, sus marcas y su filtro. */
+    inscripciones?: { tramos: TramoDeInscripciones[]; marcas: Marca[]; categoria: string; sinFecha: number };
 }
 
 const NOMBRE_TEMPORADA: Record<TemporadaGCX, string> = { S1: '1', S2: '2', S3: '3' };
@@ -323,6 +327,44 @@ const hojasCalendarioAgrupado = (tramos: TramoDeCarga[], agrupacion: Agrupacion)
     ];
 };
 
+/**
+ * Inscripciones, tal como se ven: una fila por día, semana o mes (los que
+ * quedaron en cero también), con la categoría filtrada; y otra hoja con los
+ * eventos y servicios especiales del período.
+ */
+const hojasInscripciones = (ctx: ContextoExport): HojaExcel[] => {
+    const i = ctx.inscripciones;
+    if (!i) return [{ nombre: 'Inscripciones', filas: [] }];
+    const tramo = ctx.agrupacion === 'meses' ? 'Mes' : ctx.agrupacion === 'semanas' ? 'Semana' : 'Día';
+    const conCambios = i.tramos.some(t => t['Cambiaron de grupo'] > 0);
+    const filas: Array<Record<string, string | number>> = i.tramos.map(t => ({
+        [tramo]: t.etiqueta,
+        Desde: fechaCompleta(t.desde),
+        Hasta: fechaCompleta(t.hasta),
+        'Se anotaron (personas)': t['Se anotaron'],
+        'Quedaron aprobadas (personas)': t['Quedaron aprobadas'],
+        ...(conCambios ? { 'Cambiaron de grupo (personas)': t['Cambiaron de grupo'] } : {}),
+        'Eventos y servicios': [...t.eventos, ...t.servicios].map(m => m.nombre).join(' · '),
+        Categoría: i.categoria,
+    }));
+    if (i.sinFecha > 0) {
+        filas.push({ [tramo]: 'Aprobadas sin fecha registrada', Desde: '', Hasta: '', 'Se anotaron (personas)': '', 'Quedaron aprobadas (personas)': i.sinFecha, Categoría: i.categoria });
+    }
+    return [
+        { nombre: 'Inscripciones', filas },
+        {
+            nombre: 'Eventos y servicios',
+            filas: i.marcas.map(m => ({
+                Fecha: fechaCompleta(m.fecha),
+                'Día de la semana': nombreDia(m.fecha),
+                Tipo: m.tipo === 'evento' ? 'Evento' : 'Servicio',
+                Nombre: m.nombre,
+                Detalle: m.detalle,
+            })),
+        },
+    ];
+};
+
 const hojaTabla = (d: ReportesGCXTemporada, ctx: ContextoExport): HojaExcel[] => [{
     nombre: 'Detalle por grupo',
     filas: d.tablaGrupos.map(f => ({
@@ -347,6 +389,7 @@ const hojaTabla = (d: ReportesGCXTemporada, ctx: ContextoExport): HojaExcel[] =>
 /** Título humano de cada gráfico. Se usa en los botones y en el archivo. */
 export const TITULO_GRAFICO: Record<ClaveGrafico, string> = {
     indicadores: 'Panorama de la temporada',
+    inscripciones: 'Inscripciones',
     asistencia: 'Asistencia de personas',
     reportan: 'Reporte de asistencia',
     cobertura: 'Cobertura de los datos',
@@ -361,7 +404,7 @@ export const TITULO_GRAFICO: Record<ClaveGrafico, string> = {
 
 /** Orden en el que van las pestañas del export completo. */
 export const ORDEN_GRAFICOS: ClaveGrafico[] = [
-    'indicadores', 'asistencia', 'reportan', 'cobertura',
+    'indicadores', 'inscripciones', 'asistencia', 'reportan', 'cobertura',
     'genero', 'edades', 'masReportan', 'noReportan',
     'grupoDetalle', 'calendario', 'tabla',
 ];
@@ -373,6 +416,7 @@ export const ORDEN_GRAFICOS: ClaveGrafico[] = [
  */
 export const ALCANCE_GRAFICO: Record<ClaveGrafico, 'temporada' | 'periodo' | 'agrupado'> = {
     indicadores: 'temporada',
+    inscripciones: 'agrupado',
     asistencia: 'periodo',
     reportan: 'periodo',
     cobertura: 'temporada',
@@ -425,6 +469,7 @@ const hojasSinEncabezado = (
 ): HojaExcel[] => {
     switch (clave) {
         case 'indicadores': return hojaIndicadores(datos);
+        case 'inscripciones': return hojasInscripciones(ctx);
         case 'asistencia': return hojaAsistencia(datos);
         case 'reportan': return hojaReportan(datos);
         case 'cobertura': return hojaCobertura(datos);

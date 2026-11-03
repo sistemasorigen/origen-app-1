@@ -22,10 +22,17 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import { ChevronLeft, ChevronRight, Search, ArrowLeftRight, ArrowRight, FileSpreadsheet, Printer } from 'lucide-react';
-import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia, ProgresoReportesGCX, DEFAULT_SEASON_SETTINGS } from '../../types';
+import { User, TemporadaGCX, ReportesGCXTemporada, ModalidadGrupo, ModoReunion, AsistenciaPersonasReporte, ResumenDemograficoReporte, TramosDeFrecuencia, ProgresoReportesGCX, DEFAULT_SEASON_SETTINGS, MarcasReportesGCX } from '../../types';
 import { MODALIDADES, NOMBRE_MODALIDAD } from '../../src/utils/modalidad';
 import { supabaseService } from '../../services/supabaseService';
 import { db } from '../../services/dbService';
+import { temporadaParaAbrir } from '../../src/utils/temporadaActiva';
+import { ZONA_ARG } from '../../src/utils/asistencia';
+import TarjetaInscripciones from './TarjetaInscripciones';
+import {
+    armarMarcas, categoriasDeLaTemporada, primeraInscripcion, rangoDeInscripciones,
+    resumenDeInscripciones, serieDeInscripciones, tramosDeInscripciones,
+} from './inscripcionesGCX';
 import SelectorDeRango, { etiquetaDeRango } from '../audiencia/SelectorDeRango';
 import {
     Agrupacion, AGRUPACIONES, NOMBRE_AGRUPACION, POR_AGRUPACION, Rango, TramoDeCarga, TramoDelGrupo,
@@ -834,9 +841,30 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     // Se lee una sola vez, al entrar: después la URL la escribe la pantalla.
     const [urlInicial] = useState(() => leerParametros(searchParams));
 
+    // Con qué temporada abre (temporadaParaAbrir): la de la URL si trae
+    // temporada y año; si no, la activa de la configuración, que hay que ir a
+    // buscar. Hasta tenerla no se pide nada ni se marca ninguna temporada en
+    // el encabezado: no se ve la Primera un instante para después saltar.
     const anioActual = new Date().getFullYear();
+    const conTemporadaEnUrl = !!(urlInicial.temporada && urlInicial.anio);
     const [anio, setAnio] = useState(urlInicial.anio ?? anioActual);
     const [temporada, setTemporada] = useState<TemporadaGCX>(urlInicial.temporada ?? 'S1');
+    const [decidida, setDecidida] = useState(conTemporadaEnUrl);
+    useEffect(() => {
+        if (decidida) return;
+        let vigente = true;
+        const hoyArg = new Date().toLocaleDateString('en-CA', { timeZone: ZONA_ARG });
+        supabaseService.getAppConfig()
+            .catch(() => null)
+            .then(cfg => {
+                if (!vigente) return;
+                const r = temporadaParaAbrir({ config: cfg?.groupsConfig?.seasonSettings ?? null, hoy: hoyArg });
+                setTemporada(r.temporada);
+                setAnio(r.anio);
+                setDecidida(true);
+            });
+        return () => { vigente = false; };
+    }, [decidida]);
     // Lo que trajo el servicio, de toda la temporada. `datos`, más abajo, es
     // lo que se dibuja: lo mismo recortado al período elegido.
     const [datosTemporada, setDatos] = useState<ReportesGCXTemporada | null>(null);
@@ -863,6 +891,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     );
 
     const cargar = useCallback(async () => {
+        if (!decidida) return;
         setCargando(true);
         setFallo(false);
         setProgreso({ pct: 0, etapa: '' });
@@ -873,7 +902,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         else setDatos(res);
         setProgreso({ pct: 100, etapa: 'Listo' });
         setCargando(false);
-    }, [temporada, anio]);
+    }, [temporada, anio, decidida]);
 
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -885,8 +914,8 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     /** El período que pidió la URL al entrar: se aplica cuando llega su temporada. */
     const periodoPedido = useRef(urlInicial.desde || urlInicial.hasta ? { desde: urlInicial.desde, hasta: urlInicial.hasta } : null);
 
-    const cambiarAnio = (a: number) => { setAnio(a); setPeriodo(null); periodoPedido.current = null; };
-    const cambiarTemporada = (t: TemporadaGCX) => { setTemporada(t); setPeriodo(null); periodoPedido.current = null; };
+    const cambiarAnio = (a: number) => { setAnio(a); setPeriodo(null); periodoPedido.current = null; setDecidida(true); };
+    const cambiarTemporada = (t: TemporadaGCX) => { setTemporada(t); setPeriodo(null); periodoPedido.current = null; setDecidida(true); };
 
     const claveAgrupacion = `reportes.gcx.agrupacion.${currentUser?.id ?? 'sin-sesion'}`;
     const [agrupacion, setAgrupacion] = useState<Agrupacion>(() => {
@@ -913,36 +942,70 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
     /** Lo que se está mirando: el período elegido o la temporada entera. */
     const rango = periodo ?? toda;
 
+    // Inscripciones arranca antes: la gente se anota semanas antes de que
+    // empiecen los grupos. Su "Toda la temporada" va desde la primera
+    // inscripción, y el calendario deja elegir desde ahí. Los demás gráficos
+    // siguen con `toda`: sus números no cambian.
+    const primera = useMemo(() => (datosTemporada ? primeraInscripcion(datosTemporada.crudo) : null), [datosTemporada]);
+    const todaInscripciones = useMemo<Rango | null>(
+        () => (toda ? rangoDeInscripciones(toda, primera) : null),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [toda?.desde, toda?.hasta, primera]
+    );
+    const rangoInscripciones = periodo ?? todaInscripciones;
+
+    // La categoría de Inscripciones (?catInsc=): sólo filtra ese gráfico.
+    const [catInsc, setCatInsc] = useState(() => searchParams.get('catInsc') || '');
+    const [verMarcas, setVerMarcas] = useState(true);
+    const categoriasInsc = useMemo(() => (datosTemporada ? categoriasDeLaTemporada(datosTemporada.crudo) : []), [datosTemporada]);
+    // Una categoría que no es de esta temporada (otro link, otra temporada)
+    // vuelve a "Todas".
+    useEffect(() => {
+        if (!cargando && datosTemporada && catInsc && !categoriasInsc.some(c => c.id === catInsc)) setCatInsc('');
+    }, [cargando, datosTemporada, catInsc, categoriasInsc]);
+
+    // Eventos y servicios: una carga por temporada, de la primera inscripción
+    // al final. Cambiar el período o la agrupación no vuelve a pedir.
+    const [marcasCrudas, setMarcasCrudas] = useState<MarcasReportesGCX | null>(null);
+    useEffect(() => {
+        if (!todaInscripciones) return;
+        let vigente = true;
+        supabaseService.getMarcasReportesGCX(todaInscripciones.desde, todaInscripciones.hasta)
+            .then(m => { if (vigente) setMarcasCrudas(m); })
+            .catch(() => { if (vigente) setMarcasCrudas(null); });
+        return () => { vigente = false; };
+    }, [todaInscripciones]);
+
     // El período del link se aplica una vez, cuando llegan los datos de su
     // temporada. Inválido o fuera de la temporada: "Toda la temporada".
     useEffect(() => {
         if (cargando || !periodoPedido.current) return;
         const pedido = periodoPedido.current;
         periodoPedido.current = null;
-        const r = toda ? periodoDeLaUrl(pedido.desde, pedido.hasta, toda) : null;
+        const r = todaInscripciones ? periodoDeLaUrl(pedido.desde, pedido.hasta, todaInscripciones) : null;
         setPeriodo(r && toda && !mismoRango(r, toda) ? r : null);
-    }, [cargando, toda]);
+    }, [cargando, toda, todaInscripciones]);
 
-    // La URL dice lo que se ve, para recargar o compartir el link. El período
-    // necesita su temporada al lado: sola, una fecha de octubre no se puede
-    // leer en la Primera. Sin período, la URL no lleva ni año ni temporada,
-    // como antes.
+    // La URL dice lo que se ve, para recargar o compartir el link: siempre la
+    // temporada y el año (recargar no vuelve a decidir con cuál abrir), el
+    // período si hay uno, la agrupación y la categoría de Inscripciones.
     useEffect(() => {
-        if (periodoPedido.current) return;
+        if (!decidida || periodoPedido.current) return;
         setSearchParams(prev => {
             const p = new URLSearchParams(prev);
+            p.set('temporada', temporada);
+            p.set('anio', String(anio));
             p.set('por', agrupacion);
             if (periodo) {
-                p.set('temporada', temporada);
-                p.set('anio', String(anio));
                 p.set('desde', periodo.desde);
                 p.set('hasta', periodo.hasta);
             } else {
-                ['temporada', 'anio', 'desde', 'hasta'].forEach(k => p.delete(k));
+                ['desde', 'hasta'].forEach(k => p.delete(k));
             }
+            if (catInsc) p.set('catInsc', catInsc); else p.delete('catInsc');
             return p;
         }, { replace: true });
-    }, [periodo, agrupacion, temporada, anio, cargando, setSearchParams]);
+    }, [decidida, periodo, agrupacion, temporada, anio, cargando, catInsc, setSearchParams]);
 
     const elegirPeriodo = (r: Rango) => setPeriodo(toda && mismoRango(r, toda) ? null : r);
 
@@ -977,6 +1040,29 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         () => (rango && agrupacion !== 'dias' ? tramosDelPeriodo(rango, agrupacion) : []),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [rango?.desde, rango?.hasta, agrupacion]
+    );
+
+    // ── Inscripciones: la serie, las marcas y los totales ──────────────
+    const tramosInsc = useMemo(
+        () => (rangoInscripciones ? tramosDeInscripciones(rangoInscripciones, agrupacion) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [rangoInscripciones?.desde, rangoInscripciones?.hasta, agrupacion]
+    );
+    const marcasInsc = useMemo(
+        () => (rangoInscripciones ? armarMarcas(marcasCrudas, rangoInscripciones) : []),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [marcasCrudas, rangoInscripciones?.desde, rangoInscripciones?.hasta]
+    );
+    const serieInsc = useMemo(
+        () => (datosTemporada ? serieDeInscripciones({ crudo: datosTemporada.crudo, tramos: tramosInsc, categoriaId: catInsc, marcas: verMarcas ? marcasInsc : [] }) : []),
+        [datosTemporada, tramosInsc, catInsc, marcasInsc, verMarcas]
+    );
+    const resumenInsc = useMemo(
+        () => (datosTemporada && rangoInscripciones
+            ? resumenDeInscripciones({ crudo: datosTemporada.crudo, rango: rangoInscripciones, categoriaId: catInsc })
+            : { seAnotaron: 0, aprobadas: 0, cambiaron: 0, sinFecha: 0, derivacionesNoAprobadas: 0, pendientes: 0 }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [datosTemporada, rangoInscripciones?.desde, rangoInscripciones?.hasta, catInsc]
     );
 
     // Las bajadas: qué fechas mira cada gráfico cuando no es lo de siempre.
@@ -1084,6 +1170,12 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
         agrupacion,
         tramosCalendario: tramosDeCarga,
         diasCalendario: calendario,
+        inscripciones: {
+            tramos: serieInsc,
+            marcas: marcasInsc,
+            categoria: categoriasInsc.find(c => c.id === catInsc)?.nombre ?? 'Todas las categorías',
+            sinFecha: resumenInsc.sinFecha,
+        },
     };
 
     const bajarExcel = useCallback((clave: ClaveGrafico | null) => {
@@ -1095,7 +1187,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
             clave ? TITULO_GRAFICO[clave] : 'todos los graficos',
             'xlsx'
         ));
-    }, [datos, edades, temporada, anio, edadMin, edadMax, periodo, agrupacion, tramosDeCarga, calendario]);
+    }, [datos, edades, temporada, anio, edadMin, edadMax, periodo, agrupacion, tramosDeCarga, calendario, serieInsc, marcasInsc, catInsc, categoriasInsc, resumenInsc]);
 
     /**
      * El PDF sale del diálogo de impresión del navegador ("Guardar como
@@ -1285,16 +1377,18 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <button
                             type="button"
                             onClick={() => cambiarAnio(anio - 1)}
+                            disabled={!decidida}
                             aria-label="Año anterior"
                             className="w-8 h-8 rounded-[7px] bg-white flex items-center justify-center transition-colors hover:bg-slate-50"
                             style={{ border: `1px solid ${C.borde}` }}
                         >
                             <ChevronLeft className="w-[15px] h-[15px]" style={{ color: C.medio }} strokeWidth={2.2} />
                         </button>
-                        <span className="min-w-[66px] text-center text-[15px] font-semibold" style={{ color: C.tinta }}>{anio}</span>
+                        <span className="min-w-[66px] text-center text-[15px] font-semibold" style={{ color: C.tinta }}>{decidida ? anio : ''}</span>
                         <button
                             type="button"
                             onClick={() => cambiarAnio(anio + 1)}
+                            disabled={!decidida}
                             aria-label="Año siguiente"
                             className="w-8 h-8 rounded-[7px] bg-white flex items-center justify-center transition-colors hover:bg-slate-50"
                             style={{ border: `1px solid ${C.borde}` }}
@@ -1312,9 +1406,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                     key={t}
                                     type="button"
                                     onClick={() => cambiarTemporada(t)}
-                                    aria-pressed={temporada === t}
+                                    aria-pressed={decidida && temporada === t}
                                     className="w-[38px] h-8 rounded-[7px] flex items-center justify-center text-[14px] font-semibold transition-colors"
-                                    style={temporada === t
+                                    style={decidida && temporada === t
                                         ? { background: C.azul, color: '#fff' }
                                         : { color: '#4b5563' }}
                                 >
@@ -1359,7 +1453,9 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                                         serviciosPorDia={reunionesPorDia}
                                         atajos={atajos}
                                         nombreDelConteo={{ uno: 'reunión cargada', varios: 'reuniones cargadas' }}
-                                        minimo={toda.desde}
+                                        // Desde la primera inscripción: Inscripciones
+                                        // muestra las semanas previas al inicio.
+                                        minimo={todaInscripciones?.desde ?? toda.desde}
                                         maximo={toda.hasta}
                                         etiquetaDelBoton={r => (mismoRango(r, toda) ? 'Toda la temporada' : etiquetaDeRango(r))}
                                         // El botón va del lado derecho de la pantalla.
@@ -1392,7 +1488,7 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         <PantallaCarga
                             objetivo={progreso.pct}
                             etapa={progreso.etapa}
-                            detalle={`Temporada ${NOMBRE_TEMPORADA[temporada]} · ${anio}`}
+                            detalle={decidida ? `Temporada ${NOMBRE_TEMPORADA[temporada]} · ${anio}` : 'Buscando la temporada activa'}
                             saliendo={fase === 'saliendo'}
                             onSalida={() => setFase('listo')}
                         />
@@ -1547,6 +1643,30 @@ const ReportesGCX: React.FC<{ currentUser: User }> = ({ currentUser }) => {
                         {/* Cierra el envoltorio de PANORAMA, abierto arriba para
                             que los cinco indicadores se impriman como un bloque. */}
                         </div>
+
+                        {/* ── Inscripciones ── */}
+                        {(cargando || hayGrupos) && (
+                            <TarjetaInscripciones
+                                cargando={cargando}
+                                serie={serieInsc}
+                                resumen={resumenInsc}
+                                marcas={marcasInsc}
+                                agrupacion={agrupacion}
+                                alcance={(() => {
+                                    const s = [textoPeriodo, agrupado ? POR_AGRUPACION[agrupacion] : null].filter(Boolean).join(' · ');
+                                    return s ? s.charAt(0).toUpperCase() + s.slice(1) : null;
+                                })()}
+                                arrancaAntes={!periodo && primera && toda && primera < toda.desde ? primera : null}
+                                enElPeriodo={enElPeriodo}
+                                categorias={categoriasInsc}
+                                categoria={catInsc}
+                                onCategoria={setCatInsc}
+                                verMarcas={verMarcas}
+                                onVerMarcas={setVerMarcas}
+                                descargas={!cargando && datos ? descargas('inscripciones') : null}
+                                className={claseImpresion('inscripciones')}
+                            />
+                        )}
 
                         {/* ── Tortas ── */}
                         <div className="fila-graficos grid gap-4 mt-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]">
