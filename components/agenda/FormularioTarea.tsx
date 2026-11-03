@@ -109,37 +109,42 @@ export interface PropsFormularioTarea {
 }
 
 /**
- * Una opción de "¿Se repite?". Es una lista de radios y no un desplegable
- * porque una opción que no entra tiene que poder decir POR QUÉ, y en un
- * `select` eso no se lee. Las apagadas siguen en la lista, en gris: ver que
- * "Cada semana" existe pero no entra enseña la regla; esconderla no.
+ * "¿Se repite?": UNA barra que se despliega, la misma que la de Carpeta. Es
+ * un select nativo a propósito: en el teléfono abre la rueda del sistema y el
+ * lector de pantalla la anuncia sin ayuda. Las opciones que la base dice que
+ * no entran siguen en la lista, deshabilitadas y con el motivo en el texto.
  */
-const OpcionDeRepeticion: React.FC<{
-    elegida: boolean;
-    titulo: string;
-    nota: string;
-    apagada?: boolean;
-    onElegir: () => void;
-}> = ({ elegida, titulo, nota, apagada = false, onElegir }) => (
-    <button
-        type="button"
-        role="radio"
-        aria-checked={elegida}
-        aria-disabled={apagada || undefined}
-        onClick={() => { if (!apagada) onElegir(); }}
-        className={`flex min-h-[46px] items-center gap-2.5 rounded-2xl px-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${
-            apagada ? 'cursor-default bg-[#f6f6f4] opacity-[.55]'
-                : elegida ? 'bg-white shadow-[inset_0_0_0_1.5px_#0a0a0a]'
-                    : 'bg-[#f6f6f4] shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)] hover:bg-[#f0f0ed]'}`}
-    >
-        <span
+const BarraDeRepeticion: React.FC<{
+    valor: Frecuencia | null;
+    /** El texto de "no se repite"; null si no se ofrece (al editar una serie). */
+    sinRepetir: string | null;
+    opciones: Array<{ id: Frecuencia; texto: string; apagada?: boolean }>;
+    mal?: boolean;
+    describe?: string;
+    onCambiar: (f: Frecuencia | null) => void;
+}> = ({ valor, sinRepetir, opciones, mal = false, describe, onCambiar }) => (
+    <span className="relative block">
+        <select
+            aria-label="¿Se repite?"
+            value={valor ?? ''}
+            onChange={e => onCambiar((e.target.value || null) as Frecuencia | null)}
+            aria-invalid={mal || undefined}
+            aria-describedby={describe}
+            className={`${CAMPO_CLASE} cursor-pointer pr-10`}
+            style={conBorde(mal)}
+        >
+            {sinRepetir !== null && <option value="">{sinRepetir}</option>}
+            {opciones.map(o => (
+                <option key={o.id} value={o.id} disabled={o.apagada}>{o.texto}</option>
+            ))}
+        </select>
+        <ChevronDown
+            size={14}
+            strokeWidth={2.4}
             aria-hidden="true"
-            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full"
-            style={{ boxShadow: `inset 0 0 0 ${elegida ? 5.5 : 1.5}px ${elegida ? '#0a0a0a' : 'rgba(0,0,0,.25)'}` }}
+            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-black/[.55]"
         />
-        <span className="min-w-0 flex-1 text-[14px] font-bold text-[#0a0a0a]">{titulo}</span>
-        <span className="flex-none text-[12.5px] font-semibold text-black/[.55]">{nota}</span>
-    </button>
+    </span>
 );
 
 const CAMPO_CLASE = 'h-[50px] w-full px-4 text-[15px] font-semibold';
@@ -616,37 +621,28 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                     {!conPlazo && !eraSerie && modo === 'crear' && (
                         <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
                             <legend className="mb-1 p-0 text-[13px] font-bold text-black/[.62]">¿Se repite?</legend>
-                            <OpcionDeRepeticion
-                                elegida={frecuencia === null}
-                                titulo="No se repite"
-                                nota="sólo ese día"
-                                onElegir={() => {
-                                    setFrecuencia(null);
+                            <BarraDeRepeticion
+                                valor={frecuencia}
+                                sinRepetir="No se repite"
+                                opciones={FRECUENCIAS.map(f => {
+                                    // Cuántas veces (o por qué no) sólo en la elegida, y sólo
+                                    // cuando ya contestó la base.
+                                    const lista = frecuencia === f.id && !plazoMal && !buscandoOpciones && opcionElegida;
+                                    const nota = !lista ? ''
+                                        : opcionElegida.disponible ? `${opcionElegida.veces} veces`
+                                            : opcionElegida.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces';
+                                    return { id: f.id, texto: nota ? `${f.nombre} · ${nota}` : f.nombre };
+                                })}
+                                mal={repeticionNoEntra}
+                                describe={errRepeticion ? `${idBase}-err-rep` : undefined}
+                                onCambiar={f => {
+                                    setFrecuencia(f);
+                                    if (f && (!hastaTocado || !fechaHasta || fechaHasta <= fecha)) {
+                                        setFechaHasta(sumarDias(fecha, HASTA_SUGERIDO[f]));
+                                    }
                                     if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
                                 }}
                             />
-                            {FRECUENCIAS.map(f => {
-                                const esta = frecuencia === f.id;
-                                const nota = !esta ? ''
-                                    : plazoMal || buscandoOpciones || !opcionElegida ? '…'
-                                        : opcionElegida.disponible ? `${opcionElegida.veces} veces`
-                                            : opcionElegida.superaTope ? 'Pasa de 200 repeticiones' : 'No entra dos veces';
-                                return (
-                                    <OpcionDeRepeticion
-                                        key={f.id}
-                                        elegida={esta}
-                                        titulo={f.nombre}
-                                        nota={nota}
-                                        onElegir={() => {
-                                            setFrecuencia(f.id);
-                                            if (!hastaTocado || !fechaHasta || fechaHasta <= fecha) {
-                                                setFechaHasta(sumarDias(fecha, HASTA_SUGERIDO[f.id]));
-                                            }
-                                            if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
-                                        }}
-                                    />
-                                );
-                            })}
                             {frecuencia && (
                                 <label className="mt-1.5 flex flex-col gap-1.5">
                                     <span className="text-[13px] font-bold text-black/[.62]">Se repite hasta</span>
@@ -679,34 +675,26 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                             {buscandoOpciones && opciones.length === 0 ? (
                                 <p className="m-0 text-[13px] font-semibold text-black/[.55]">Buscando qué repeticiones entran…</p>
                             ) : (
-                                <>
-                                    {/* Una serie no se vuelve una tarea con plazo: al editar
-                                        una repetición, "No se repite" no está. */}
-                                    {!eraSerie && (
-                                        <OpcionDeRepeticion
-                                            elegida={frecuencia === null}
-                                            titulo="No se repite"
-                                            nota="una tarea para todo el plazo"
-                                            onElegir={() => { setFrecuencia(null); setAvisoRepeticion(null); }}
-                                        />
-                                    )}
-                                    {opciones.map(o => (
-                                        <OpcionDeRepeticion
-                                            key={o.frecuencia}
-                                            elegida={frecuencia === o.frecuencia}
-                                            titulo={o.nombre}
-                                            nota={o.disponible
-                                                ? `${o.veces} veces`
-                                                : o.superaTope ? 'Pasa de 200 repeticiones' : 'No entra dos veces en este plazo'}
-                                            apagada={!o.disponible}
-                                            onElegir={() => {
-                                                setFrecuencia(o.frecuencia);
-                                                setAvisoRepeticion(null);
-                                                if (error?.campo === 'repeticion') setError(null);
-                                            }}
-                                        />
-                                    ))}
-                                </>
+                                <BarraDeRepeticion
+                                    valor={frecuencia}
+                                    // Una serie no se vuelve una tarea con plazo: al editar una
+                                    // repetición, "No se repite" no está.
+                                    sinRepetir={eraSerie ? null : 'No se repite'}
+                                    opciones={opciones.map(o => ({
+                                        id: o.frecuencia,
+                                        texto: o.disponible
+                                            ? `${o.nombre} · ${o.veces} veces`
+                                            : `${o.nombre} · ${o.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces'}`,
+                                        apagada: !o.disponible,
+                                    }))}
+                                    mal={!!errRepeticion}
+                                    describe={errRepeticion ? `${idBase}-err-rep` : undefined}
+                                    onCambiar={f => {
+                                        setFrecuencia(f);
+                                        setAvisoRepeticion(null);
+                                        if (error?.campo === 'repeticion') setError(null);
+                                    }}
+                                />
                             )}
                             {avisoRepeticion && (
                                 <p role="status" className="m-0 text-[12.5px] font-semibold text-[#8a4b06]">{avisoRepeticion}</p>

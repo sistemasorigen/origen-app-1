@@ -2759,6 +2759,11 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   `set local role authenticated`, no como postgres. Se piden con 350 ms de espera; las que no
   están disponibles van en gris con su motivo. Si la elegida deja de entrar,
   vuelve a "No se repite" con un aviso.
+  - **"¿Se repite?" es UNA barra que se despliega** (`BarraDeRepeticion`):
+    un select nativo, igual al de Carpeta. Las que no entran siguen en la
+    lista, deshabilitadas, con el motivo en el texto ("Por mes · no entra dos
+    veces"), y la elegida dice cuántas veces da ("Cada semana · 6 veces").
+    Antes eran renglones de radio.
   - **"Un día" también se repite** (pedido de Ignacio, 2026-11-03). Debajo
     del día va "¿Se repite?", con "No se repite" y las cinco frecuencias
     (nombres fijos en `FRECUENCIAS`; si entra y cuántas veces lo contesta la
