@@ -234,7 +234,10 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN v_txt := v_txt || 'SELECT no · ';
     END;
     BEGIN
-        PERFORM public.agenda_registrar_avisos(t2, 'asignada', ARRAY[v_encA], 'x', 'y', 'z');
+        -- La firma cambió el 2026-10-29 con sql/notif_catalogo.sql: ahora
+        -- recibe la clave de la alerta y las variables en jsonb.
+        PERFORM public.agenda_registrar_avisos(t2, 'asignada', ARRAY[v_encA],
+                                               'agenda_tarea_asignada', '{}'::jsonb);
         v_txt := v_txt || 'EXECUTE PASÓ';
     EXCEPTION WHEN insufficient_privilege THEN v_txt := v_txt || 'EXECUTE no';
     END;

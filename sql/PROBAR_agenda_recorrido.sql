@@ -68,7 +68,12 @@ DECLARE
     s3 uuid := gen_random_uuid();
     -- Trabajo
     v_hoy   date := (now() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date;
-    v_email text := CASE WHEN now() >= public.agenda_emails_desde() THEN 'pendiente' ELSE 'pausado' END;
+    -- Desde el 2026-10-28 (sql/agenda_avisos_sin_email.sql, decisión de
+    -- Ignacio) los avisos de tareas NO van por email: se borraron el canal
+    -- 'email' de agenda_avisos, agenda_pedir_emails, agenda_emails_desde y la
+    -- edge function send-agenda-aviso. Lo que esta suite cuida ahora es que
+    -- NO vuelva a salir ninguno.
+    v_email text := 'ninguno';
     v_cola0 bigint;
     v_cola  bigint;
     r  jsonb;
@@ -225,7 +230,7 @@ BEGIN
         RAISE EXCEPTION 'FALLÓ R4: % notificaciones bien armadas a Diseño, o le llegó a un encargado o a Video', n3;
     END IF;
     SELECT string_agg(DISTINCT estado, ','), count(*) INTO v_txt, n FROM public.agenda_avisos WHERE tarea_id = t1 AND canal = 'email';
-    IF v_txt IS DISTINCT FROM v_email OR n <> 3 THEN RAISE EXCEPTION 'FALLÓ R4: emails % (%), esperaba 3 %', v_txt, n, v_email; END IF;
+    IF v_txt IS NOT NULL OR n <> 0 THEN RAISE EXCEPTION 'FALLÓ R4: Agenda no manda emails y aparecieron % (%)', n, v_txt; END IF;
     o := o || format(E'| R4 | Asignar a Diseño | en proceso; los 3 de Diseño la ven y reciben el aviso; Video y los encargados no; emails "%s" | en su agenda 1 · Video 0 · panel: en proceso %s, para hoy %s · notificaciones %s (texto y link bien) · emails %s × %s | ✅ |\n',
                      v_email, r2->'contadores'->>'en_proceso', r2->'contadores'->>'para_hoy', n3, n, v_txt);
 
@@ -285,8 +290,10 @@ BEGIN
     RESET ROLE;
     SELECT count(*) INTO n FROM public.app_notifications WHERE action_url = '/agenda?tarea=' || t1;
     SELECT count(*) INTO n2 FROM public.agenda_avisos WHERE tarea_id = t1;
-    IF r->'tarea'->>'estado' IS DISTINCT FROM 'completada' OR n <> 5 OR n2 <> 10 THEN
-        RAISE EXCEPTION 'FALLÓ R7: estado %, % notificaciones (esperaba 5), % avisos (esperaba 10)', r->'tarea'->>'estado', n, n2;
+    -- 5 filas en agenda_avisos, no 10: desde el 28/10 el único canal es la app
+    -- (antes había una fila 'app' y otra 'email' por persona).
+    IF r->'tarea'->>'estado' IS DISTINCT FROM 'completada' OR n <> 5 OR n2 <> 5 THEN
+        RAISE EXCEPTION 'FALLÓ R7: estado %, % notificaciones (esperaba 5), % avisos (esperaba 5)', r->'tarea'->>'estado', n, n2;
     END IF;
     o := o || format(E'| R7 | Quien dirige la reabre y la vuelve a completar | en proceso sin fecha de completada → completada; ningún aviso nuevo | %s notificaciones (3 asignada + 2 completada) · %s filas en agenda_avisos | ✅ |\n', n, n2);
 
@@ -551,7 +558,8 @@ BEGIN
         pg_temp.notifs(v_encB, 'AGENDA_TAREA_COMPLETADA'), pg_temp.notifs(v_encB, 'AGENDA_SOLICITUD_NUEVA'), pg_temp.emails(v_encB),
         pg_temp.notifs(v_solic, 'AGENDA_SOLICITUD_REVISADA'), pg_temp.emails(v_solic),
         (SELECT count(*) FROM public.app_notifications WHERE user_id = v_ajeno));
-    IF v_txt IS DISTINCT FROM 'Dirige 3/3 · Uno 3/3 · Dos 3/3 · Video 2/2 · EncA 2+3/2 · EncB 2+3/2 · Solicitante 3/0 · Ajeno 0' THEN
+    -- Los emails son todos 0: desde el 28/10 Agenda avisa sólo por la app.
+    IF v_txt IS DISTINCT FROM 'Dirige 3/0 · Uno 3/0 · Dos 3/0 · Video 2/0 · EncA 2+3/0 · EncB 2+3/0 · Solicitante 3/0 · Ajeno 0' THEN
         RAISE EXCEPTION 'FALLÓ R18: %', v_txt;
     END IF;
     -- Ninguna notificación de más: todo lo de Agenda que hay es de estas personas.
@@ -560,8 +568,8 @@ BEGIN
     SELECT string_agg(DISTINCT estado, ',') INTO v_txt2 FROM public.agenda_avisos WHERE canal = 'email'
        AND user_id IN (v_super, v_encA, v_encB, v_dirD, v_m1, v_m2, v_dirV, v_solic, v_ajeno);
     SELECT count(*) INTO v_cola FROM net.http_request_queue WHERE url LIKE '%send-agenda-aviso%';
-    IF n <> 24 OR v_txt2 IS DISTINCT FROM v_email
-       OR (v_email = 'pausado' AND v_cola <> v_cola0) OR (v_email = 'pendiente' AND v_cola = v_cola0) THEN
+    -- Ni una fila de email, ni un pedido a la función que ya no existe.
+    IF n <> 24 OR v_txt2 IS NOT NULL OR v_cola <> v_cola0 THEN
         RAISE EXCEPTION 'FALLÓ R18: % notificaciones (esperaba 24), emails %, cola % → %', n, v_txt2, v_cola0, v_cola;
     END IF;
     o := o || format(E'| R18 | Lo que recibió cada uno (notificaciones/emails) | asignadas al equipo, completadas y solicitudes a los encargados, revisadas al solicitante sin email, nada al ajeno; emails "%s" | %s · total %s · emails %s · pedidos a pg_net: %s | ✅ |\n',
