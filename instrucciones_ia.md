@@ -2848,8 +2848,61 @@ Base: `sql/testimonios_gcx.sql` (pruebas `PROBAR_`, 109 casos; deshacer
    (`testimonios.corazon-pendiente`) para sobrevivir a la vuelta de Google.
    Compartir reusa `ModalCompartirQR` (el de Enlaces Origen) con el link de la
    app: `…/#/testimonios/:id` y `?testimonio=:id`.
-4. "Mis testimonios" en el Perfil y la moderación en Sistemas
-   (`/panel-admin?tab=testimonios`, a donde ya apunta el aviso).
+4. "Mis testimonios" en el Perfil y la moderación en Sistemas. ✅ Hecho
+   (2026-11-02): `pages/user/miCuenta/MisTestimonios.tsx` (sección
+   `testimonios` de Mi cuenta, fila en "MI VIDA EN ORIGEN" después de
+   Solicitudes, con el molde de `MisSolicitudes.tsx`) y
+   `pages/admin/TestimoniosSistemas.tsx` (sección `testimonios` del grupo
+   "Personas" de `Administrador.tsx`, `?tab=testimonios[&id=]`, con el molde
+   de `ReportesSistemas.tsx`). Más la alerta de vuelta
+   `testimonios_pedido_resuelto` (ver abajo).
+
+### "Mis testimonios" (`/perfil/testimonios`)
+Una tarjeta por testimonio de `testimonios_mios()`, más nuevos primero, con el
+estado escrito DESDE EL LADO DE LA PERSONA y no con la palabra de la base:
+`publicado` → "Publicado"; `eliminacion_solicitada` → "Pediste eliminarlo" +
+"Está oculto mientras Sistemas revisa tu pedido."; `oculto` → "No visible" +
+"Sistemas lo ocultó de la página de testimonios."; y `publicado` con
+`decision = 'pedido_rechazado'` → "Publicado" + "Revisamos tu pedido y lo
+mantuvimos publicado.". El texto se corta a 100 caracteres con `cortar` /
+`hayQueCortar` de `pages/testimonios/piezas.tsx` y respeta los saltos de línea.
+
+- **No hay "Editar", y no es un olvido**: un testimonio publicado no se edita
+  nunca. Lo que hay es "Solicitar eliminación", que abre el `Panel` de Mi
+  cuenta (hoja en el teléfono, modal en la compu) con un campo "Motivo"
+  OPCIONAL de hasta `LIMITE_MOTIVO` (500) y su contador. Al confirmar, la
+  tarjeta cambia de estado en el acto, sin volver a pedir la lista.
+- **"Ver publicado" usa `visible`, no `estado`**: uno de una temporada cerrada
+  sigue `publicado`, pero `testimonios_grupo` contesta `fuera_de_temporada` y
+  el link no llevaría a nada. Sin `visible`, el botón no se dibuja.
+- El número de la fila del índice sale de `getMisTestimonios()`, aparte del
+  `Promise.all` del resto (como Solicitudes): si esa consulta tarda, el índice
+  no espera.
+
+### La moderación (`/panel-admin?tab=testimonios`)
+Sección `testimonios` del grupo "Personas", con la pastilla roja de PEDIDOS DE
+ELIMINACIÓN pendientes visible desde cualquier sección (el panel entero ya es
+sólo SUPER_ADMIN: `isSuperAdmin` en `App.tsx`).
+
+- **Acá se ve el nombre completo y el email.** Es la única pantalla donde pasa:
+  en la página pública un menor es "Nombre I.", y Sistemas tiene que saber de
+  quién es el testimonio que está por borrar.
+- **Se pide una vez y se filtra en el navegador** (como Reportes): la base
+  manda hasta 500 con los pedidos primero, y los contadores de TODA la tabla
+  aparte, así cambiar de filtro es instantáneo y los números no bailan. Si
+  algún día hay más de 500 se dice en pantalla ("se traen los 500 más
+  recientes") en vez de mentir con el número. El buscador es local y sin
+  acentos (`sinAcentos` de `pages/admin/departamentos/piezas.tsx`).
+- **El filtro de entrada se decide una sola vez**, con la primera respuesta:
+  "Pedidos de eliminación" si hay alguno, y si no "Publicados". Después de
+  resolver el último pedido la pantalla no se mueve sola.
+- Cada acción pasa por `ModalConfirmacion` diciendo qué va a pasar. En el de
+  "Eliminar" (rojo, destructivo) la acción `secundaria` lleva a rechazar el
+  pedido, con su propia confirmación: la salida suave sin volver a buscar la
+  tarjeta. Después de cada acción la lista y los contadores se vuelven a pedir:
+  nada optimista, porque un testimonio eliminado ya no está.
+- `?id=` (el link de la alerta) pasa el filtro a "Todos", resalta la tarjeta
+  3,2 s y hace scroll hasta ella; si ese testimonio ya se eliminó, lo dice.
 
 ### Las reglas (no se cambian)
 - **Temporada vigente**: la última que EMPEZÓ, con las fechas de inicio y fin
@@ -2923,13 +2976,32 @@ Cada una contesta `{ ok, … }` o `{ ok: false, motivo }`.
   probar cualquier fecha; las gemelas y las piezas no las ejecuta nadie de
   afuera.
 
-### El aviso a Sistemas
+### Los dos avisos
+**A Sistemas, cuando alguien pide eliminar.**
 Alerta automática `testimonios_eliminacion_solicitada` (área Sistemas,
 apagable, `type_legacy = 'ADMIN'`, abre `/panel-admin?tab=testimonios`). La
 emite `testimonios_solicitar_eliminacion` con `notif_emitir` a cada
 SUPER_ADMIN, **una vez** por pedido (pedirlo de nuevo mientras está pendiente
-no vuelve a avisar). El catálogo pasa a tener **21** automáticas (las pruebas de
-Notificaciones que contaban 20 se actualizaron).
+no vuelve a avisar).
+
+**A la persona, cuando Sistemas resuelve su pedido.** Alerta automática
+`testimonios_pedido_resuelto` (área GCX, apagable, `type_legacy = 'info'`,
+abre `/perfil/testimonios`), desde el 2026-11-02:
+`sql/testimonios_aviso_resolucion.sql` (pruebas `PROBAR_`, 19 casos; deshacer
+`ROLLBACK_`). Un solo renglón del catálogo para los dos finales —lo que cambia
+es la variable `resultado`, "fue eliminado" o "sigue publicado"—, porque dos
+alertas distintas para el mismo hecho serían dos interruptores para apagar lo
+mismo. La emite `testimonios_admin_resolver` SÓLO a quien escribió el
+testimonio y SÓLO cuando lo que se resuelve es un pedido de eliminación:
+ocultar y mostrar por decisión de Sistemas no contestan ningún pedido y no
+avisan, y eliminar uno que nadie pidió sacar, tampoco. **El aviso no lleva el
+texto del testimonio**: el GCX y en qué quedó, nada más. Lo que hace falta
+para avisar (`autor_id`, el nombre del GCX y si había pedido) se lee ANTES del
+DELETE: después ya no hay a quién avisarle ni de qué.
+
+El catálogo pasa a tener **22** automáticas (las pruebas de Notificaciones que
+contaban 21 fijas se actualizaron: `PROBAR_notif_catalogo` E1,
+`PROBAR_notif_preferencias` E1 y `PROBAR_notif_programadas` R23).
 
 ### Pruebas de Notificaciones independientes de la fecha y de los datos reales
 (2026-11-02) `PROBAR_notif_programadas`: `pg_temp.prog` arranca el reloj
