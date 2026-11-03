@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- TESTIMONIOS DE LOS GCX — los interruptores de /testimonios y /testimonios-gcx
--- 2026-11-03 · ⏳ PENDIENTE
+-- 2026-11-03 · ✅ APLICADO el 2026-11-03 (PROBAR_testimonios_habilitar 39/39, PROBAR_testimonios_gcx 109/109 contra producción)
 --
 -- QUÉ PIDIÓ IGNACIO. Dos botones en /panel-admin?tab=testimonios que habilitan
 -- las dos páginas, cada una por su lado:
