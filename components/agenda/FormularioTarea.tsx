@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Clock } from 'lucide-react';
+import { CalendarRange, ChevronDown, Clock, Repeat } from 'lucide-react';
 import {
-    crearTarea, editarTarea, fechaYHora, hoyIso, mensajeDeMotivo, nuevoId, sello,
-    type Carpeta, type DatosDeTarea, type MotivoAgenda, type Tarea, type TareaDetalle,
+    crearTarea, editarTarea, fechaYHora, getRepeticionesPosibles, hoyIso, mensajeDeMotivo,
+    nuevoId, sello, sumarDias,
+    type AlcanceSerie, type Carpeta, type DatosDeTarea, type Frecuencia, type MotivoAgenda,
+    type OpcionRepeticion, type Tarea, type TareaDetalle,
 } from '../../services/agenda';
 import { Avatar, ErrorDeCampo, RotuloPaso, tinte } from '../../pages/admin/departamentos/piezas';
 import { Hoja, PieDeHoja, Punto } from '../../pages/departamentos/equipo/piezas';
+import { diaYMes, largoDelPlazo, pendientesDeLaSerie, resumenDeCuando } from '../../pages/agenda/plazos';
 import ComboboxDeSub from './ComboboxDeSub';
 import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
 
@@ -34,7 +37,12 @@ const AVISO_DETALLES = 300;
 const HORA_DESDE = '19:00';
 const HORA_HASTA = '20:30';
 
-type Campo = 'nombre' | 'sub' | 'carpeta' | 'fecha' | 'horario' | 'prioridad' | 'detalles' | 'general';
+/** Cuánto se espera antes de preguntarle a la base qué repeticiones entran. */
+const ESPERA_OPCIONES = 350;
+/** Lo que propone "Con plazo" la primera vez. */
+const PLAZO_SUGERIDO = 30;
+
+type Campo = 'nombre' | 'sub' | 'carpeta' | 'fecha' | 'plazo' | 'repeticion' | 'horario' | 'prioridad' | 'detalles' | 'general';
 
 /** Qué campo marca cada motivo de la base. */
 const CAMPO: Partial<Record<MotivoAgenda, Campo>> = {
@@ -43,6 +51,9 @@ const CAMPO: Partial<Record<MotivoAgenda, Campo>> = {
     carpeta_ajena: 'carpeta',
     prioridad_ajena: 'prioridad', prioridad_requerida: 'prioridad',
     fecha_invalida: 'fecha',
+    plazo_invalido: 'plazo',
+    repeticion_no_disponible: 'repeticion', demasiadas_repeticiones: 'repeticion',
+    serie_invalida: 'repeticion', serie_completada: 'repeticion', alcance_invalido: 'repeticion',
     horario_invalido: 'horario',
     detalles_largos: 'detalles', detalles_cortos: 'detalles',
 };
@@ -65,9 +76,47 @@ export interface PropsFormularioTarea {
     /** Por defecto "Crear tarea" / "Guardar cambios". */
     etiquetaDeAccion?: string;
     onCerrar: () => void;
-    /** La pantalla decide el aviso: el formulario no lo escribe. */
-    onGuardada: (tarea: Tarea, creada: boolean) => void;
+    /**
+     * La pantalla decide el aviso: el formulario no lo escribe. `veces` es
+     * cuántas repeticiones se crearon o se cambiaron (1 si no es una serie),
+     * para que el aviso pueda decir "Se crearon 6 repeticiones".
+     */
+    onGuardada: (tarea: Tarea, creada: boolean, veces?: number) => void;
 }
+
+/**
+ * Una opción de "¿Se repite?". Es una lista de radios y no un desplegable
+ * porque una opción que no entra tiene que poder decir POR QUÉ, y en un
+ * `select` eso no se lee. Las apagadas siguen en la lista, en gris: ver que
+ * "Cada semana" existe pero no entra enseña la regla; esconderla no.
+ */
+const OpcionDeRepeticion: React.FC<{
+    elegida: boolean;
+    titulo: string;
+    nota: string;
+    apagada?: boolean;
+    onElegir: () => void;
+}> = ({ elegida, titulo, nota, apagada = false, onElegir }) => (
+    <button
+        type="button"
+        role="radio"
+        aria-checked={elegida}
+        aria-disabled={apagada || undefined}
+        onClick={() => { if (!apagada) onElegir(); }}
+        className={`flex min-h-[46px] items-center gap-2.5 rounded-2xl px-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${
+            apagada ? 'cursor-default bg-[#f6f6f4] opacity-[.55]'
+                : elegida ? 'bg-white shadow-[inset_0_0_0_1.5px_#0a0a0a]'
+                    : 'bg-[#f6f6f4] shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)] hover:bg-[#f0f0ed]'}`}
+    >
+        <span
+            aria-hidden="true"
+            className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full"
+            style={{ boxShadow: `inset 0 0 0 ${elegida ? 5.5 : 1.5}px ${elegida ? '#0a0a0a' : 'rgba(0,0,0,.25)'}` }}
+        />
+        <span className="min-w-0 flex-1 text-[14px] font-bold text-[#0a0a0a]">{titulo}</span>
+        <span className="flex-none text-[12.5px] font-semibold text-black/[.55]">{nota}</span>
+    </button>
+);
 
 const CAMPO_CLASE = 'h-[50px] w-full px-4 text-[15px] font-semibold';
 const conBorde = (mal: boolean) => (mal ? ({ '--ag-borde': '#b42318' } as React.CSSProperties) : undefined);
@@ -103,6 +152,20 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const [nombre, setNombre] = useState(inicial.nombre);
     const [detalles, setDetalles] = useState(inicial.detalles || '');
     const [fecha, setFecha] = useState(inicial.fecha);
+    /**
+     * Las tres formas de una tarea viven en dos controles: "Con plazo" prende
+     * `fechaHasta`, y dentro de un plazo `frecuencia` lo vuelve una serie.
+     * Una tarea que ya existe NO se convierte en serie (la base contesta
+     * `serie_invalida`), así que al editar la repetición sólo aparece si ya
+     * era una.
+     */
+    const [conPlazo, setConPlazo] = useState(!!tarea?.fechaHasta || !!tarea?.serie);
+    const [fechaHasta, setFechaHasta] = useState(
+        tarea?.fechaHasta || tarea?.serie?.hasta || '');
+    const [frecuencia, setFrecuencia] = useState<Frecuencia | null>(tarea?.serie?.frecuencia ?? null);
+    const [opciones, setOpciones] = useState<OpcionRepeticion[]>([]);
+    const [buscandoOpciones, setBuscandoOpciones] = useState(false);
+    const [avisoRepeticion, setAvisoRepeticion] = useState<string | null>(null);
     const [todoElDia, setTodoElDia] = useState(inicial.todoElDia);
     const [horaDesde, setHoraDesde] = useState(inicial.horaDesde || '');
     const [horaHasta, setHoraHasta] = useState(inicial.horaHasta || '');
@@ -112,9 +175,12 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState<{ campo: Campo; texto: string } | null>(null);
 
+    const [preguntandoAlcance, setPreguntandoAlcance] = useState(false);
+
     const enviando = useRef(false);
     const campoNombre = useRef<HTMLInputElement>(null);
     const campoFecha = useRef<HTMLInputElement>(null);
+    const campoHasta = useRef<HTMLInputElement>(null);
     const idBase = useRef(`tarea-${Math.random().toString(36).slice(2, 8)}`).current;
 
     // La hora que corre, para la nota al pie de "crear".
@@ -138,11 +204,23 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         ];
     }, [elegido]);
 
+    /** Sin repetición, una tarea con plazo es siempre todo el día (lo fuerza la base). */
+    const hayHorario = !conPlazo || !!frecuencia;
+    const esSerie = conPlazo && !!frecuencia;
+    const laTarea = tarea ?? null;
+    const eraSerie = !!laTarea?.serie;
+
     const sinNombre = nombre.trim() === '';
-    const horarioIncompleto = !todoElDia && (!horaDesde || !horaHasta);
-    const horarioAlReves = !todoElDia && !!horaDesde && !!horaHasta && horaHasta <= horaDesde;
+    const horarioIncompleto = hayHorario && !todoElDia && (!horaDesde || !horaHasta);
+    const horarioAlReves = hayHorario && !todoElDia && !!horaDesde && !!horaHasta && horaHasta <= horaDesde;
     const horarioMal = horarioIncompleto || horarioAlReves;
-    const invalido = sinNombre || !fecha || horarioMal;
+
+    const plazoVacio = conPlazo && !fechaHasta;
+    const plazoAlReves = conPlazo && !!fechaHasta && fechaHasta <= fecha;
+    const plazoLargo = conPlazo && !!fechaHasta && largoDelPlazo(fecha, fechaHasta) > 367;
+    const plazoMal = plazoVacio || plazoAlReves || plazoLargo;
+
+    const invalido = sinNombre || !fecha || horarioMal || plazoMal;
 
     const errorDe = (c: Campo) => (error?.campo === c ? error.texto : null);
     const errNombre = errorDe('nombre') ?? (tocado && sinNombre ? 'Escribí un nombre para la tarea.' : null);
@@ -150,6 +228,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const errHorario = errorDe('horario') ?? (
         horarioAlReves ? 'La hora de “Hasta” tiene que ser después de “Desde”.'
             : tocado && horarioIncompleto ? 'Completá desde y hasta qué hora.' : null);
+    const errPlazo = errorDe('plazo') ?? (
+        plazoAlReves ? 'El último día tiene que ser posterior al primero.'
+            : plazoLargo ? 'El plazo no puede pasar de un año.'
+                : tocado && plazoVacio ? 'Elegí hasta qué día.' : null);
+    const errRepeticion = errorDe('repeticion');
 
     /**
      * Lo primero que falta, para el pie de la hoja. Es un RESUMEN que apunta
@@ -158,9 +241,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
      */
     const queFalta = sinNombre ? 'Falta el nombre de la tarea.'
         : !fecha ? 'Falta el día.'
-            : horarioIncompleto ? 'Falta completar el horario.'
-                : horarioAlReves ? 'Revisá el horario.'
-                    : null;
+            : plazoVacio ? 'Falta hasta qué día.'
+                : plazoAlReves || plazoLargo ? 'Revisá el plazo.'
+                    : horarioIncompleto ? 'Falta completar el horario.'
+                        : horarioAlReves ? 'Revisá el horario.'
+                            : null;
 
     const hayCambios = nombre !== inicial.nombre
         || sub !== inicial.subdepartamentoId
@@ -170,7 +255,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         || fecha !== inicial.fecha
         || todoElDia !== inicial.todoElDia
         || (horaDesde || '') !== (inicial.horaDesde || '')
-        || (horaHasta || '') !== (inicial.horaHasta || '');
+        || (horaHasta || '') !== (inicial.horaHasta || '')
+        || (conPlazo ? fechaHasta : '') !== (laTarea?.fechaHasta || laTarea?.serie?.hasta || '')
+        || frecuencia !== (laTarea?.serie?.frecuencia ?? null);
 
     const intentarCerrar = () => {
         if (guardando) return;
@@ -185,6 +272,61 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         });
     };
 
+    /**
+     * Qué repeticiones entran en este plazo. La cuenta es de la BASE: acá no
+     * se decide nada, sólo se pregunta y se espera un momento entre teclas
+     * para no pedirlo con cada dígito de la fecha.
+     */
+    useEffect(() => {
+        if (!conPlazo || !fechaHasta || plazoMal) { setOpciones([]); return; }
+        let vivo = true;
+        setBuscandoOpciones(true);
+        const t = window.setTimeout(async () => {
+            const r = await getRepeticionesPosibles(fecha, fechaHasta);
+            if (!vivo) return;
+            setBuscandoOpciones(false);
+            setOpciones(r.ok ? r.opciones : []);
+        }, ESPERA_OPCIONES);
+        return () => { vivo = false; window.clearTimeout(t); };
+    }, [conPlazo, fecha, fechaHasta, plazoMal]);
+
+    /**
+     * Si cambiaron las fechas y lo que estaba elegido ya no entra, se vuelve
+     * a "No se repite" y se dice por qué: dejarlo elegido haría que la base
+     * lo rechace recién al guardar.
+     */
+    useEffect(() => {
+        if (!frecuencia || buscandoOpciones || opciones.length === 0) return;
+        const o = opciones.find(x => x.frecuencia === frecuencia);
+        if (o && o.disponible) return;
+        setFrecuencia(null);
+        setAvisoRepeticion(o && o.superaTope
+            ? `“${o.nombre}” pasa de 200 repeticiones en este plazo. Volvió a “No se repite”.`
+            : 'La repetición que habías elegido ya no entra en este plazo. Volvió a “No se repite”.');
+    }, [opciones, buscandoOpciones, frecuencia]);
+
+    const resumen = useMemo(() => resumenDeCuando({
+        desde: fecha,
+        hasta: conPlazo ? fechaHasta : null,
+        frecuencia,
+        frecuenciaTexto: opciones.find(o => o.frecuencia === frecuencia)?.nombre ?? null,
+        veces: opciones.find(o => o.frecuencia === frecuencia)?.veces ?? null,
+        todoElDia: !hayHorario || todoElDia,
+        horaDesde,
+        horaHasta,
+    }), [fecha, fechaHasta, conPlazo, frecuencia, opciones, hayHorario, todoElDia, horaDesde, horaHasta]);
+
+    /** Cuántas repeticiones quedan por hacer, para el texto del alcance. */
+    const pendientes = useMemo(() => (laTarea ? pendientesDeLaSerie(laTarea) : 0), [laTarea]);
+
+    /**
+     * En una repetición, si cambió la REGLA de la serie: el último día o cada
+     * cuánto se repite. Eso sólo se puede con "Todas las que faltan" (la base
+     * contesta alcance_invalido con "Solo esta").
+     */
+    const cambiaLaRegla = eraSerie && (
+        fechaHasta !== (laTarea?.serie?.hasta || '') || frecuencia !== (laTarea?.serie?.frecuencia ?? null));
+
     const alCambiarCarpeta = (valor: string) => {
         if (valor === '__nueva') {
             datos.onPedirCarpeta?.(creada => {
@@ -197,17 +339,29 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         if (error?.campo === 'carpeta') setError(null);
     };
 
-    const guardar = async () => {
-        if (enviando.current) return;
-        if (invalido) {
-            setTocado(true);
-            if (sinNombre) campoNombre.current?.focus();
-            else if (!fecha) campoFecha.current?.focus();
-            return;
+    /**
+     * El plazo y la frecuencia que se mandan. En una repetición:
+     *   · "Solo esta": ninguno de los dos. Una repetición no tiene plazo
+     *     propio, y si viajaran la base contestaría alcance_invalido.
+     *   · "Todas las que faltan": sólo si cambió la regla o el día. Mandarlos
+     *     hace que la base borre las que faltan y las cree de nuevo, así que
+     *     para un cambio de nombre o de horario no viajan.
+     */
+    const plazoQueViaja = (alcance: AlcanceSerie): Pick<DatosDeTarea, 'fechaHasta' | 'frecuencia'> => {
+        if (modo === 'crear' || !eraSerie) {
+            return { fechaHasta: conPlazo ? fechaHasta : null, frecuencia: modo === 'crear' ? frecuencia : null };
         }
+        if (alcance === 'solo_esta') return { fechaHasta: null, frecuencia: null };
+        return cambiaLaRegla || fecha !== inicial.fecha
+            ? { fechaHasta, frecuencia }
+            : { fechaHasta: null, frecuencia: null };
+    };
+
+    const guardarDeVerdad = async (alcance: AlcanceSerie) => {
         enviando.current = true;
         setGuardando(true);
         setError(null);
+        const sinHora = !hayHorario || todoElDia;
         const carga: DatosDeTarea = {
             subdepartamentoId: sub,
             carpetaId,
@@ -215,17 +369,37 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             nombre,
             detalles: detalles.trim() || null,
             fecha,
-            todoElDia,
-            horaDesde: todoElDia ? null : horaDesde,
-            horaHasta: todoElDia ? null : horaHasta,
+            todoElDia: sinHora,
+            horaDesde: sinHora ? null : horaDesde,
+            horaHasta: sinHora ? null : horaHasta,
+            ...plazoQueViaja(alcance),
         };
         const r = modo === 'crear'
             ? await crearTarea({ ...carga, id, departamentoId: datos.departamentoId, solicitudId: solicitudId ?? null })
-            : await editarTarea(tarea?.id ?? '', carga);
+            : await editarTarea(tarea?.id ?? '', carga, alcance);
         enviando.current = false;
         setGuardando(false);
         if (!r.ok) { setError({ campo: CAMPO[r.motivo] ?? 'general', texto: mensajeDeMotivo(r.motivo) }); return; }
-        onGuardada(r.tarea, modo === 'crear');
+        const cuantas = modo === 'crear'
+            ? ((r as { veces?: number }).veces ?? 1)
+            : Math.max(1, r.tareas.length || 1);
+        const guardada = r.tarea ?? r.tareas[0] ?? null;
+        if (guardada) onGuardada(guardada, modo === 'crear', cuantas);
+        else onCerrar();
+    };
+
+    const guardar = async () => {
+        if (enviando.current) return;
+        if (invalido) {
+            setTocado(true);
+            if (sinNombre) campoNombre.current?.focus();
+            else if (!fecha) campoFecha.current?.focus();
+            else if (plazoMal) campoHasta.current?.focus();
+            return;
+        }
+        // Editar una repetición: primero hay que saber a cuáles alcanza.
+        if (modo === 'editar' && eraSerie) { setPreguntandoAlcance(true); return; }
+        await guardarDeVerdad('solo_esta');
     };
 
     return (
@@ -303,23 +477,144 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                     {errorDe('carpeta') && <ErrorDeCampo id={`${idBase}-err-carpeta`}>{errorDe('carpeta')}</ErrorDeCampo>}
                 </label>
 
-                <label className="flex flex-col gap-2">
-                    <RotuloPaso>Día</RotuloPaso>
-                    <input
-                        ref={campoFecha}
-                        type="date"
-                        value={fecha}
-                        onChange={e => { setFecha(e.target.value); if (error?.campo === 'fecha') setError(null); }}
-                        aria-invalid={!!errFecha}
-                        aria-describedby={errFecha ? `${idBase}-err-fecha` : undefined}
-                        className={CAMPO_CLASE}
-                        style={conBorde(!!errFecha)}
-                    />
+                <div className="flex flex-col gap-2.5">
+                    <RotuloPaso id={`${idBase}-rot-cuando`}>¿Cuándo?</RotuloPaso>
+
+                    {/* Un día · Con plazo. En edición, una repetición no cambia
+                        de forma: siempre es un día de su serie. */}
+                    {!eraSerie && (
+                        <div role="radiogroup" aria-labelledby={`${idBase}-rot-cuando`} className="flex gap-1.5 rounded-2xl bg-[#f6f6f4] p-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]">
+                            {[
+                                { id: false, etiqueta: 'Un día', icono: Clock },
+                                { id: true, etiqueta: 'Con plazo', icono: CalendarRange },
+                            ].map(o => {
+                                const on = conPlazo === o.id;
+                                const Icono = o.icono;
+                                return (
+                                    <button
+                                        key={String(o.id)}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={on}
+                                        onClick={() => {
+                                            setConPlazo(o.id);
+                                            setAvisoRepeticion(null);
+                                            if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
+                                            if (o.id && !fechaHasta) setFechaHasta(sumarDias(fecha, PLAZO_SUGERIDO));
+                                            if (!o.id) setFrecuencia(null);
+                                        }}
+                                        className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13.5px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${on ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,.1)]' : 'text-black/[.55] hover:text-[#0a0a0a]'}`}
+                                    >
+                                        <Icono size={15} strokeWidth={2.1} aria-hidden="true" />
+                                        {o.etiqueta}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div className={conPlazo ? 'grid gap-2.5 sm:grid-cols-2' : ''}>
+                        <label className="flex flex-col gap-1.5">
+                            <span className="text-[13px] font-bold text-black/[.62]">{conPlazo ? 'Desde' : 'Día'}</span>
+                            <input
+                                ref={campoFecha}
+                                type="date"
+                                value={fecha}
+                                onChange={e => { setFecha(e.target.value); if (error?.campo === 'fecha') setError(null); }}
+                                aria-invalid={!!errFecha}
+                                aria-describedby={errFecha ? `${idBase}-err-fecha` : undefined}
+                                className={CAMPO_CLASE}
+                                style={conBorde(!!errFecha)}
+                            />
+                        </label>
+                        {conPlazo && (
+                            <label className="flex flex-col gap-1.5">
+                                <span className="text-[13px] font-bold text-black/[.62]">Hasta</span>
+                                <input
+                                    ref={campoHasta}
+                                    type="date"
+                                    value={fechaHasta}
+                                    min={sumarDias(fecha, 1)}
+                                    onChange={e => {
+                                        setFechaHasta(e.target.value);
+                                        setAvisoRepeticion(null);
+                                        if (error?.campo === 'plazo') setError(null);
+                                    }}
+                                    aria-invalid={!!errPlazo}
+                                    aria-describedby={errPlazo ? `${idBase}-err-plazo` : undefined}
+                                    className={CAMPO_CLASE}
+                                    style={conBorde(!!errPlazo)}
+                                />
+                            </label>
+                        )}
+                    </div>
                     {errFecha && <ErrorDeCampo id={`${idBase}-err-fecha`}>{errFecha}</ErrorDeCampo>}
-                </label>
+                    {errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
+                    {conPlazo && !!fechaHasta && !plazoMal && (
+                        <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
+                            {largoDelPlazo(fecha, fechaHasta)} días
+                        </p>
+                    )}
+
+                    {/* ¿Se repite? Las opciones y los "no" los decide la base. */}
+                    {conPlazo && !plazoMal && (!eraSerie ? modo === 'crear' : true) && (
+                        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+                            <legend className="mb-1 p-0 text-[13px] font-bold text-black/[.62]">¿Se repite?</legend>
+                            {buscandoOpciones && opciones.length === 0 ? (
+                                <p className="m-0 text-[13px] font-semibold text-black/[.55]">Buscando qué repeticiones entran…</p>
+                            ) : (
+                                <>
+                                    {/* Una serie no se vuelve una tarea con plazo: al editar
+                                        una repetición, "No se repite" no está. */}
+                                    {!eraSerie && (
+                                        <OpcionDeRepeticion
+                                            elegida={frecuencia === null}
+                                            titulo="No se repite"
+                                            nota="una tarea para todo el plazo"
+                                            onElegir={() => { setFrecuencia(null); setAvisoRepeticion(null); }}
+                                        />
+                                    )}
+                                    {opciones.map(o => (
+                                        <OpcionDeRepeticion
+                                            key={o.frecuencia}
+                                            elegida={frecuencia === o.frecuencia}
+                                            titulo={o.nombre}
+                                            nota={o.disponible
+                                                ? `${o.veces} veces`
+                                                : o.superaTope ? 'Pasa de 200 repeticiones' : 'No entra dos veces en este plazo'}
+                                            apagada={!o.disponible}
+                                            onElegir={() => {
+                                                setFrecuencia(o.frecuencia);
+                                                setAvisoRepeticion(null);
+                                                if (error?.campo === 'repeticion') setError(null);
+                                            }}
+                                        />
+                                    ))}
+                                </>
+                            )}
+                            {avisoRepeticion && (
+                                <p role="status" className="m-0 text-[12.5px] font-semibold text-[#8a4b06]">{avisoRepeticion}</p>
+                            )}
+                            {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
+                        </fieldset>
+                    )}
+
+                    {resumen && (
+                        <p className="m-0 rounded-2xl bg-[#f6f6f4] px-3.5 py-2.5 text-[13px] font-semibold leading-[1.5] text-black/[.72]">
+                            {resumen}
+                        </p>
+                    )}
+                </div>
             </div>
 
-            {/* Horario */}
+            {/* Horario. Una tarea con plazo sin repetir es siempre de todo
+                el día: un horario no significa nada repartido en seis semanas. */}
+            {!hayHorario ? (
+                <p className="m-0 flex items-center gap-2.5 rounded-2xl bg-[#f6f6f4] px-3.5 py-3 text-[13.5px] font-semibold text-black/[.62]">
+                    <Clock size={17} strokeWidth={1.9} aria-hidden="true" className="flex-none text-black/[.45]" />
+                    Las tareas con plazo son de todo el día.
+                </p>
+            ) : (
             <div className="flex flex-col gap-2.5">
                 <button
                     type="button"
@@ -382,7 +677,13 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                         {errHorario && <ErrorDeCampo id={`${idBase}-err-horario`}>{errHorario}</ErrorDeCampo>}
                     </>
                 )}
+                {esSerie && (
+                    <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
+                        El mismo horario para todas las repeticiones.
+                    </p>
+                )}
             </div>
+            )}
 
             {/* Prioridad */}
             <div className="flex flex-col gap-2.5">
@@ -465,6 +766,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                         </div>
                         <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
                             Les aparece en su Agenda y les llega una notificación.
+                            {esSerie && ' Les llega un solo aviso, no uno por cada repetición.'}
                         </p>
                     </>
                 ) : (
@@ -481,8 +783,57 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             </p>
 
             {errorDe('general') && <p role="alert" className="m-0 text-[13px] font-bold text-[#b42318]">{errorDe('general')}</p>}
+
+            {preguntandoAlcance && (
+                <Hoja
+                    titulo="¿Qué querés cambiar?"
+                    onCerrar={() => setPreguntandoAlcance(false)}
+                    ocupada={guardando}
+                    ancho={460}
+                >
+                    <p className="m-0 text-[14px] font-semibold leading-[1.55] text-black/[.72]">
+                        Esta tarea se repite. Elegí a cuáles alcanza el cambio.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                        <BotonDeAlcance
+                            titulo="Solo esta"
+                            texto={cambiaLaRegla
+                                ? 'No se puede: cambiaste el plazo o cada cuánto se repite, y eso vale para toda la serie.'
+                                : `Cambia la repetición del ${diaYMes(inicial.fecha)} y nada más.`}
+                            apagado={cambiaLaRegla}
+                            onElegir={() => { setPreguntandoAlcance(false); void guardarDeVerdad('solo_esta'); }}
+                        />
+                        <BotonDeAlcance
+                            titulo={`Todas las que faltan (${pendientes})`}
+                            texto="Cambia las repeticiones de hoy en adelante que todavía no se completaron."
+                            onElegir={() => { setPreguntandoAlcance(false); void guardarDeVerdad('las_que_faltan'); }}
+                        />
+                    </div>
+                    <p className="m-0 text-[12.5px] font-semibold leading-[1.5] text-black/[.55]">
+                        Las repeticiones que ya se completaron no cambian nunca.
+                        {cambiaLaRegla
+                            ? ' Con un plazo o una repetición nueva, las que faltan se arman de nuevo con los días nuevos.'
+                            : ''}
+                    </p>
+                </Hoja>
+            )}
         </Hoja>
     );
 };
+
+/** Una de las dos salidas de "¿Qué querés cambiar?". */
+const BotonDeAlcance: React.FC<{ titulo: string; texto: string; onElegir: () => void; apagado?: boolean }> = ({
+    titulo, texto, onElegir, apagado = false,
+}) => (
+    <button
+        type="button"
+        onClick={apagado ? undefined : onElegir}
+        aria-disabled={apagado || undefined}
+        className={`flex flex-col gap-1 rounded-2xl bg-[#f6f6f4] px-4 py-3.5 text-left shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${apagado ? 'cursor-not-allowed opacity-60' : 'hover:bg-[#f0f0ed]'}`}
+    >
+        <span className="text-[14.5px] font-bold text-[#0a0a0a]">{titulo}</span>
+        <span className="text-[12.5px] font-semibold leading-[1.45] text-black/[.62]">{texto}</span>
+    </button>
+);
 
 export default FormularioTarea;

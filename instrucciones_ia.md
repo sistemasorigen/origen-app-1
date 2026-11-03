@@ -2737,6 +2737,71 @@ Desde el **2026-11-03** una tarea puede ser de tres formas. Pruebas en
   tope de 100 días de `agenda_mis_tareas` sigue siendo del rango que se pide,
   no del largo de un plazo.
 
+### Las pantallas de los plazos y las repeticiones (desde el 2026-11-03)
+Lo puro (texto y geometría, nunca reglas) está en `pages/agenda/plazos.ts`.
+Las piezas visuales compartidas están en `components/agenda/piezasPlazo.tsx`:
+`ChipVencida`, `PuntoVencida`, `IconoSerie`, `LineaDeSerie`, `BloqueDePlazo`
+y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
+"Vencida" se ve igual en todos lados.
+- **Vencida** tiene su propio color, `VENCIDA` en `agendaPaleta.ts`:
+  `#7c2d12` sobre `rgba(124,45,18,.12)`, con punto `#9a3412`. Es un rojo
+  quemado que no se confunde con el `#dc2626` de "hoy" ni con Urgente. Va
+  **al lado** del chip de estado, nunca en su lugar. `vencida` y
+  `diasRestantes` se usan como vienen de la base.
+- **Fechas de un plazo** en la forma corta `diaYMes` ("1/11"): "Del 1/11 al
+  12/12" y "Plazo: 1/11 – 12/12 · faltan 9 días". Las etiquetas para lector de
+  pantalla siguen con `fechaCorta`.
+- **Formulario**: el selector Un día · Con plazo. Las opciones de "¿Se repite?"
+  salen SIEMPRE de `getRepeticionesPosibles`, con 350 ms de espera; las que no
+  están disponibles van en gris con su motivo. Si la elegida deja de entrar,
+  vuelve a "No se repite" con un aviso.
+  - **Editar una repetición** pregunta "Solo esta / Todas las que faltan (N)".
+    Con "Solo esta" NO viajan ni `fechaHasta` ni `frecuencia`: la base
+    contestaría `alcance_invalido`.
+  - **Con "Todas las que faltan"** viajan sólo si cambió el plazo, la
+    frecuencia o el día, porque mandarlos hace que la base borre las que
+    faltan y las vuelva a crear. Un cambio de nombre no las rearma.
+  - Si cambió la regla, "Solo esta" sale en gris. Editando una serie, "No se
+    repite" no se ofrece.
+- **N de "Todas las que faltan"**: sale de `pendientesDeLaSerie`, que usa
+  `serie.pendientes` si la base lo manda. ⚠️ `agenda_tarea_json` todavía no lo
+  trae, así que se estima con `total − número + 1`. La estimación se pasa si
+  la repetición abierta ya venció o si se completó alguna posterior. Para el
+  número exacto, sumar `'pendientes'` al objeto `serie` de
+  `agenda_tarea_json` (cambio de base pendiente).
+- **Semana / Día**: arriba, un carril "Plazo" con las barras, repartidas por
+  `repartirEnCarriles`. Si el plazo sigue antes o después, el lado va recto y
+  con un chevron. Debajo, la banda "Todo el día" de las tareas de un día,
+  **idéntica a la de antes** (dos por día y "+N").
+  - En el teléfono la semana sólo muestra colores: se toca el día ("N tarea
+    con plazo el …") y el Día abre el detalle.
+  - La capa de separaciones va con `pointer-events-none`. Sin eso tapa las
+    barras y no se pueden tocar.
+- **Mes**: las barras van apoyadas en el piso de cada fila de semana. La celda
+  suma lugar para ellas sólo si hay barras; sin plazos mide lo mismo que antes.
+  En el teléfono, el número del día cuenta también las barras.
+- **Lista**: un bloque "Con plazo" arriba, ordenado por vencimiento. Además la
+  tarea aparece en el día en que vence, con "Vence hoy" o "Último día del
+  plazo", o lo que diga el vencimiento si ya venció. En el teléfono, la tira
+  de días marca con una línea fina los días que cubre un plazo.
+- **Paneles del departamento y del sub**:
+  - El divisor "Vencida" va arriba de todo y aparece **sólo si hay alguna**.
+    Las vencidas salen de su divisor de estado.
+  - Las tareas con plazo se agrupan en el día en que vencen.
+  - El período filtra por superposición.
+  - El Inicio del sub suma el contador "Vencidas".
+- **`/departamentos/<id>?tarea=<id>`** abre el detalle y lleva el período a la
+  fecha de la tarea. Si ya no existe: "Esa tarea ya no existe.".
+  - Ojo: sacar el parámetro de la URL vuelve a correr el efecto. La respuesta
+    de la base se descarta sólo si la pestaña se desmontó (`montada`), no en
+    la limpieza, o se perdería siempre.
+- **Pruebas** (fuera del repo, `tests/nocturna-golden/` está en
+  `.git/info/exclude`): `vistazo-agenda-plazos.spec.ts`, con la base
+  interceptada. Son 23 casos en desktop-1280 e iphone-14.
+  - Antes de tocar estas vistas otra vez, comparar contra HEAD con sólo
+    tareas de un día: build de HEAD en un worktree, `toHaveScreenshot`, y las
+    de un día tienen que salir idénticas.
+
 ### Estados de una tarea (los pone la base)
 `'esperando'` (sin sub-departamento) · `'en_proceso'` (con sub) ·
 `'completada'` (la marcó alguien del equipo, un encargado o SUPER_ADMIN).

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, FolderPlus, LayoutGrid, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import {
-    eliminarCarpeta, fechaDesdeIso, fechaIso, getTareasDepartamento, hoyIso, mensajeDeMotivo,
+    eliminarCarpeta, fechaDesdeIso, fechaIso, getTarea, getTareasDepartamento, hoyIso, mensajeDeMotivo,
     type Carpeta, type EstadoTarea, type MotivoAgenda, type Tarea,
 } from '../../../services/agenda';
 import DetalleTarea from '../../../components/agenda/DetalleTarea';
@@ -14,7 +15,8 @@ import {
     BOTON_CHICO, BOTON_NEGRO, Hoja, Mensaje, guardarPlegadas, leerPlegadas, usePanel,
 } from '../equipo/piezas';
 import FormularioCarpeta from './FormularioCarpeta';
-import ListaPorEstado from './ListaPorEstado';
+import ListaPorEstado, { type DivisorDeLista } from './ListaPorEstado';
+import { ordenPorVencimiento, ultimoDia } from '../../agenda/plazos';
 
 /**
  * La pestaña Tareas de un departamento: todo lo que tiene, por estado, por
@@ -33,7 +35,11 @@ import ListaPorEstado from './ListaPorEstado';
  * algo distinto de lo que hay en la base.
  */
 
-const ESTADOS_EN_ORDEN: EstadoTarea[] = ['esperando', 'en_proceso', 'completada'];
+/**
+ * El orden de los divisores. "Vencidas" va primero: es lo único que ya se
+ * pasó de fecha, y lo que no se mira arriba no se mira.
+ */
+const DIVISORES_EN_ORDEN: DivisorDeLista[] = ['vencidas', 'esperando', 'en_proceso', 'completada'];
 
 /** El mes en curso, entero: del 1 al último día. */
 const mesEntero = (iso: string): Rango => {
@@ -57,6 +63,7 @@ type Fuente = { rango: Rango; tareas: Tarea[] };
 
 const PestanaTareas: React.FC = () => {
     const { depId, datos, recargar, avisar, confirmar, ir } = usePanel();
+    const [params, setParams] = useSearchParams();
     const { user } = useAuth();
 
     const hoy = useRef(hoyIso()).current;
@@ -72,7 +79,13 @@ const PestanaTareas: React.FC = () => {
     const [plegadas, setPlegadas] = useState(() => leerPlegadas(depId));
     const [carpetasCerradas, setCarpetasCerradas] = useState<Record<string, boolean>>({});
 
-    const [abierta, setAbierta] = useState<string | null>(null);
+    /**
+     * /departamentos/<dep>?tarea=<id> abre esa tarea, como ya hace
+     * /agenda?tarea=. Es a donde lleva el aviso de plazo vencido. El
+     * parámetro se saca de la URL en cuanto se usa, así volver atrás no la
+     * vuelve a abrir.
+     */
+    const [abierta, setAbierta] = useState<string | null>(() => params.get('tarea'));
     const [creando, setCreando] = useState(false);
     const [carpetaEnEdicion, setCarpetaEnEdicion] = useState<Carpeta | null>(null);
     const [creandoCarpeta, setCreandoCarpeta] = useState(false);
@@ -83,6 +96,44 @@ const PestanaTareas: React.FC = () => {
     const marca = useRef(0);
 
     const acciones = useMemo<AccionesDeAgenda>(() => ({ confirmar, avisar }), [confirmar, avisar]);
+
+    /**
+     * El ?tarea= de la URL, una sola vez. Además de abrir el detalle hay que
+     * llevar el período hasta su fecha: si no, al cerrarlo quedaría una
+     * lista donde esa tarea no está. Para saber la fecha hay que preguntarle
+     * a la base, igual que hace /agenda?tarea=.
+     *
+     * Sacar el parámetro cambia `params` y vuelve a correr este efecto: por
+     * eso la respuesta no se descarta en la limpieza (se perdería siempre),
+     * sino sólo si la pestaña ya no está.
+     */
+    const montada = useRef(true);
+    useEffect(() => { montada.current = true; return () => { montada.current = false; }; }, []);
+    useEffect(() => {
+        const pedida = params.get('tarea');
+        if (!pedida) return;
+        setAbierta(pedida);
+        const p = new URLSearchParams(params);
+        p.delete('tarea');
+        setParams(p, { replace: true });
+
+        (async () => {
+            const r = await getTarea(pedida);
+            if (!montada.current) return;
+            if (!r.ok) {
+                avisar(r.motivo === 'no_existe'
+                    ? 'Esa tarea ya no existe.'
+                    : 'No podés ver esa tarea.', 'error');
+                setAbierta(null);
+                return;
+            }
+            const dia = r.tarea.fechaHasta || r.tarea.fecha;
+            setRango(x => (dia >= x.desde && dia <= x.hasta ? x : {
+                desde: dia < x.desde ? dia : x.desde,
+                hasta: dia > x.hasta ? dia : x.hasta,
+            }));
+        })();
+    }, [params, setParams, avisar]);
 
     const dentroDeLaVentana = useCallback(
         (r: Rango) => r.desde >= ventana.desde && r.hasta <= ventana.hasta,
@@ -123,8 +174,12 @@ const PestanaTareas: React.FC = () => {
     const haciaLaBase = !dentroDeLaVentana(rango);
     const fuente = haciaLaBase ? afuera : ventanaCargada;
 
+    /**
+     * Lo que TOCA el período, no lo que empieza adentro: una tarea con plazo
+     * del 1/11 al 12/12 tiene que verse también mirando sólo diciembre.
+     */
     const visibles = useMemo(
-        () => (fuente?.tareas ?? []).filter(t => t.fecha >= rango.desde && t.fecha <= rango.hasta),
+        () => (fuente?.tareas ?? []).filter(t => t.fecha <= rango.hasta && ultimoDia(t) >= rango.desde),
         [fuente, rango.desde, rango.hasta],
     );
 
@@ -138,9 +193,17 @@ const PestanaTareas: React.FC = () => {
         return m;
     }, [ventanaCargada, afuera, ventana]);
 
-    const porEstado = useMemo(() => {
-        const m: Record<EstadoTarea, Tarea[]> = { esperando: [], en_proceso: [], completada: [] };
-        visibles.forEach(t => { if (m[t.estado]) m[t.estado].push(t); });
+    /**
+     * Las vencidas salen de su divisor de estado y van al suyo: si
+     * estuvieran en los dos, el contador de arriba mentiría.
+     */
+    const porDivisor = useMemo(() => {
+        const m: Record<DivisorDeLista, Tarea[]> = { vencidas: [], esperando: [], en_proceso: [], completada: [] };
+        visibles.forEach(t => {
+            if (t.vencida) m.vencidas.push(t);
+            else if (m[t.estado]) m[t.estado].push(t);
+        });
+        m.vencidas.sort(ordenPorVencimiento);
         return m;
     }, [visibles]);
 
@@ -160,7 +223,7 @@ const PestanaTareas: React.FC = () => {
         }
     }, [pedirVentana, haciaLaBase, depId, rango.desde, rango.hasta]);
 
-    const alCrearTarea = async (tarea: Tarea) => {
+    const alCrearTarea = async (tarea: Tarea, _creada: boolean, veces = 1) => {
         setCreando(false);
         // El divisor donde cayó se abre: si no, la tarea se crea y no se ve.
         setPlegadas(p => { const n = { ...p, [tarea.estado]: false }; guardarPlegadas(depId, n); return n; });
@@ -172,9 +235,12 @@ const PestanaTareas: React.FC = () => {
                 hasta: tarea.fecha > r.hasta ? tarea.fecha : r.hasta,
             }));
         }
-        avisar(tarea.subdepartamento
-            ? `Tarea creada${afueraDelPeriodo ? '. Ampliamos el período para mostrarla.' : '.'}`
-            : `Tarea creada: queda esperando asignación${afueraDelPeriodo ? ', y ampliamos el período para mostrarla' : ''}.`);
+        const amplio = afueraDelPeriodo ? ' Ampliamos el período para mostrarla.' : '';
+        avisar(veces > 1
+            ? `Se crearon ${veces} repeticiones.${amplio}`
+            : tarea.subdepartamento
+                ? `Tarea creada.${amplio}`
+                : `Tarea creada: queda esperando asignación.${amplio}`);
         await alCambiar({ tipo: 'guardada', tarea, creada: true });
     };
 
@@ -290,11 +356,12 @@ const PestanaTareas: React.FC = () => {
 
             {!esperando && !motivo && !vacio && (
                 <div className="mt-5 flex flex-col gap-3">
-                    {ESTADOS_EN_ORDEN.map(estado => (
+                    {/* "Vencidas" sólo si hay alguna: sin plazos, el panel queda como antes. */}
+                    {DIVISORES_EN_ORDEN.filter(e => e !== 'vencidas' || porDivisor.vencidas.length > 0).map(estado => (
                         <ListaPorEstado
                             key={estado}
                             estado={estado}
-                            tareas={porEstado[estado]}
+                            tareas={porDivisor[estado]}
                             carpetas={datos.carpetas}
                             abierto={!plegadas[estado]}
                             onAlternar={() => setPlegadas(p => {

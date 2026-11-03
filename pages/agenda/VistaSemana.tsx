@@ -1,7 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { diaDeLaSemana, fechaDesdeIso, fechaLarga, type Tarea } from '../../services/agenda';
 import { minutos, ubicarEnCarriles } from './calendario';
-import { NombreDeTarea, PastillaTarea, estaCompletada, estiloDeTarea, etiquetaDe } from './piezasAgenda';
+import { BarraDePlazo, NombreDeTarea, PastillaTarea, estaCompletada, estiloDeTarea, etiquetaDe } from './piezasAgenda';
+import { PuntoVencida } from '../../components/agenda/piezasPlazo';
+import { diaDelPlazo, diaYMes, diasDePlazo, esConPlazo, repartirEnCarriles, textoDeVencimiento } from './plazos';
 
 /**
  * Las vistas Semana y Día (design-claude/Agenda Origen): una grilla horaria
@@ -9,8 +11,11 @@ import { NombreDeTarea, PastillaTarea, estaCompletada, estiloDeTarea, etiquetaDe
  *
  *   · De 07:00 a 23:00, 52 px por hora; si hay tareas antes o después, la
  *     grilla se estira hasta incluirlas.
- *   · Arriba, la banda "Todo el día". Con muchas en un día se pliega en
- *     "+N", que la despliega entera.
+ *   · Arriba, las tareas CON PLAZO: una barra por tarea que ocupa todos sus
+ *     días de la semana, en carriles si se pisan. Si el plazo sigue antes o
+ *     después de la semana, ese lado va recto y con un chevron.
+ *   · Debajo, la banda "Todo el día" de las tareas de un día, como siempre.
+ *     Con muchas en un día se pliega en "+N", que la despliega entera.
  *   · Cada tarea con horario es un bloque de alto proporcional a su
  *     duración (como mínimo media hora, para que se lea). Si no entra el
  *     horario, sólo el nombre.
@@ -26,8 +31,10 @@ import { NombreDeTarea, PastillaTarea, estaCompletada, estiloDeTarea, etiquetaDe
 const HP = 52;
 const H0 = 7;
 const H1 = 23;
-/** Cuántas de "Todo el día" se ven por día antes de plegarse. */
+/** Cuántos carriles de "Todo el día" se ven antes de plegarse. */
 const TOPE_TODO_EL_DIA = 2;
+/** El alto de cada carril de la banda. */
+const CARRIL = 24;
 
 const ahoraEnMinutos = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 
@@ -84,7 +91,21 @@ const VistaSemana: React.FC<{
         el.scrollTop = Math.max(0, objetivo);
     }, [primerDia, dias.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const todoElDia = dias.map(d => (porDia.get(d) ?? []).filter(t => t.todoElDia || !t.horaDesde));
+    /**
+     * La banda de arriba, en dos partes:
+     *
+     *   · las tareas CON PLAZO, como barras que cruzan los días, en carriles
+     *     (`repartirEnCarriles`) para que las que se pisan no se tapen. No
+     *     están en `porDia` porque pueden empezar antes de la semana;
+     *   · debajo, las de UN DÍA sin horario, exactamente como antes de los
+     *     plazos: apiladas en su día, dos y "+N". Sin plazos a la vista, la
+     *     banda se ve igual que siempre.
+     */
+    const { barras } = useMemo(
+        () => repartirEnCarriles(tareas.filter(esConPlazo), dias),
+        [tareas, dias],
+    );
+    const todoElDia = dias.map(d => (porDia.get(d) ?? []).filter(t => !esConPlazo(t) && (t.todoElDia || !t.horaDesde)));
     const hayTodoElDia = todoElDia.some(l => l.length > 0);
     const sobran = todoElDia.some(l => l.length > TOPE_TODO_EL_DIA);
     const columnas = `${angosta ? 40 : 52}px repeat(${dias.length}, minmax(0,1fr))`;
@@ -121,7 +142,78 @@ const VistaSemana: React.FC<{
                 })}
             </div>
 
-            {/* Todo el día */}
+            {/* Las tareas con plazo: barras que cruzan los días */}
+            {barras.length > 0 && (
+                <div className={hayTodoElDia ? '' : 'border-b border-black/[.06]'}>
+                    <div className="grid" style={{ gridTemplateColumns: columnas }}>
+                        <span className="flex items-start justify-end pr-1.5 pt-2 text-right text-[10px] font-bold leading-[1.2] text-black/[.55]">
+                            {hayTodoElDia ? 'Plazo' : <>Todo<br />el día</>}
+                        </span>
+                        {/* Las separaciones entre días, debajo de las barras (sin tapar los clics) */}
+                        <div className="pointer-events-none relative col-span-full col-start-2 row-start-1 grid" style={{ gridTemplateColumns: `repeat(${dias.length}, minmax(0,1fr))` }}>
+                            {dias.map((d, i) => (
+                                <span key={d} aria-hidden="true" className={i === 0 ? '' : 'border-l border-black/[.05]'} />
+                            ))}
+                        </div>
+                        <div
+                            className="col-span-full col-start-2 row-start-1 grid gap-y-1 p-1"
+                            style={{ gridTemplateColumns: `repeat(${dias.length}, minmax(0,1fr))`, gridAutoRows: `${CARRIL - 2}px` }}
+                        >
+                            {barras.map(b => (
+                                <span
+                                    key={b.tarea.id}
+                                    className="min-w-0"
+                                    style={{ gridColumn: `${b.inicio + 1} / span ${b.fin - b.inicio + 1}`, gridRow: b.carril + 1 }}
+                                >
+                                    {angosta ? (
+                                        // Una barra de 14 px no se toca con el dedo: en el
+                                        // teléfono lo que se toca es el día, como en el mes.
+                                        <span
+                                            aria-hidden="true"
+                                            className="block h-3.5 w-full"
+                                            style={{
+                                                ...estiloDeTarea(b.tarea, '26'),
+                                                // Si viene de antes, sin el filo de color: no empieza acá.
+                                                ...(b.cortaAntes ? { boxShadow: 'none' } : {}),
+                                                borderRadius: `${b.cortaAntes ? 0 : 7}px ${b.cortaDespues ? 0 : 7}px ${b.cortaDespues ? 0 : 7}px ${b.cortaAntes ? 0 : 7}px`,
+                                            }}
+                                        />
+                                    ) : (
+                                        <BarraDePlazo barra={b} onAbrir={onAbrir} alto={CARRIL - 2} />
+                                    )}
+                                </span>
+                            ))}
+                        </div>
+                        {/* En el teléfono, el día entero es el botón */}
+                        {angosta && onIrADia && (
+                            <div className="col-span-full col-start-2 row-start-1 grid" style={{ gridTemplateColumns: `repeat(${dias.length}, minmax(0,1fr))` }}>
+                                {dias.map(d => {
+                                    const cuantas = barras.filter(b => dias[b.inicio] <= d && dias[b.fin] >= d).length;
+                                    return cuantas > 0 ? (
+                                        <button
+                                            key={d}
+                                            type="button"
+                                            onClick={() => onIrADia(d)}
+                                            aria-label={`${cuantas} ${cuantas === 1 ? 'tarea con plazo' : 'tareas con plazo'} el ${fechaLarga(d)}`}
+                                            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0a0a0a]"
+                                        />
+                                    ) : <span key={d} />;
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* En el Día, cuánto del plazo va */}
+                    {esDia && barras.map(b => (
+                        <p key={`p-${b.tarea.id}`} className="m-0 px-3 pb-1.5 text-[11.5px] font-semibold text-black/[.58]">
+                            {b.tarea.nombre}: día {diaDelPlazo(b.tarea, dias[0])} de {diasDePlazo(b.tarea)} · vence el {diaYMes(b.tarea.fechaHasta as string)}
+                            {b.tarea.vencida ? ` · ${textoDeVencimiento(b.tarea).toLowerCase()}` : ''}
+                        </p>
+                    ))}
+                </div>
+            )}
+
+            {/* Todo el día: las de un día, como siempre */}
             {hayTodoElDia && (
                 <div className="grid border-b border-black/[.06]" style={{ gridTemplateColumns: columnas }}>
                     <span className="flex items-start justify-end pr-1.5 pt-2 text-right text-[10px] font-bold leading-[1.2] text-black/[.55]">
@@ -221,9 +313,14 @@ const VistaSemana: React.FC<{
                                             }}
                                         >
                                             <span aria-hidden="true" className="pointer-events-none absolute inset-x-0" style={{ top: -extra, bottom: -extra }} />
+                                            {/* Vencida: en el teléfono, donde no hay nombre, un punto en la esquina. */}
+                                            {angosta && u.tarea.vencida && (
+                                                <span className="pointer-events-none absolute right-[3px] top-[3px] flex"><PuntoVencida tam={6} /></span>
+                                            )}
                                             {!angosta && (
                                                 <span className="flex h-full flex-col overflow-hidden py-[5px] pl-[9px] pr-[7px]">
                                                     <span className={`font-bold leading-[1.25] text-[#0a0a0a] ${esDia ? 'text-[14px]' : 'text-[12px]'} ${alto > 60 ? 'line-clamp-2' : 'truncate'}`}>
+                                                        {u.tarea.vencida && <span className="mr-1 inline-flex align-middle"><PuntoVencida tam={6} /></span>}
                                                         <NombreDeTarea tarea={u.tarea} />
                                                     </span>
                                                     {conHora && (

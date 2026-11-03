@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useDragControls, useReducedMotion } from 'framer-motion';
 import {
-    ArrowLeftRight, CalendarDays, Check, Folder, Pencil, Signal, Trash2, X,
-} from 'lucide-react';
+    ArrowLeftRight, CalendarDays, Check, Folder, Pencil, Signal, Trash2, X, Repeat,} from 'lucide-react';
 import {
     cambiarEstadoTarea, eliminarTarea, fechaDeDia, fechaYHora, getTarea, horarioDeTarea,
-    mensajeDeMotivo, reasignarTarea,
+    hoyIso, mensajeDeMotivo, reasignarTarea, type AlcanceSerie,
     type MotivoAgenda, type TareaDetalle,
 } from '../../services/agenda';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
@@ -14,6 +13,8 @@ import {
     BOTON_CHICO, ChipEstado, HojaElegir, Punto, ROTULO,
 } from '../../pages/departamentos/equipo/piezas';
 import FormularioTarea from './FormularioTarea';
+import { BloqueDePlazo, ChipVencida, LineaDeSerie } from './piezasPlazo';
+import { diaDelPlazo, diasDePlazo, esConPlazo, pendientesDeLaSerie } from '../../pages/agenda/plazos';
 import type { AccionesDeAgenda, CambioDeTarea, DatosParaEditar } from './contratos';
 
 /**
@@ -183,26 +184,72 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
         onConfirmar: () => { cambiarEstado('completada'); },
     });
 
-    const pedirEliminar = () => tarea && acciones.confirmar({
-        tipo: 'destructivo',
-        rotulo: 'Eliminar tarea',
-        titulo: `¿Eliminar “${tarea.nombre}”?`,
-        texto: [
-            tarea.laTienen.length && tarea.subdepartamento
-                ? `Se borra de la Agenda de ${plural(tarea.laTienen.length, 'persona', 'personas')} de ${tarea.subdepartamento.nombre}.`
-                : '',
-            tarea.solicitud ? 'La solicitud vuelve a quedar para asignar.' : '',
-            'Esto no se puede deshacer.',
-        ].filter(Boolean).join(' '),
-        etiquetaBoton: 'Eliminar tarea',
-        onConfirmar: async () => {
-            const r = await eliminarTarea(tareaId);
-            if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
-            acciones.avisar('Tarea eliminada.');
-            onCambio?.({ tipo: 'eliminada', id: tareaId });
-            onCerrar();
-        },
-    });
+    /**
+     * Cuántas repeticiones quedan por hacer. Es para el texto de la pregunta:
+     * el número que manda es el que devuelve la base al terminar.
+     */
+    const pendientes = tarea ? pendientesDeLaSerie(tarea) : 0;
+
+    const eliminar = async (alcance: AlcanceSerie) => {
+        const r = await eliminarTarea(tareaId, alcance);
+        if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
+        acciones.avisar(alcance === 'las_que_faltan' && r.eliminadas > 1
+            ? `Se eliminaron ${r.eliminadas} repeticiones.`
+            : 'Tarea eliminada.');
+        onCambio?.({ tipo: 'eliminada', id: tareaId });
+        onCerrar();
+    };
+
+    const pedirEliminar = () => {
+        if (!tarea) return;
+        const comun = tarea.laTienen.length && tarea.subdepartamento
+            ? `Se borra de la Agenda de ${plural(tarea.laTienen.length, 'persona', 'personas')} de ${tarea.subdepartamento.nombre}.`
+            : '';
+        if (tarea.serie) {
+            acciones.confirmar({
+                tipo: 'destructivo',
+                rotulo: 'Eliminar repetición',
+                titulo: `¿Eliminar “${tarea.nombre}”?`,
+                texto: `Se repite ${tarea.serie.frecuenciaTexto.toLowerCase()}. Esta es la ${tarea.serie.numero} de ${tarea.serie.total}.`,
+                etiquetaBoton: 'Eliminar solo esta',
+                onConfirmar: () => eliminar('solo_esta'),
+                secundaria: {
+                    etiqueta: `Eliminar todas las que faltan (${pendientes})`,
+                    onClick: () => acciones.confirmar({
+                        tipo: 'destructivo',
+                        rotulo: 'Eliminar repeticiones',
+                        titulo: '¿Eliminar las que faltan?',
+                        texto: `Se eliminan las ${pendientes} que faltan, de hoy en adelante. Las completadas quedan. Esto no se puede deshacer.`,
+                        etiquetaBoton: 'Eliminar las que faltan',
+                        onConfirmar: () => eliminar('las_que_faltan'),
+                    }),
+                },
+            });
+            return;
+        }
+        acciones.confirmar({
+            tipo: 'destructivo',
+            rotulo: 'Eliminar tarea',
+            titulo: `¿Eliminar “${tarea.nombre}”?`,
+            texto: [
+                comun,
+                tarea.solicitud ? 'La solicitud vuelve a quedar para asignar.' : '',
+                'Esto no se puede deshacer.',
+            ].filter(Boolean).join(' '),
+            etiquetaBoton: 'Eliminar tarea',
+            onConfirmar: () => eliminar('solo_esta'),
+        });
+    };
+
+    const mover = async (destinoId: string, nombre: string, alcance: AlcanceSerie) => {
+        const r = await reasignarTarea(tareaId, destinoId, alcance);
+        if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
+        acciones.avisar(alcance === 'las_que_faltan' && r.reasignadas > 1
+            ? `${r.reasignadas} repeticiones pasaron a ${nombre}.`
+            : `Ahora la tiene ${nombre}.`);
+        if (r.tarea) onCambio?.({ tipo: 'guardada', tarea: r.tarea, creada: false });
+        await cargar();
+    };
 
     const pedirReasignar = (destinoId: string) => {
         const destino = otros.find(s => s.id === destinoId);
@@ -215,13 +262,19 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                 ? `Los integrantes de ${destino.nombre} la van a ver en su Agenda y les llega una notificación. Deja de estar en la de ${tarea.subdepartamento.nombre}.`
                 : `Los integrantes de ${destino.nombre} la van a ver en su Agenda y les llega una notificación. La tarea pasa a En proceso.`,
             etiquetaBoton: tarea.subdepartamento ? `Pasar a ${destino.nombre}` : `Asignar a ${destino.nombre}`,
-            onConfirmar: async () => {
-                const r = await reasignarTarea(tareaId, destino.id);
-                if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
-                acciones.avisar(`Ahora la tiene ${destino.nombre}.`);
-                onCambio?.({ tipo: 'guardada', tarea: r.tarea, creada: false });
-                await cargar();
-            },
+            onConfirmar: () => mover(destino.id, destino.nombre, 'solo_esta'),
+            // En una serie, la salida suave es mover todas las que faltan.
+            secundaria: tarea.serie ? {
+                etiqueta: `Pasar todas las que faltan (${pendientes})`,
+                onClick: () => acciones.confirmar({
+                    tipo: 'control',
+                    rotulo: 'Reasignar repeticiones',
+                    titulo: `¿Pasar las ${pendientes} que faltan a ${destino.nombre}?`,
+                    texto: `Las repeticiones de hoy en adelante pasan a ${destino.nombre} y les llega un solo aviso. Las completadas se quedan con el equipo que las hizo.`,
+                    etiquetaBoton: `Pasar las que faltan`,
+                    onConfirmar: () => mover(destino.id, destino.nombre, 'las_que_faltan'),
+                }),
+            } : undefined,
         });
         return true;
     };
@@ -315,14 +368,27 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                     <h2 className="m-0 flex-1 text-[21px] font-bold leading-[1.25] tracking-[-0.015em]">{tarea.nombre}</h2>
                                 </div>
 
-                                <div className="mt-3 flex">
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
                                     <ChipEstado estado={tarea.estado} grande conCheck={reciencompletada && completada} />
+                                    {tarea.vencida && <ChipVencida grande />}
                                 </div>
 
                                 <div className="mt-5 flex flex-col gap-3.5">
-                                    <Dato icono={<CalendarDays size={18} strokeWidth={1.75} />}>
-                                        {fechaDeDia(tarea.fecha)} · {horarioDeTarea(tarea)}
-                                    </Dato>
+                                    {esConPlazo(tarea) ? (
+                                        <Dato icono={<CalendarDays size={18} strokeWidth={1.75} />}>
+                                            <BloqueDePlazo tarea={tarea} hoy={hoyIso()} />
+                                        </Dato>
+                                    ) : (
+                                        <Dato icono={<CalendarDays size={18} strokeWidth={1.75} />}>
+                                            {fechaDeDia(tarea.fecha)} · {horarioDeTarea(tarea)}
+                                        </Dato>
+                                    )}
+
+                                    {tarea.serie && (
+                                        <Dato icono={<Repeat size={18} strokeWidth={1.9} />}>
+                                            <LineaDeSerie tarea={tarea} />
+                                        </Dato>
+                                    )}
 
                                     <Dato icono={(
                                         <span

@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { fechaDeDia, hoyIso, type Carpeta, type EstadoTarea, type Tarea } from '../../../services/agenda';
 import { ChipEstado, DivisorPlegable } from '../equipo/piezas';
+import { ChipVencida } from '../../../components/agenda/piezasPlazo';
+import { diaDeAgrupado, esConPlazo } from '../../agenda/plazos';
 import FilaCarpeta from './FilaCarpeta';
 import TarjetaTarea from './TarjetaTarea';
 
@@ -17,20 +19,29 @@ import TarjetaTarea from './TarjetaTarea';
  * proceso se ordena de lo más próximo a lo más lejano, porque es lo que hay
  * que hacer; lo completado, de lo más reciente a lo más viejo, porque es
  * historial y lo último es lo que se busca.
+ *
+ * Una tarea CON PLAZO se agrupa en el día en que VENCE, no en el que empieza:
+ * lo que hay que mirar es hasta cuándo hay tiempo. Una repetición va en su
+ * día, como cualquier tarea de un día.
  */
 
-const SIN_NADA: Record<EstadoTarea, string> = {
+const SIN_NADA: Record<string, string> = {
     esperando: 'No hay tareas esperando asignación en este período.',
     en_proceso: 'No hay tareas en proceso en este período.',
     completada: 'Todavía no se completó ninguna en este período.',
+    vencidas: 'Nada venció sin completarse. Así se quiere.',
 };
 
 /**
- * Dentro de un día: primero las de todo el día, después por hora de inicio
- * y, a igual hora, por el orden de las prioridades del departamento (el que
- * se arma en Configuración). Las que no tienen prioridad, al final.
+ * Dentro de un día: primero las que tienen plazo (son las que vencen ese
+ * día), después las de todo el día, después por hora de inicio y, a igual
+ * hora, por el orden de las prioridades del departamento (el que se arma en
+ * Configuración). Las que no tienen prioridad, al final.
  */
 export const ordenDentroDelDia = (a: Tarea, b: Tarea): number => {
+    const conPlazoA = esConPlazo(a);
+    const conPlazoB = esConPlazo(b);
+    if (conPlazoA !== conPlazoB) return conPlazoA ? -1 : 1;
     if (a.todoElDia !== b.todoElDia) return a.todoElDia ? -1 : 1;
     const ha = a.horaDesde || '';
     const hb = b.horaDesde || '';
@@ -47,8 +58,16 @@ interface Dia {
     sueltas: Tarea[];
 }
 
+/**
+ * El divisor de VENCIDAS no es un estado: es una tarea con plazo o una
+ * repetición que pasó su último día sin completarse. Va ARRIBA de todo, con
+ * su contador y abierto, porque es lo único de la lista que ya se pasó de
+ * fecha. Sus tareas no vuelven a aparecer en el divisor de su estado.
+ */
+export type DivisorDeLista = EstadoTarea | 'vencidas';
+
 const ListaPorEstado: React.FC<{
-    estado: EstadoTarea;
+    estado: DivisorDeLista;
     /** Ya filtradas por período y por este estado. */
     tareas: Tarea[];
     carpetas: Carpeta[];
@@ -70,14 +89,18 @@ const ListaPorEstado: React.FC<{
     prefijoDeId = 'tareas',
 }) => {
     const hoy = hoyIso();
+    const esVencidas = estado === 'vencidas';
 
     const dias = useMemo<Dia[]>(() => {
         const porFecha = new Map<string, Tarea[]>();
         tareas.forEach(t => {
-            const lista = porFecha.get(t.fecha);
-            if (lista) lista.push(t); else porFecha.set(t.fecha, [t]);
+            const dia = diaDeAgrupado(t);
+            const lista = porFecha.get(dia);
+            if (lista) lista.push(t); else porFecha.set(dia, [t]);
         });
         const fechas = [...porFecha.keys()].sort();
+        // Completadas: lo último primero, que es lo que se busca. Vencidas:
+        // en orden, así lo que hace más que venció queda arriba.
         if (estado === 'completada') fechas.reverse();
 
         return fechas.map(fecha => {
@@ -91,12 +114,13 @@ const ListaPorEstado: React.FC<{
 
     return (
         <DivisorPlegable
-            rotulo={<ChipEstado estado={estado} grande />}
+            rotulo={esVencidas ? <ChipVencida grande /> : <ChipEstado estado={estado} grande />}
             cuantas={tareas.length}
             abierto={abierto}
             onAlternar={onAlternar}
             id={`${prefijoDeId}-${estado}`}
             marca={estado}
+            urgente={esVencidas && tareas.length > 0}
         >
             <div className="flex flex-col gap-[18px] pb-2 pt-4">
                 {tareas.length === 0 && (

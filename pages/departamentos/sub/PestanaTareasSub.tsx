@@ -6,7 +6,8 @@ import {
 } from '../../../services/agenda';
 import SelectorDeRango, { atajosDeTareas, type Rango } from '../../audiencia/SelectorDeRango';
 import { BOTON_NEGRO, Mensaje, guardarPlegadas, leerPlegadas } from '../equipo/piezas';
-import ListaPorEstado from '../tareas/ListaPorEstado';
+import ListaPorEstado, { type DivisorDeLista } from '../tareas/ListaPorEstado';
+import { ordenPorVencimiento, ultimoDia } from '../../agenda/plazos';
 
 /**
  * Las tareas del sub-departamento, por estado, día y carpeta
@@ -25,7 +26,8 @@ import ListaPorEstado from '../tareas/ListaPorEstado';
  * haya cargado ese período.
  */
 
-const ESTADOS: EstadoTarea[] = ['en_proceso', 'completada'];
+/** "Vencidas" primero: es lo único que ya se pasó de fecha. */
+const ESTADOS: DivisorDeLista[] = ['vencidas', 'en_proceso', 'completada'];
 
 /** El mes en curso, entero. */
 const mesEntero = (iso: string): Rango => {
@@ -109,8 +111,12 @@ const PestanaTareasSub: React.FC<{
     const haciaLaBase = !dentroDeLaVentana(rango);
     const fuente = haciaLaBase ? afuera : ventanaCargada;
 
+    /**
+     * Lo que TOCA el período, no lo que empieza adentro: una tarea con plazo
+     * del 1/11 al 12/12 tiene que verse también mirando sólo diciembre.
+     */
     const visibles = useMemo(
-        () => (fuente?.tareas ?? []).filter(t => t.fecha >= rango.desde && t.fecha <= rango.hasta),
+        () => (fuente?.tareas ?? []).filter(t => t.fecha <= rango.hasta && ultimoDia(t) >= rango.desde),
         [fuente, rango.desde, rango.hasta],
     );
 
@@ -134,9 +140,14 @@ const PestanaTareasSub: React.FC<{
         return [...vistas.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     }, [ventanaCargada, afuera]);
 
+    /** Una vencida sale de su divisor de estado y va al de arriba. */
     const porEstado = useMemo(() => {
-        const m: Record<EstadoTarea, Tarea[]> = { esperando: [], en_proceso: [], completada: [] };
-        visibles.forEach(t => { if (m[t.estado]) m[t.estado].push(t); });
+        const m: Record<DivisorDeLista, Tarea[]> = { vencidas: [], esperando: [], en_proceso: [], completada: [] };
+        visibles.forEach(t => {
+            if (t.vencida) m.vencidas.push(t);
+            else if (m[t.estado]) m[t.estado].push(t);
+        });
+        m.vencidas.sort(ordenPorVencimiento);
         return m;
     }, [visibles]);
 
@@ -187,7 +198,8 @@ const PestanaTareasSub: React.FC<{
 
             {!esperando && !motivo && !vacio && (
                 <div className="mt-5 flex flex-col gap-3">
-                    {ESTADOS.map(estado => (
+                    {/* "Vencidas" sólo si hay alguna: sin plazos, el panel queda como antes. */}
+                    {ESTADOS.filter(e => e !== 'vencidas' || porEstado.vencidas.length > 0).map(estado => (
                         <ListaPorEstado
                             key={estado}
                             estado={estado}

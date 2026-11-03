@@ -6,12 +6,13 @@ import {
     type MotivoAgenda, type PanelSubdepartamento, type Tarea,
 } from '../../../services/agenda';
 import type { AccionesDeAgenda } from '../../../components/agenda/contratos';
+import { VENCIDA } from '../../../src/contenido/agendaPaleta';
 import { nombreDePila } from '../../admin/departamentos/piezas';
 import { BOTON_NEGRO, ChipColor, ChipEstado, Mensaje, ROTULO, TARJETA } from '../equipo/piezas';
 
 /**
- * El inicio del panel de un sub-departamento: los tres números y lo que hay
- * por hacer (design-claude/Sub-departamento - Panel).
+ * El inicio del panel de un sub-departamento: los números y lo que hay por
+ * hacer (design-claude/Sub-departamento - Panel).
  *
  * EL ORDEN ES EL MENSAJE. Primero lo de hoy, después lo que viene y al final
  * lo que venció: quien dirige un equipo abre esto para saber qué pasa hoy, no
@@ -60,6 +61,13 @@ const PestanaInicioSub: React.FC<{
     useEffect(() => () => relojes.current.forEach(window.clearTimeout), []);
 
     const hoy = datos.hoy;
+
+    /**
+     * Las vencidas de la ventana que ya se pidió. El `vencida` lo decide la
+     * base (hora argentina): acá sólo se cuentan. Los otros tres contadores
+     * vienen de `agenda_subdepartamento`, que no trae este.
+     */
+    const vencidas = carga.estado === 'listo' ? carga.tareas.filter(t => t.vencida).length : 0;
 
     const pedir = useCallback(async () => {
         const r = await getTareasSubdepartamento(subId, sumarDias(hoy, -ATRAS), sumarDias(hoy, ADELANTE));
@@ -118,10 +126,11 @@ const PestanaInicioSub: React.FC<{
                 Esto es lo que tiene {datos.subdepartamento.nombre} por delante.
             </p>
 
-            <div className="mt-[18px] grid grid-cols-3 gap-2.5">
+            <div className="mt-[18px] grid grid-cols-2 gap-2.5 md:grid-cols-4">
                 <Contador cuantas={datos.contadores.enProceso} texto="En proceso" color="#1d4ed8" />
                 <Contador cuantas={datos.contadores.completadasMes} texto="Completadas este mes" color="#15803d" />
                 <Contador cuantas={datos.contadores.paraHoy} texto="Para hoy" color="#0a0a0a" />
+                <Contador cuantas={vencidas} texto="Vencidas" color={VENCIDA.tinta} />
             </div>
 
             <h3 className={`${ROTULO} mb-3 mt-7`}>Tareas asignadas</h3>

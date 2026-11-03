@@ -2,6 +2,8 @@ import React from 'react';
 import { Folder } from 'lucide-react';
 import { horarioDeTarea, type Tarea } from '../../../services/agenda';
 import { ChipColor, Punto } from '../equipo/piezas';
+import { ChipVencida, EtiquetaDePlazo, IconoSerie } from '../../../components/agenda/piezasPlazo';
+import { esConPlazo, textoDeSerie, textoDeVencimiento, textoDelPlazo } from '../../agenda/plazos';
 
 /**
  * Una tarea en la lista (design-claude/Departamento - Tareas).
@@ -12,6 +14,10 @@ import { ChipColor, Punto } from '../equipo/piezas';
  *
  * El nombre tachado es el único lugar donde se dice que está completada sin
  * repetir la pastilla del divisor: dentro de "Completadas" todas lo están.
+ *
+ * Una tarea CON PLAZO muestra el plazo en vez del horario (no tiene), una
+ * REPETICIÓN lleva su ícono y su "3 de 6", y una VENCIDA el chip al lado del
+ * equipo. Es el mismo lenguaje que el detalle y que la Agenda.
  */
 
 const TarjetaTarea: React.FC<{
@@ -27,7 +33,9 @@ const TarjetaTarea: React.FC<{
     // El texto está partido en pastillas: sin esto se lee de a pedazos (7.15).
     const descripcion = [
         tarea.nombre,
-        horario,
+        esConPlazo(tarea) ? `${textoDelPlazo(tarea)}, ${textoDeVencimiento(tarea).toLowerCase()}` : horario,
+        tarea.serie ? `repetición ${textoDeSerie(tarea)}` : '',
+        tarea.vencida ? 'vencida' : '',
         tarea.subdepartamento ? tarea.subdepartamento.nombre : 'Sin asignar',
         tarea.prioridad ? `prioridad ${tarea.prioridad.nombre}` : '',
         tarea.carpeta ? `carpeta ${tarea.carpeta.nombre}` : '',
@@ -43,11 +51,18 @@ const TarjetaTarea: React.FC<{
         >
             <span aria-hidden="true" className="w-1 flex-none self-stretch rounded-full" style={{ background: color }} />
             <span className="flex min-w-0 flex-1 flex-col gap-[7px]">
-                <span className={`text-[15px] font-bold leading-[1.3] ${completada ? 'text-black/[.5] line-through' : 'text-[#0a0a0a]'}`}>
-                    {tarea.nombre}
+                <span className={`flex items-center gap-1.5 text-[15px] font-bold leading-[1.3] ${completada ? 'text-black/[.5] line-through' : 'text-[#0a0a0a]'}`}>
+                    {tarea.serie && <IconoSerie size={14} className="flex-none text-black/[.45]" />}
+                    <span className="min-w-0">{tarea.nombre}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-0.5 whitespace-nowrap text-[12.5px] font-semibold text-black/[.62]">{horario}</span>
+                    {esConPlazo(tarea)
+                        ? <EtiquetaDePlazo tarea={tarea} />
+                        : <span className="mr-0.5 whitespace-nowrap text-[12.5px] font-semibold text-black/[.62]">{horario}</span>}
+                    {tarea.serie && (
+                        <span className="whitespace-nowrap text-[12px] font-semibold text-black/[.55]">{textoDeSerie(tarea)}</span>
+                    )}
+                    {tarea.vencida && <ChipVencida />}
                     <ChipColor color={color}>{tarea.subdepartamento ? tarea.subdepartamento.nombre : 'Sin asignar'}</ChipColor>
                     {tarea.prioridad && <ChipColor color={tarea.prioridad.color}>{tarea.prioridad.nombre}</ChipColor>}
                     {tarea.carpeta && (

@@ -93,6 +93,24 @@ export const ESTADOS: Readonly<Record<EstadoTarea, ColoresDeEstado>> = {
     completada: { etiqueta: 'Completada', tinta: '#15803d', fondo: 'rgba(21,128,61,.12)', punto: '#16a34a' },
 };
 
+/**
+ * "Vencida": una tarea con plazo o una repetición cuyo último día pasó sin
+ * completarse (sql/agenda_plazos_y_repeticiones.sql). NO es un estado —el
+ * estado sigue siendo el que es—, es una marca que va al lado.
+ *
+ * El color es un rojo quemado, más oscuro y más terroso que el #dc2626 de
+ * "hoy" y de la prioridad Urgente, y que el #c2410c de la paleta: a 11,5 px
+ * tiene que leerse distinto de los tres. Gris quedaba descartado: una tarea
+ * vencida no es algo inactivo, es algo que se pasó. Misma forma que los
+ * estados (tinta + fondo + punto) para que el chip se vea nativo.
+ */
+export const VENCIDA: ColoresDeEstado = {
+    etiqueta: 'Vencida',
+    tinta: '#7c2d12',
+    fondo: 'rgba(124,45,18,.12)',
+    punto: '#9a3412',
+};
+
 /** Las cuatro que crea "Usar las sugeridas" (agenda_prioridades_sugeridas), en ese orden. */
 export const PRIORIDADES_SUGERIDAS: readonly ColorDeAgenda[] = [
     { hex: '#9ca3af', nombre: 'Baja' },

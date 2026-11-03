@@ -1,10 +1,12 @@
 import React from 'react';
-import { Check, ChevronRight, Clock, Folder } from 'lucide-react';
-import { horarioDeTarea, type Tarea } from '../../services/agenda';
-import { ESTADOS } from '../../src/contenido/agendaPaleta';
+import { Check, ChevronLeft, ChevronRight, Clock, Folder } from 'lucide-react';
+import { fechaCorta, horarioDeTarea, type Tarea } from '../../services/agenda';
+import { ESTADOS, VENCIDA } from '../../src/contenido/agendaPaleta';
 import { tinte } from '../admin/departamentos/piezas';
 import { ChipEstado, Punto } from '../departamentos/equipo/piezas';
+import { ChipVencida, IconoSerie, PuntoVencida } from '../../components/agenda/piezasPlazo';
 import { horarioHablado } from './calendario';
+import { esConPlazo, textoDeSerie, textoDeVencimiento, textoDelPlazo, type Barra } from './plazos';
 
 /**
  * Cómo se ve una tarea en la Agenda (design-claude/Agenda Origen), igual en
@@ -26,7 +28,14 @@ export const estaCompletada = (t: Tarea) => t.estado === 'completada';
 export const estaEsperando = (t: Tarea) => t.estado === 'esperando' || !t.subdepartamento;
 
 export const etiquetaDe = (t: Tarea): string =>
-    [t.nombre, horarioHablado(t), t.subdepartamento?.nombre || 'sin asignar', ESTADOS[t.estado].etiqueta.toLowerCase()].join(', ');
+    [
+        t.nombre,
+        t.fechaHasta ? `del ${fechaCorta(t.fecha)} al ${fechaCorta(t.fechaHasta)}` : horarioHablado(t),
+        t.serie ? `repetición ${textoDeSerie(t)}` : null,
+        t.subdepartamento?.nombre || 'sin asignar',
+        ESTADOS[t.estado].etiqueta.toLowerCase(),
+        t.vencida ? textoDeVencimiento(t).toLowerCase() : null,
+    ].filter(Boolean).join(', ');
 
 /** El fondo, el filo de color y el borde de una tarea en la grilla. */
 export const estiloDeTarea = (t: Tarea, alfa = '2e'): React.CSSProperties => {
@@ -48,6 +57,7 @@ export const NombreDeTarea: React.FC<{ tarea: Tarea; className?: string }> = ({ 
         style={estaCompletada(tarea) ? { textDecoration: 'line-through', textDecorationColor: 'rgba(0,0,0,.35)' } : undefined}
     >
         {estaCompletada(tarea) && <Check size={11} strokeWidth={3} className="-mt-0.5 mr-1 inline" aria-hidden="true" />}
+        {tarea.serie && <IconoSerie size={11} className="-mt-0.5 mr-1 inline" />}
         {tarea.nombre}
     </span>
 );
@@ -71,6 +81,14 @@ export const PastillaTarea: React.FC<{ tarea: Tarea; onAbrir: (id: string) => vo
 /** La tarjeta de la vista Lista: barra de color, nombre, horario, sub, prioridad, carpeta y estado. */
 export const TarjetaDeLista: React.FC<{ tarea: Tarea; onAbrir: (id: string) => void }> = ({ tarea, onAbrir }) => {
     const esperando = estaEsperando(tarea);
+    /**
+     * Una tarea con plazo aparece en la lista el día en que VENCE: ahí, en
+     * vez del horario (siempre "Todo el día"), se dice eso. "Vence hoy" sale
+     * de `diasRestantes` de la base, no de la fecha del navegador.
+     */
+    const cuando = esConPlazo(tarea)
+        ? (tarea.vencida ? textoDeVencimiento(tarea) : tarea.diasRestantes === 0 ? 'Vence hoy' : 'Último día del plazo')
+        : horarioDeTarea(tarea);
     return (
         <button
             type="button"
@@ -86,13 +104,14 @@ export const TarjetaDeLista: React.FC<{ tarea: Tarea; onAbrir: (id: string) => v
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
                     <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-black/[.62]">
-                        <Clock size={13} strokeWidth={2} aria-hidden="true" />{horarioDeTarea(tarea)}
+                        <Clock size={13} strokeWidth={2} aria-hidden="true" />{cuando}
                     </span>
                     <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] text-[11.5px] font-bold text-black/[.78]" style={{ background: esperando ? 'rgba(0,0,0,.06)' : tinte(colorDe(tarea)) }}>
                         <Punto color={colorDe(tarea)} tam={7} />
                         {tarea.subdepartamento?.nombre || 'Sin asignar'}
                     </span>
                     <ChipEstado estado={tarea.estado} />
+                    {tarea.vencida && <ChipVencida />}
                     {tarea.prioridad && (
                         <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-black/[.62]">
                             <Punto color={tarea.prioridad.color} tam={7} />{tarea.prioridad.nombre}
@@ -125,4 +144,73 @@ export const EsqueletoDeVista: React.FC<{ vista: 'grilla' | 'mes' | 'lista' }> =
             </div>
         )}
     </div>
+);
+
+/**
+ * Una tarea CON PLAZO en la banda "Todo el día" de la semana, o en una fila
+ * del mes: una barra que ocupa todos sus días de esa tira.
+ *
+ * Cuando el plazo sigue antes o después de la tira, ese lado va RECTO (sin
+ * redondeo) y lleva un chevron del color de la tarea. El borde recto solo es
+ * una diferencia de dos píxeles que nadie mira; el chevron es lo que se ve.
+ * La frase del lector de pantalla lo dice con palabras.
+ */
+export const BarraDePlazo: React.FC<{
+    barra: Barra;
+    onAbrir: (id: string) => void;
+    alto?: number;
+    /** Sin el nombre: el mes del teléfono, donde no entra. */
+    muda?: boolean;
+}> = ({ barra, onAbrir, alto = 22, muda = false }) => {
+    const { tarea, cortaAntes, cortaDespues } = barra;
+    const c = colorDe(tarea);
+    const sigue = [
+        cortaAntes ? 'empezó antes' : null,
+        cortaDespues ? 'sigue después' : null,
+    ].filter(Boolean).join(' y ');
+
+    return (
+        <button
+            type="button"
+            onClick={() => onAbrir(tarea.id)}
+            aria-label={`${etiquetaDe(tarea)}${sigue ? `, ${sigue}` : ''}`}
+            title={`${tarea.nombre} · ${textoDelPlazo(tarea)}`}
+            className="flex w-full min-w-0 items-center gap-1 pl-[7px] pr-[5px] text-left text-[11.5px] font-bold text-[#0a0a0a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0a0a0a]"
+            style={{
+                height: alto,
+                borderRadius: `${cortaAntes ? 0 : 7}px ${cortaDespues ? 0 : 7}px ${cortaDespues ? 0 : 7}px ${cortaAntes ? 0 : 7}px`,
+                ...estiloDeTarea(tarea, '26'),
+                boxShadow: cortaAntes ? 'none' : `inset 3px 0 0 ${c}`,
+            }}
+        >
+            {cortaAntes && <ChevronLeft size={12} strokeWidth={3} aria-hidden="true" className="-ml-[3px] flex-none" style={{ color: c }} />}
+            {tarea.vencida && <PuntoVencida tam={5} />}
+            {!muda && <NombreDeTarea tarea={tarea} className="flex-1 truncate" />}
+            {muda && <span className="flex-1" />}
+            {cortaDespues && <ChevronRight size={12} strokeWidth={3} aria-hidden="true" className="-mr-[2px] flex-none" style={{ color: c }} />}
+        </button>
+    );
+};
+
+/** La tarjeta del bloque "Con plazo" de la vista Lista. */
+export const TarjetaDePlazo: React.FC<{ tarea: Tarea; onAbrir: (id: string) => void }> = ({ tarea, onAbrir }) => (
+    <button
+        type="button"
+        onClick={() => onAbrir(tarea.id)}
+        aria-label={etiquetaDe(tarea)}
+        className="flex min-h-[60px] w-full items-center gap-3 rounded-[18px] bg-white py-3 pl-3.5 pr-4 text-left shadow-[0_1px_2px_rgba(0,0,0,.05)] transition-shadow hover:shadow-[0_4px_14px_rgba(0,0,0,.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+    >
+        <span aria-hidden="true" className="w-1 flex-none self-stretch rounded-full" style={{ background: colorDe(tarea), opacity: estaCompletada(tarea) ? 0.5 : 1 }} />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className={`text-[14.5px] font-bold leading-[1.3] ${estaCompletada(tarea) ? 'text-black/50' : 'text-[#0a0a0a]'}`}>
+                <NombreDeTarea tarea={tarea} />
+            </span>
+            <span className="truncate text-[12.5px] font-semibold text-black/[.62]">
+                {textoDelPlazo(tarea)} · {tarea.subdepartamento?.nombre || 'Sin asignar'}
+            </span>
+        </span>
+        {tarea.vencida
+            ? <ChipVencida />
+            : <span className="flex-none whitespace-nowrap text-[12.5px] font-bold" style={{ color: 'rgba(0,0,0,.62)' }}>{textoDeVencimiento(tarea)}</span>}
+    </button>
 );

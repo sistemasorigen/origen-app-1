@@ -69,6 +69,12 @@ export interface Serie {
     /** Cuál de todas es esta repetición, y cuántas hay. */
     numero: number;
     total: number;
+    /**
+     * Cuántas quedan por hacer de hoy en adelante (`agenda_serie_pendientes`).
+     * Sólo viene en la serie que devuelven crear y editar; la de cada tarea
+     * (`agenda_tarea_json`) todavía no lo trae, y entonces es null.
+     */
+    pendientes: number | null;
 }
 export type EstadoSolicitud = 'nueva' | 'aceptada' | 'rechazada' | 'asignada';
 
@@ -641,6 +647,7 @@ const serie = (v: unknown): Serie | null => {
         hasta: txt(s.hasta),
         numero: num(s.numero),
         total: num(s.total),
+        pendientes: s.pendientes === undefined || s.pendientes === null ? null : num(s.pendientes),
     } : null;
 };
 
