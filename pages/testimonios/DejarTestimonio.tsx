@@ -566,6 +566,24 @@ const DejarTestimonio: React.FC = () => {
                                 Volver al inicio
                             </button>
                         </div>
+
+                        {/* Cómo sacarlo después. Lo pidió Ignacio (no está en el
+                            diseño): no se edita ni se borra desde acá; se pide
+                            en Mis testimonios, Sistemas lo revisa y, mientras
+                            tanto, deja de verse (testimonios_solicitar_eliminacion). */}
+                        <div style={{ marginTop: 22, width: '100%', background: '#fff', borderRadius: 20, padding: 16, textAlign: 'left', boxShadow: '0 1px 2px rgba(0,0,0,.04)' }}>
+                            <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, fontWeight: 500, color: C.m62, textWrap: 'pretty' } as React.CSSProperties}>
+                                Si más adelante querés sacar tu testimonio, podés pedirlo desde Mis testimonios con "Solicitar eliminación". Un administrador revisa el pedido y lo elimina; mientras tanto, deja de verse para el público.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/perfil/testimonios')}
+                                style={{ marginTop: 12, height: 44, padding: '0 18px', border: 0, borderRadius: 999, background: C.gris, color: C.tinta, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                                className="active:scale-[.98]"
+                            >
+                                Ir a Mis testimonios
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
