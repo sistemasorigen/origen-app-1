@@ -123,11 +123,15 @@ const Tarjeta: React.FC<{
         <div className={`${TARJETA} p-4`} style={ESTILO_TARJETA}>
             <div className="flex items-start justify-between gap-3">
                 <span className="min-w-0 flex items-center gap-3">
+                    {/* La portada del GCX; sin foto, el ícono de la sección,
+                        que se lee como una miniatura a propósito y no como una
+                        imagen que no cargó. */}
                     <span
                         aria-hidden="true"
-                        className="w-11 h-11 flex-none rounded-[14px] overflow-hidden"
+                        className="w-11 h-11 flex-none rounded-[14px] overflow-hidden flex items-center justify-center"
                         style={{
                             background: 'var(--mc-chip)',
+                            color: 'var(--mc-m38)',
                             ...(t.grupo.portada
                                 ? {
                                     backgroundImage: `url("${t.grupo.portada.replace(/"/g, '%22')}")`,
@@ -136,7 +140,9 @@ const Tarjeta: React.FC<{
                                 }
                                 : {}),
                         }}
-                    />
+                    >
+                        {!t.grupo.portada && <Icono d={ICONOS.testimonio} tam={20} grosor={1.8} />}
+                    </span>
                     <span className="min-w-0 flex flex-col gap-0.5">
                         <span className="text-[15px] font-semibold leading-[1.3] line-clamp-2">
                             {t.grupo.nombre}
