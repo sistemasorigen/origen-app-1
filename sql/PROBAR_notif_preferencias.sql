@@ -275,7 +275,7 @@ PERFORM pg_temp.chk('A6', 'programada nueva sin decir nada: apagable', 'true',
 -- ══════════════════════════════════════════════════════════════════════════
 -- E · Datos y permisos
 -- ══════════════════════════════════════════════════════════════════════════
-PERFORM pg_temp.chk('E1', 'las 21 automáticas con nombre público y área', '21 · 21',
+PERFORM pg_temp.chk('E1', 'las 22 automáticas con nombre público y área', '22 · 22',
     (SELECT count(*) FILTER (WHERE nombre_publico IS NOT NULL) || ' · ' || count(*) FILTER (WHERE area IS NOT NULL)
        FROM public.notif_alertas WHERE tipo = 'automatica'));
 PERFORM pg_temp.chk('E2', 'los repetidos apuntan a su principal', 'gcx_grupo_aprobado_app→gcx_grupo_aprobado, gcx_solicitud_ingreso_app→gcx_solicitud_ingreso, gcx_solicitud_pareja_app→gcx_solicitud_ingreso',

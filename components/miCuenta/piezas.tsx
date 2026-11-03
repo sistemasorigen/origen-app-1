@@ -174,6 +174,7 @@ export const ICONOS: Record<string, string> = {
     candado: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3M12 14.5v2',
     play: 'M12 3.5a8.5 8.5 0 110 17 8.5 8.5 0 010-17zM10 8.8v6.4l5.2-3.2z',
     chat: 'M4.5 5h15v11H10l-5.5 4z',
+    testimonio: 'M4.5 5h15v11H10l-5.5 4zM8 9h8M8 12.5h5',
     bicho: 'M12 20a5 5 0 005-5v-4a5 5 0 00-10 0v4a5 5 0 005 5zM12 11v9M7 13H3.5M20.5 13H17M8.5 7L6 4.5M15.5 7L18 4.5',
     documento: 'M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6',
     info: 'M12 3.5a8.5 8.5 0 110 17 8.5 8.5 0 010-17zM12 11v5.5M12 7.8v.2',

@@ -21,9 +21,11 @@ import DirectorioAdmin from './DirectorioAdmin';
 import ConfiguracionApp, { SubSeccion } from './ConfiguracionApp';
 import BandejaDeDatos from './BandejaDeDatos';
 import ReportesSistemas from './ReportesSistemas';
+import TestimoniosSistemas from './TestimoniosSistemas';
 import DepartamentosAdmin from './DepartamentosAdmin';
 import GestionNotificaciones from './notificaciones/GestionNotificaciones';
 import { reportesSistemas } from '../../services/miCuenta';
+import { getTestimoniosAdmin } from '../../services/testimonios';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 
 /**
@@ -40,7 +42,7 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
  * solo cambia por dónde se llega a ellas.
  */
 
-type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes' | 'departamentos' | 'notificaciones';
+type Seccion = 'usuarios' | 'directorio' | 'config' | 'auditoria' | 'datos' | 'reportes' | 'departamentos' | 'notificaciones' | 'testimonios';
 
 const safeUUID = () => {
     // Respaldo para contextos no seguros (http://IP), donde crypto.randomUUID
@@ -95,6 +97,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     // La pastilla de "Reportes" en la navegación y el resumen de la cabecera.
     const [reportesNuevos, setReportesNuevos] = useState(0);
     const [reportesTotal, setReportesTotal] = useState<number | null>(null);
+    // La pastilla de "Testimonios": los pedidos de eliminacion sin resolver.
+    const [pedidosTestimonios, setPedidosTestimonios] = useState(0);
     const [sub, setSub] = useState<SubSeccion>('identidad');
     const [menuSistema, setMenuSistema] = useState(false);
     // Mobile: los dos selectores abren una hoja desde abajo con su grupo.
@@ -143,6 +147,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             datos: 'datos',
             departamentos: 'departamentos',
             notificaciones: 'notificaciones',
+            testimonios: 'testimonios',
         };
         if (enRutaDeReportes) setSeccion('reportes');
         else if (tab && equivalencias[tab]) setSeccion(equivalencias[tab]);
@@ -155,6 +160,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
             if (!l) return;
             setReportesNuevos(l.filter(r => r.estado === 'nuevo').length);
             setReportesTotal(l.length);
+        });
+        // Los contadores vienen de toda la tabla, asi que con traer una fila
+        // alcanza para la pastilla.
+        getTestimoniosAdmin({ limite: 1 }).then(r => {
+            if (r.ok) setPedidosTestimonios(r.cantidades.eliminacionSolicitada);
         });
     }, []);
 
@@ -369,7 +379,8 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     };
 
     // ── Cabecera ──────────────────────
-    const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes' || seccion === 'departamentos';
+    const enPersonas = seccion === 'usuarios' || seccion === 'directorio' || seccion === 'reportes'
+        || seccion === 'departamentos' || seccion === 'testimonios';
     const enSistema = seccion === 'config' || seccion === 'auditoria' || seccion === 'notificaciones';
     // En el teléfono "Sistema" junta las tres: configuración, registro y datos.
     const enSistemaMovil = enSistema || seccion === 'datos';
@@ -377,7 +388,7 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
     const NOMBRE: Record<Seccion, string> = {
         usuarios: 'Usuarios', directorio: 'Directorio', reportes: 'Reportes', departamentos: 'Departamentos',
         config: 'Configuración', auditoria: 'Registro de cambios', datos: 'Solicitudes de datos',
-        notificaciones: 'Notificaciones',
+        notificaciones: 'Notificaciones', testimonios: 'Testimonios',
     };
     const DETALLE: Partial<Record<Seccion, string>> = {
         usuarios: 'Cuentas, roles y permisos.',
@@ -388,13 +399,15 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
         auditoria: 'Quién tocó qué y cuándo.',
         datos: 'Pedidos de acceso, corrección o baja (Ley 25.326).',
         notificaciones: 'Qué avisos manda la app, a quién y cuándo.',
+        testimonios: 'Pedidos de eliminación, y qué se muestra en la página de testimonios.',
     };
     const GRUPO: Record<'personas' | 'sistema', Seccion[]> = {
-        personas: ['usuarios', 'directorio', 'reportes', 'departamentos'],
+        personas: ['usuarios', 'directorio', 'reportes', 'testimonios', 'departamentos'],
         sistema: ['config', 'auditoria', 'datos', 'notificaciones'],
     };
 
-    const titulo = seccion === 'reportes' ? 'Reportes de problemas'
+    const titulo = seccion === 'testimonios' ? 'Testimonios de los GCX'
+        : seccion === 'reportes' ? 'Reportes de problemas'
         : seccion === 'departamentos' ? 'Departamentos'
         : seccion === 'notificaciones' ? 'Gestión de notificaciones'
         : seccion === 'usuarios'
@@ -437,6 +450,9 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                             )}
                             {seccion === 'notificaciones' && (
                                 <p className="mt-1 text-[13.5px] font-medium text-black/[.56]">{DETALLE.notificaciones}</p>
+                            )}
+                            {seccion === 'testimonios' && (
+                                <p className="mt-1 text-[13.5px] font-medium text-black/[.56]">{DETALLE.testimonios}</p>
                             )}
                         </div>
 
@@ -536,6 +552,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                         {reportesNuevos}
                                     </span>
                                 )}
+                                {b.grupo === 'personas' && pedidosTestimonios > 0 && seccion !== 'testimonios' && (
+                                    <span aria-label={`${pedidosTestimonios} pedidos de eliminación de testimonios`} className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                        {pedidosTestimonios}
+                                    </span>
+                                )}
                                 <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-full ${b.activo ? 'bg-white/15' : 'bg-white'}`}>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                         <path d="M6 9l6 6 6-6" />
@@ -569,6 +590,20 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                     {reportesNuevos > 0 && (
                                         <span aria-label={`${reportesNuevos} nuevos`} className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
                                             {reportesNuevos}
+                                        </span>
+                                    )}
+                                </button>
+                                {/* Testimonios de los GCX: el globo de diálogo con
+                                    renglones, el mismo ícono que la fila de
+                                    "Mis testimonios" en Mi cuenta. */}
+                                <button onClick={() => irA('testimonios')} className={botonNav(seccion === 'testimonios')}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M4.5 5h15v11H10l-5.5 4zM8 9h8M8 12.5h5" />
+                                    </svg>
+                                    Testimonios
+                                    {pedidosTestimonios > 0 && (
+                                        <span aria-label={`${pedidosTestimonios} pedidos de eliminación`} className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                            {pedidosTestimonios}
                                         </span>
                                     )}
                                 </button>
@@ -651,6 +686,11 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                                             {reportesNuevos}
                                         </span>
                                     )}
+                                    {id === 'testimonios' && pedidosTestimonios > 0 && (
+                                        <span aria-label={`${pedidosTestimonios} pedidos de eliminación`} className="flex h-[22px] min-w-[22px] flex-none items-center justify-center rounded-full bg-[#d93025] px-[7px] text-[12px] font-bold text-white">
+                                            {pedidosTestimonios}
+                                        </span>
+                                    )}
                                     {activa && (
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none">
                                             <path d="M5 12.5l4.5 4.5L19 7.5" />
@@ -679,6 +719,10 @@ const Admin: React.FC<AdminProps> = ({ currentUser, onConfigUpdate }) => {
                 )}
 
                 {seccion === 'notificaciones' && <GestionNotificaciones avisar={avisar} />}
+
+                {seccion === 'testimonios' && (
+                    <TestimoniosSistemas avisar={avisar} onResumen={setPedidosTestimonios} />
+                )}
 
                 {seccion === 'usuarios' && !abierto && !creando && (
                     <UsuariosAdmin

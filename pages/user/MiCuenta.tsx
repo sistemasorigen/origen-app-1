@@ -8,6 +8,7 @@ import {
     type CompraPropia, type GrupoPropio, type InscripcionPropia,
 } from '../../services/miCuenta';
 import { getMisSolicitudes } from '../../services/agenda';
+import { getMisTestimonios } from '../../services/testimonios';
 import {
     BotonPrimario, BotonRojo, BotonSecundario, EncabezadoSubpagina, ESTILOS_MI_CUENTA,
     EsqueletoDeSeccion, Panel, TituloDePanel, useAvisoFlotante,
@@ -29,6 +30,7 @@ import {
     MisGrupos, MisInscripciones,
 } from './miCuenta/MiVida';
 import { MisSolicitudes } from './miCuenta/MisSolicitudes';
+import { MisTestimonios } from './miCuenta/MisTestimonios';
 import { DispositivosPush } from './miCuenta/DispositivosPush';
 
 declare const __BUILD_VERSION__: string;
@@ -56,6 +58,7 @@ const TITULOS: Record<SeccionDeMiCuenta, string> = {
     inscripciones: 'Mis inscripciones',
     servicio: 'Dónde sirvo',
     solicitudes: 'Solicitudes',
+    testimonios: 'Mis testimonios',
     seguridad: 'Cuenta y seguridad',
     privacidad: 'Privacidad y mis datos',
     terminos: 'Términos y privacidad',
@@ -146,6 +149,7 @@ const MiCuenta: React.FC = () => {
     const [eventos, setEventos] = useState<InscripcionPropia[]>([]);
     /** Sólo para el número de la fila: la lista la trae la sección. */
     const [solicitudes, setSolicitudes] = useState(0);
+    const [testimonios, setTestimonios] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [cerradas, setCerradas] = useState<string[]>(leerCerradas);
     const [panel, setPanel] = useState<null | 'salir'>(null);
@@ -174,6 +178,9 @@ const MiCuenta: React.FC = () => {
         // Agenda no contesta el resto del índice no tiene por qué esperarla.
         getMisSolicitudes().then(r => {
             if (vigente && r.ok) setSolicitudes(r.solicitudes.length);
+        });
+        getMisTestimonios().then(r => {
+            if (vigente && r.ok) setTestimonios(r.testimonios.length);
         });
         return () => { vigente = false; };
     }, [user?.id]);
@@ -283,6 +290,7 @@ const MiCuenta: React.FC = () => {
         compras: compras.length,
         inscripciones: eventos.length,
         solicitudes,
+        testimonios,
         // Por ahora, las áreas de voluntariado más el rol de anfitrión. La
         // pantalla de "Dónde sirvo" (prompt 3) es la que arma la lista de
         // verdad; este número tiene que coincidir con ella.
@@ -290,7 +298,7 @@ const MiCuenta: React.FC = () => {
         // texto: tipar el array no significa que la base lo respete.
         servicio: (user?.volunteerRoles?.length || 0)
             + (esAnfitrion(user) ? 1 : 0),
-    }), [dirigidos, compras, eventos, solicitudes, user]);
+    }), [dirigidos, compras, eventos, solicitudes, testimonios, user]);
 
     const faltantes = useMemo(() => {
         if (!user) return [];
@@ -423,6 +431,7 @@ const MiCuenta: React.FC = () => {
         if (seccion === 'historial') return <Historial onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'servicio') return <DondeSirvo onVolver={esAncha ? undefined : volver} />;
         if (seccion === 'solicitudes') return <MisSolicitudes onVolver={esAncha ? undefined : volver} />;
+        if (seccion === 'testimonios') return <MisTestimonios onVolver={esAncha ? undefined : volver} avisar={avisar} />;
 
         if (seccion === 'compras') {
             return id
