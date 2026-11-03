@@ -2752,7 +2752,11 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   12/12" y "Plazo: 1/11 – 12/12 · faltan 9 días". Las etiquetas para lector de
   pantalla siguen con `fechaCorta`.
 - **Formulario**: el selector Un día · Con plazo. Las opciones de "¿Se repite?"
-  salen SIEMPRE de `getRepeticionesPosibles`, con 350 ms de espera; las que no
+  salen SIEMPRE de `getRepeticionesPosibles`. Esa RPC es `SECURITY DEFINER`
+  desde `sql/agenda_repeticiones_posibles_permiso.sql`: como INVOKER daba
+  "permission denied" a todos, porque usa auxiliares cerradas. Una RPC
+  nueva que use `agenda_serie_fechas` tiene que ser DEFINER. Pruebas con
+  `set local role authenticated`, no como postgres. Se piden con 350 ms de espera; las que no
   están disponibles van en gris con su motivo. Si la elegida deja de entrar,
   vuelve a "No se repite" con un aviso.
   - **Editar una repetición** pregunta "Solo esta / Todas las que faltan (N)".
