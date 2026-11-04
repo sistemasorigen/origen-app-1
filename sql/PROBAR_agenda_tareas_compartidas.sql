@@ -111,6 +111,15 @@ DECLARE
     t1 uuid := gen_random_uuid();
     t_comun uuid := gen_random_uuid();
     s1 uuid := gen_random_uuid();
+    t19 uuid := gen_random_uuid();
+    t18 uuid := gen_random_uuid();
+    t17 uuid := gen_random_uuid();
+    s5 uuid := gen_random_uuid();
+    s4 uuid := gen_random_uuid();
+    sv uuid := gen_random_uuid();
+    st uuid := gen_random_uuid();
+    ss uuid := gen_random_uuid();
+    sr uuid := gen_random_uuid();
     v_antes integer;
     t16 uuid := gen_random_uuid();
     t15 uuid := gen_random_uuid();
@@ -606,6 +615,93 @@ PERFORM pg_temp.admin();
 PERFORM pg_temp.chk('G11', 'borrar la tarea se lleva sus equipos', 'true · 0',
     (j->>'ok') || ' · ' || (SELECT count(*)::text FROM public.agenda_tarea_equipos WHERE tarea_id = t15));
 
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- H · Lo que encontró la revisión
+-- ═══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.admin();
+INSERT INTO public.agenda_subdepartamentos (id, departamento_id, nombre, color, lider_id) VALUES
+    (sr, dep, 'Equipo R', '#111111', cora), (ss, dep, 'Equipo S', '#222222', NULL),
+    (st, dep, 'Equipo T', '#333333', NULL), (sv, dep, 'Equipo V', '#444444', NULL);
+INSERT INTO public.agenda_subdepartamento_miembros (subdepartamento_id, user_id) VALUES (sr, mina);
+
+-- Rearmar una serie con un equipo archivado.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(s4, dep, NULL, NULL, NULL, 'PRUEBA serie archivo', NULL, HOY, true, NULL, NULL,
+                               NULL, HOY + 14, 'cada_semana', ARRAY[sr, ss]);
+j := public.agenda_archivar_subdepartamento(sr);
+PERFORM pg_temp.admin();
+SELECT array_agg(id ORDER BY fecha) INTO v_ids FROM public.agenda_tareas WHERE serie_id = s4;
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(v_ids[1], NULL, NULL, NULL, 'PRUEBA serie archivo', NULL, HOY, true, NULL, NULL,
+                                HOY + 14, 'cada_semana', 'las_que_faltan');
+PERFORM pg_temp.admin();
+SELECT array_agg(id ORDER BY fecha) INTO v_ids FROM public.agenda_tareas WHERE serie_id = s4;
+PERFORM pg_temp.chk('H1', 'rearmar no copia al equipo archivado', 'en_proceso S:no', pg_temp.avance(v_ids[1]));
+PERFORM pg_temp.chk('H2', 'y su gente no recibe otro aviso', '0', pg_temp.avisos(cora, 'agenda_tarea_asignada')::text);
+
+-- Rearmar con todos los equipos archivados: que el departamento asigne otros.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(s5, dep, NULL, NULL, NULL, 'PRUEBA serie sin nadie', NULL, HOY, true, NULL, NULL,
+                               NULL, HOY + 14, 'cada_semana', ARRAY[st, ss]);
+j := public.agenda_archivar_subdepartamento(st);
+j := public.agenda_archivar_subdepartamento(ss);
+PERFORM pg_temp.admin();
+SELECT array_agg(id ORDER BY fecha) INTO v_ids FROM public.agenda_tareas WHERE serie_id = s5;
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(v_ids[1], NULL, NULL, NULL, 'PRUEBA serie sin nadie', NULL, HOY, true, NULL, NULL,
+                                HOY + 14, 'cada_semana', 'las_que_faltan');
+PERFORM pg_temp.admin();
+SELECT array_agg(id ORDER BY fecha) INTO v_ids FROM public.agenda_tareas WHERE serie_id = s5;
+PERFORM pg_temp.chk('H3', 'sin equipos que cuenten, las nuevas esperan: nadie podría terminarlas', 'esperando -', pg_temp.avance(v_ids[1]));
+
+-- Quien integra un equipo archivado no ve el estado de la tarea entera.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t17, dep, NULL, NULL, NULL, 'PRUEBA archivo y link', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sv, sf]);
+j := public.agenda_archivar_subdepartamento(sv);
+PERFORM pg_temp.admin();
+INSERT INTO public.agenda_subdepartamento_miembros (subdepartamento_id, user_id) VALUES (sv, otto);
+PERFORM pg_temp.como(otto);
+PERFORM pg_temp.chk('H4', 'integrante de un equipo archivado, por link', 'sin_permiso', pg_temp.vista(t17));
+PERFORM pg_temp.admin();
+DELETE FROM public.agenda_subdepartamento_miembros WHERE subdepartamento_id = sv AND user_id = otto;
+
+-- Desde el panel de un equipo, el detalle es el de ese equipo.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t18, dep, NULL, NULL, NULL, 'PRUEBA contexto', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.como(ana);
+j := public.agenda_cambiar_estado_tarea(t18, 'completada', a);
+j := public.agenda_tarea(t18, a);
+PERFORM pg_temp.chk('H5', 'Ana en el panel de A, que ya terminó', 'Equipo A · completada · false',
+    (j->'tarea'->'subdepartamento'->>'nombre') || ' · ' || (j->'tarea'->>'estado') || ' · ' || (j->'tarea'->>'puede_cambiar_estado'));
+j := public.agenda_tarea(t18, b);
+PERFORM pg_temp.chk('H6', 'Ana en el panel de B, que no', 'Equipo B · en_proceso · true',
+    (j->'tarea'->'subdepartamento'->>'nombre') || ' · ' || (j->'tarea'->>'estado') || ' · ' || (j->'tarea'->>'puede_cambiar_estado'));
+PERFORM pg_temp.como(bea);
+j := public.agenda_tarea(t18, a);
+PERFORM pg_temp.chk('H7', 'pedir el panel de otro equipo no muestra su avance', 'Equipo B · en_proceso · null',
+    (j->'tarea'->'subdepartamento'->>'nombre') || ' · ' || (j->'tarea'->>'estado') || ' · ' || COALESCE(j->'tarea'->>'equipos', 'null'));
+PERFORM pg_temp.como(cora);
+j := public.agenda_tarea(t18, a);
+PERFORM pg_temp.chk('H8', 'quien no está en la tarea, tampoco con contexto', 'sin_permiso', j->>'motivo');
+PERFORM pg_temp.como(elsa);
+j := public.agenda_tarea(t18, a);
+PERFORM pg_temp.chk('H9', 'la encargada en el panel de un equipo, con el avance', 'Equipo A · completada · 2',
+    (j->'tarea'->'subdepartamento'->>'nombre') || ' · ' || (j->'tarea'->>'estado') || ' · ' || jsonb_array_length(j->'tarea'->'equipos'));
+
+-- Editar conservando a un equipo archivado: no pierde lo que terminó.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t19, dep, NULL, NULL, NULL, 'PRUEBA conservar', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[a, b]);
+j := public.agenda_cambiar_estado_tarea(t19, 'completada', b);
+PERFORM pg_temp.admin();
+UPDATE public.agenda_subdepartamentos SET archivado_at = now() WHERE id = b;
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(t19, NULL, NULL, NULL, 'PRUEBA conservar', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[a, b, c]);
+PERFORM pg_temp.chk('H10', 'sumar uno conservando al archivado', 'true · en_proceso A:no B:si C:no', (j->>'ok') || ' · ' || pg_temp.avance(t19));
+PERFORM pg_temp.admin();
+UPDATE public.agenda_subdepartamentos SET archivado_at = NULL WHERE id = b;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════

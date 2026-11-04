@@ -6,6 +6,7 @@ import {
     type MotivoAgenda, type PanelSubdepartamento, type Tarea,
 } from '../../../services/agenda';
 import type { AccionesDeAgenda } from '../../../components/agenda/contratos';
+import { EtiquetaCompartida } from '../../../components/agenda/piezasPlazo';
 import { VENCIDA } from '../../../src/contenido/agendaPaleta';
 import { nombreDePila } from '../../admin/departamentos/piezas';
 import { BOTON_NEGRO, ChipColor, ChipEstado, Mensaje, ROTULO, TARJETA } from '../equipo/piezas';
@@ -102,12 +103,14 @@ const PestanaInicioSub: React.FC<{
         tipo: 'control',
         rotulo: 'Completar',
         titulo: `¿Marcar “${t.nombre}” como completada?`,
-        texto: 'Sale de esta lista, pasa a Completadas y les llega una notificación a los encargados del departamento. Se puede volver a En proceso en cualquier momento.',
+        texto: t.compartida
+            ? 'Se marca como terminada para tu equipo. Le avisamos al departamento y, si fue un error, el departamento puede deshacerlo.'
+            : 'Sale de esta lista, pasa a Completadas y les llega una notificación a los encargados del departamento. Se puede volver a En proceso en cualquier momento.',
         etiquetaBoton: 'Sí, completada',
         onConfirmar: async () => {
-            const r = await cambiarEstadoTarea(t.id, 'completada');
+            const r = await cambiarEstadoTarea(t.id, 'completada', t.compartida ? subId : undefined);
             if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
-            acciones.avisar(`“${t.nombre}” quedó completada.`);
+            acciones.avisar(t.compartida ? `Tu equipo terminó su parte de “${t.nombre}”.` : `“${t.nombre}” quedó completada.`);
             // Se despide antes de irse, así se ve cuál se fue.
             setSaliendo(t.id);
             relojes.current.push(window.setTimeout(async () => {
@@ -198,6 +201,7 @@ const PestanaInicioSub: React.FC<{
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-1.5">
+                                            <EtiquetaCompartida tarea={t} />
                                             {t.prioridad && <ChipColor color={t.prioridad.color}>{t.prioridad.nombre}</ChipColor>}
                                             {t.carpeta && (
                                                 <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-black/[.62]">

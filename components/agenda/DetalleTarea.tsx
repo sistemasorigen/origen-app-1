@@ -50,6 +50,8 @@ export interface PropsDetalleTarea {
     acciones: AccionesDeAgenda;
     /** Sin esto, el panel no ofrece Editar, Reasignar ni Eliminar. */
     edicion?: DatosParaEditar;
+    /** Abierto desde el panel de un equipo: una compartida se ve y se marca por ese equipo. */
+    subContexto?: string;
     onCerrar: () => void;
     /** Cada cambio, para que la lista de atrás se actualice. */
     onCambio?: (cambio: CambioDeTarea) => void;
@@ -109,7 +111,7 @@ const Dato: React.FC<{ icono: React.ReactNode; children: React.ReactNode }> = ({
     </div>
 );
 
-const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion, onCerrar, onCambio, pie, onCargada }) => {
+const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion, subContexto, onCerrar, onCambio, pie, onCargada }) => {
     const [carga, setCarga] = useState<Carga>({ estado: 'cargando' });
     const [editando, setEditando] = useState(false);
     const [reasignando, setReasignando] = useState(false);
@@ -141,7 +143,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
 
     const cargar = useCallback(async () => {
         setCarga({ estado: 'cargando' });
-        const r = await getTarea(tareaId);
+        const r = await getTarea(tareaId, subContexto);
         setCarga(r.ok ? { estado: 'listo', tarea: r.tarea } : { estado: 'error', motivo: r.motivo });
         avisarCarga.current?.(r.ok ? { ok: true, tarea: r.tarea } : { ok: false, motivo: r.motivo });
     }, [tareaId]);
@@ -169,7 +171,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
 
     const cambiarEstado = async (a: 'completada' | 'en_proceso', equipo?: { id: string; nombre: string }) => {
         setOcupado(true);
-        const r = await cambiarEstadoTarea(tareaId, a, equipo?.id);
+        const r = await cambiarEstadoTarea(tareaId, a, equipo?.id ?? (tarea?.compartida ? subContexto : undefined));
         setOcupado(false);
         if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
         setRecienCompletada(a === 'completada' && r.tarea.estado === 'completada');
@@ -231,7 +233,9 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
 
     const pedirEliminar = () => {
         if (!tarea) return;
-        const comun = tarea.laTienen.length && tarea.subdepartamento
+        const comun = tarea.laTienen.length && tarea.compartida
+            ? `Se borra de la Agenda de ${plural(tarea.laTienen.length, 'persona', 'personas')} de todos sus equipos.`
+            : tarea.laTienen.length && tarea.subdepartamento
             ? `Se borra de la Agenda de ${plural(tarea.laTienen.length, 'persona', 'personas')} de ${tarea.subdepartamento.nombre}.`
             : '';
         if (tarea.serie) {

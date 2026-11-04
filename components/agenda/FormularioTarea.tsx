@@ -397,7 +397,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
     const errorDe = (c: Campo) => (error?.campo === c ? error.texto : null);
     const errNombre = errorDe('nombre') ?? (tocado && sinNombre ? 'Escribí un nombre para la tarea.' : null);
-    const errSub = errorDe('sub') ?? (tocado && sinEquipo ? 'Elegí al menos un sub-departamento, o “Sin asignar todavía”.' : null);
+    const errSub = errorDe('sub') ?? (tocado && sinEquipo
+        ? (eraCompartida ? 'Elegí al menos un sub-departamento.' : 'Elegí al menos un sub-departamento, o “Sin asignar todavía”.')
+        : null);
     const errCompartida = tocado && faltaCompartida ? 'Elegí si la tarea es compartida.' : null;
     const errFecha = errorDe('fecha') ?? (tocado && !fecha ? 'Elegí el día.' : null);
     const errHorario = errorDe('horario') ?? (
@@ -720,7 +722,10 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         const carga: DatosDeTarea = {
             subdepartamentoId: eraCompartida ? null : sub,
             // Si no cambiaron no viajan: la base dejaría igual lo que ya terminó cada uno.
-            subdepartamentoIds: eraCompartida && cambiaronLosEquipos ? subs : null,
+            // Los archivados no están en la lista, pero siguen: se pierde lo que terminaron si no viajan.
+            subdepartamentoIds: eraCompartida && cambiaronLosEquipos
+                ? [...subs, ...(tarea?.equipos ?? []).filter(e => e.archivado).map(e => e.id)]
+                : null,
             carpetaId,
             prioridadId,
             nombre,
@@ -909,7 +914,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                     if (error?.campo === 'sub') setError(null);
                                 }}
                                 bloqueado={completada}
-                                motivoDelBloqueo="Está completada: para cambiarle el equipo, primero volvela a En proceso."
+                                motivoDelBloqueo={eraCompartida
+                                    ? 'Está completada: para cambiarle los equipos, primero deshacé el finalizado de un equipo desde el detalle.'
+                                    : 'Está completada: para cambiarle el equipo, primero volvela a En proceso.'}
                                 error={errSub}
                             />
 

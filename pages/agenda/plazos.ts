@@ -283,7 +283,7 @@ export const avanceDeTarea = (t: Pick<Tarea, 'compartida' | 'equipos'>): string 
     if (!t.compartida || !t.equipos) return '';
     const hechos = t.equipos.filter(e => e.finalizadoAt).map(e => e.nombre);
     const faltan = t.equipos.filter(e => !e.finalizadoAt && !e.archivado).map(e => e.nombre);
-    if (faltan.length === 0) return 'Terminaron todos los equipos';
+    if (faltan.length === 0) return hechos.length > 0 ? 'Terminaron todos los equipos' : 'Sin equipos activos';
     if (hechos.length === 0) return `Falta ${enLista(faltan)}`;
     return `${enLista(hechos)} ya ${hechos.length === 1 ? 'terminó' : 'terminaron'} · ${faltan.length === 1 ? 'falta' : 'faltan'} ${enLista(faltan)}`;
 };

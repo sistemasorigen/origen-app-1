@@ -20,6 +20,7 @@ $$;
 
 DROP TRIGGER trg_agenda_tarea_equipos_avisar ON public.agenda_tarea_equipos;
 
+DROP FUNCTION public.agenda_tarea(uuid, uuid);
 DROP FUNCTION public.agenda_tarea_json(public.agenda_tareas, uuid);
 DROP FUNCTION public.agenda_crear_tarea(uuid, uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, uuid, date, text, uuid[]);
 DROP FUNCTION public.agenda_editar_tarea(uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, date, text, text, uuid[]);
@@ -80,6 +81,57 @@ $function$
 ;
 REVOKE ALL ON FUNCTION public.agenda_tarea_json(public.agenda_tareas) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.agenda_tarea_json(public.agenda_tareas) FROM authenticated;
+CREATE OR REPLACE FUNCTION public.agenda_tarea(p_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    t public.agenda_tareas;
+    s public.agenda_subdepartamentos;
+    v_encargado boolean;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_puede_ver_tarea(p_id) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    SELECT * INTO s FROM public.agenda_subdepartamentos WHERE id = t.subdepartamento_id;
+    v_encargado := public.agenda_es_encargado(t.departamento_id);
+
+    RETURN jsonb_build_object('ok', true, 'tarea',
+        public.agenda_tarea_json(t) || jsonb_build_object(
+            'detalles', t.detalles,
+            -- Quien dirige primero y después los miembros, sin repetir.
+            'la_tienen', CASE WHEN s.id IS NULL THEN '[]'::jsonb ELSE
+                COALESCE((SELECT jsonb_agg(x.p || jsonb_build_object('dirige', x.dirige) ORDER BY x.dirige DESC, x.creado)
+                            FROM (SELECT public.agenda_persona(s.lider_id) AS p, true AS dirige,
+                                         '-infinity'::timestamptz AS creado
+                                   WHERE s.lider_id IS NOT NULL
+                                  UNION ALL
+                                  SELECT public.agenda_persona(m.user_id), false, m.created_at
+                                    FROM public.agenda_subdepartamento_miembros m
+                                   WHERE m.subdepartamento_id = s.id
+                                     AND m.user_id IS DISTINCT FROM s.lider_id) x
+                           WHERE x.p IS NOT NULL), '[]'::jsonb) END,
+            'creador', public.agenda_persona(t.created_by),
+            'completada_por', public.agenda_persona(t.completada_por),
+            'puede_editar', v_encargado,
+            -- Una completada de un sub archivado es historial: no se reabre.
+            'puede_cambiar_estado', t.subdepartamento_id IS NOT NULL
+                                    AND s.archivado_at IS NULL
+                                    AND (v_encargado OR public.agenda_es_miembro(t.subdepartamento_id))));
+END;
+$function$
+;
+REVOKE ALL ON FUNCTION public.agenda_tarea(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agenda_tarea(uuid) TO authenticated;
 CREATE OR REPLACE FUNCTION public.agenda_crear_tarea(p_id uuid, p_dep uuid, p_sub uuid, p_carpeta uuid, p_prioridad uuid, p_nombre text, p_detalles text, p_fecha date, p_todo_el_dia boolean, p_desde time without time zone, p_hasta time without time zone, p_solicitud uuid DEFAULT NULL::uuid, p_fecha_hasta date DEFAULT NULL::date, p_frecuencia text DEFAULT NULL::text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -490,55 +542,6 @@ AS $function$
                       AND (public.agenda_es_encargado(t.departamento_id)
                            OR (t.subdepartamento_id IS NOT NULL
                                AND public.agenda_es_miembro(t.subdepartamento_id))));
-$function$
-;
-CREATE OR REPLACE FUNCTION public.agenda_tarea(p_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    t public.agenda_tareas;
-    s public.agenda_subdepartamentos;
-    v_encargado boolean;
-BEGIN
-    IF auth.uid() IS NULL THEN
-        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
-    END IF;
-    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id;
-    IF NOT FOUND THEN
-        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
-    END IF;
-    IF NOT public.agenda_puede_ver_tarea(p_id) THEN
-        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
-    END IF;
-    SELECT * INTO s FROM public.agenda_subdepartamentos WHERE id = t.subdepartamento_id;
-    v_encargado := public.agenda_es_encargado(t.departamento_id);
-
-    RETURN jsonb_build_object('ok', true, 'tarea',
-        public.agenda_tarea_json(t) || jsonb_build_object(
-            'detalles', t.detalles,
-            -- Quien dirige primero y después los miembros, sin repetir.
-            'la_tienen', CASE WHEN s.id IS NULL THEN '[]'::jsonb ELSE
-                COALESCE((SELECT jsonb_agg(x.p || jsonb_build_object('dirige', x.dirige) ORDER BY x.dirige DESC, x.creado)
-                            FROM (SELECT public.agenda_persona(s.lider_id) AS p, true AS dirige,
-                                         '-infinity'::timestamptz AS creado
-                                   WHERE s.lider_id IS NOT NULL
-                                  UNION ALL
-                                  SELECT public.agenda_persona(m.user_id), false, m.created_at
-                                    FROM public.agenda_subdepartamento_miembros m
-                                   WHERE m.subdepartamento_id = s.id
-                                     AND m.user_id IS DISTINCT FROM s.lider_id) x
-                           WHERE x.p IS NOT NULL), '[]'::jsonb) END,
-            'creador', public.agenda_persona(t.created_by),
-            'completada_por', public.agenda_persona(t.completada_por),
-            'puede_editar', v_encargado,
-            -- Una completada de un sub archivado es historial: no se reabre.
-            'puede_cambiar_estado', t.subdepartamento_id IS NOT NULL
-                                    AND s.archivado_at IS NULL
-                                    AND (v_encargado OR public.agenda_es_miembro(t.subdepartamento_id))));
-END;
 $function$
 ;
 CREATE OR REPLACE FUNCTION public.agenda_mis_tareas(p_desde date, p_hasta date, p_todo_el_departamento boolean DEFAULT false)
@@ -1190,5 +1193,7 @@ ALTER TABLE public.agenda_avisos ADD CONSTRAINT agenda_avisos_tipo_check CHECK (
     tipo = ANY (ARRAY['asignada'::text, 'completada'::text])
 );
 DELETE FROM public.notif_alertas WHERE clave = 'agenda_tarea_equipo_termino';
+
+NOTIFY pgrst, 'reload schema';
 
 COMMIT;

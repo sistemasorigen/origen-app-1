@@ -1094,8 +1094,9 @@ export const getMisTareas = (desde: string, hasta: string, todoElDepartamento = 
         { p_desde: desde, p_hasta: hasta, p_todo_el_departamento: todoElDepartamento },
         d => ({ tareas: tareas(d.tareas) }));
 
-export const getTarea = (id: string) =>
-    llamar<{ tarea: TareaDetalle }>('agenda_tarea', { p_id: id }, d => {
+/** `subContexto`: el panel de un equipo. Una compartida se ve como la ve ese equipo. */
+export const getTarea = (id: string, subContexto?: string) =>
+    llamar<{ tarea: TareaDetalle }>('agenda_tarea', { p_id: id, ...(subContexto ? { p_contexto: subContexto } : {}) }, d => {
         const t = obj(d.tarea) ?? {};
         return {
             tarea: {

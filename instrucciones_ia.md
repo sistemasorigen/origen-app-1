@@ -2754,6 +2754,13 @@ Diseño en `docs/superpowers/specs/2026-11-04-tareas-compartidas-design.md`.
 - **Finalizar** es `agenda_cambiar_estado_tarea(id, estado, p_sub)`. Sin `p_sub`,
   el integrante marca todos sus equipos pendientes; el encargado siempre dice
   cuál. Deshacer es sólo del encargado.
+- **Desde el panel de un equipo** todo va con ese equipo: la lista
+  (`agenda_tareas_subdepartamento`), el detalle (`agenda_tarea(id, p_contexto)`) y
+  el finalizado (`p_sub`). `agenda_tarea_vista` ignora un contexto que quien pide no
+  puede mirar: si no, pedir el panel de otro equipo mostraría su avance.
+- **Un equipo archivado** deja de ver la tarea, no cuenta para completarla ni va a
+  las repeticiones nuevas. Editar lo conserva con lo que terminó: el formulario
+  no lo muestra, pero lo manda en `p_subs`.
 - **Quien terminó deja de verla en su Agenda** (`agenda_mis_tareas`), también
   cuando se completa la tarea entera: un integrante común sólo llega por link.
   Quien dirige la ve en el panel, como completada.

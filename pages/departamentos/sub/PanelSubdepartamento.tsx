@@ -256,6 +256,7 @@ const PanelSubdepartamento: React.FC = () => {
                     key={tareaAbierta}
                     tareaId={tareaAbierta}
                     acciones={acciones}
+                    subContexto={subId}
                     onCerrar={() => setTareaAbierta(null)}
                     onCambio={alCambiar}
                 />

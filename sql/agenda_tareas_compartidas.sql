@@ -75,7 +75,8 @@ BEGIN
         RETURN;
     END IF;
 
-    IF p_contexto IS NOT NULL THEN
+    IF p_contexto IS NOT NULL
+       AND (public.agenda_es_encargado(t.departamento_id) OR public.agenda_es_miembro(p_contexto)) THEN
         SELECT * INTO e FROM public.agenda_tarea_equipos q
          WHERE q.tarea_id = t.id AND q.subdepartamento_id = p_contexto;
     ELSIF NOT public.agenda_es_encargado(t.departamento_id) THEN
@@ -213,13 +214,15 @@ AS $function$
                                AND public.agenda_es_miembro(t.subdepartamento_id))
                            OR (t.compartida AND EXISTS (
                                    SELECT 1 FROM public.agenda_tarea_equipos e
-                                    WHERE e.tarea_id = t.id
+                                     JOIN public.agenda_subdepartamentos s ON s.id = e.subdepartamento_id
+                                    WHERE e.tarea_id = t.id AND s.archivado_at IS NULL
                                       AND public.agenda_es_miembro(e.subdepartamento_id)))));
 $function$
 ;
 
 -- ── 5 · El detalle ────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.agenda_tarea(p_id uuid)
+DROP FUNCTION public.agenda_tarea(p_id uuid);
+CREATE OR REPLACE FUNCTION public.agenda_tarea(p_id uuid, p_contexto uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
@@ -246,7 +249,7 @@ BEGIN
     v_encargado := public.agenda_es_encargado(t.departamento_id);
 
     v_res := jsonb_build_object('ok', true, 'tarea',
-        public.agenda_tarea_json(t) || jsonb_build_object(
+        public.agenda_tarea_json(t, p_contexto) || jsonb_build_object(
             'detalles', t.detalles,
             -- Quien dirige primero y después los miembros, sin repetir.
             'la_tienen', CASE WHEN s.id IS NULL THEN '[]'::jsonb ELSE
@@ -274,17 +277,21 @@ BEGIN
     -- Una compartida: la gente y lo que puede hacer dependen de quién mira. Un
     -- integrante con su parte terminada ya no tiene nada para cambiar: deshacer
     -- es del departamento.
-    SELECT q.completada_por INTO v_quien FROM public.agenda_tarea_vista(t) q;
+    SELECT q.completada_por INTO v_quien FROM public.agenda_tarea_vista(t, p_contexto) q;
     RETURN jsonb_set(v_res, '{tarea}', (v_res->'tarea') || jsonb_build_object(
         'la_tienen', public.agenda_gente_de_tarea(t),
         'completada_por', public.agenda_persona(v_quien),
         'puede_cambiar_estado', v_encargado OR EXISTS (
             SELECT 1 FROM public.agenda_tarea_equipos e
              WHERE e.tarea_id = t.id AND e.finalizado_at IS NULL
-               AND e.subdepartamento_id = ANY (public.agenda_mis_equipos_de_tarea(t.id)))));
+               AND e.subdepartamento_id = ANY (
+                   CASE WHEN p_contexto = ANY (public.agenda_mis_equipos_de_tarea(t.id)) THEN ARRAY[p_contexto]
+                        ELSE public.agenda_mis_equipos_de_tarea(t.id) END))));
 END;
 $function$
 ;
+REVOKE ALL ON FUNCTION public.agenda_tarea(uuid, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agenda_tarea(uuid, uuid) TO authenticated;
 
 -- ── 6 · Mis tareas ────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.agenda_mis_tareas(p_desde date, p_hasta date, p_todo_el_departamento boolean DEFAULT false)
@@ -984,8 +991,11 @@ BEGIN
     -- Cambió el plazo o la frecuencia: se rehacen los días que faltan.
     IF p_frecuencia IS NOT NULL THEN
         -- Antes de borrar: las repeticiones nuevas llevan los mismos equipos.
-        SELECT COALESCE(v_subs, array_agg(e.subdepartamento_id)) INTO v_equipos
-          FROM public.agenda_tarea_equipos e WHERE e.tarea_id = p_id;
+        SELECT array_agg(q.id) INTO v_equipos
+          FROM public.agenda_subdepartamentos q
+         WHERE q.archivado_at IS NULL
+           AND q.id = ANY (COALESCE(v_subs, (SELECT array_agg(e.subdepartamento_id)
+                                               FROM public.agenda_tarea_equipos e WHERE e.tarea_id = p_id)));
 
         DELETE FROM public.agenda_tareas
          WHERE id IN (SELECT id FROM public.agenda_serie_pendientes(s.id));
@@ -1021,6 +1031,7 @@ BEGIN
             IF t.compartida THEN
                 INSERT INTO public.agenda_tarea_equipos (tarea_id, subdepartamento_id)
                 SELECT v_nueva, q FROM unnest(v_equipos) q;
+                PERFORM public.agenda_recalcular_compartida(v_nueva);
             END IF;
             v_hay := v_hay + 1;
         END LOOP;
@@ -1319,7 +1330,9 @@ BEGIN
     IF FOUND AND t.compartida THEN
         -- Un aviso por persona y por tarea: quien está en dos equipos recibe uno.
         SELECT COALESCE(sum(public.agenda_avisar_equipo(t, e.subdepartamento_id)), 0)::integer INTO v_n
-          FROM public.agenda_tarea_equipos e WHERE e.tarea_id = t.id;
+          FROM public.agenda_tarea_equipos e
+          JOIN public.agenda_subdepartamentos s ON s.id = e.subdepartamento_id
+         WHERE e.tarea_id = t.id AND s.archivado_at IS NULL;
         RETURN v_n;
     END IF;
     IF NOT FOUND OR t.subdepartamento_id IS NULL THEN
@@ -1726,5 +1739,8 @@ BEGIN
 END;
 $function$
 ;
+
+-- ── 24 · Que la API vea las firmas nuevas ─────────────────────────────────
+NOTIFY pgrst, 'reload schema';
 
 COMMIT;

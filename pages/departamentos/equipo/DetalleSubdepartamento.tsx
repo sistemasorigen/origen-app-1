@@ -111,7 +111,7 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
         tipo: 'destructivo',
         rotulo: 'Archivar',
         titulo: `¿Archivar ${sub.nombre}?`,
-        texto: 'Las tareas pendientes vuelven a Esperando asignación. Las completadas se conservan. Sus integrantes dejan de verlo.',
+        texto: 'Las tareas pendientes vuelven a Esperando asignación. En las compartidas deja de contar, y si era el único que faltaba quedan completadas. Las completadas se conservan. Sus integrantes dejan de verlo.',
         etiquetaBoton: 'Archivar sub-departamento',
         onConfirmar: async () => {
             const r = await archivarSubdepartamento(sub.id);
@@ -303,6 +303,8 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
                                                 )}
                                             </span>
                                         </button>
+                                        {/* Los equipos de una compartida se cambian editándola. */}
+                                        {!t.compartida && (
                                         <button
                                             type="button"
                                             onClick={() => setReasignando(t)}
@@ -314,6 +316,7 @@ const DetalleSubdepartamento: React.FC<{ sub: Subdepartamento }> = ({ sub }) => 
                                             <ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />
                                             Reasignar
                                         </button>
+                                        )}
                                         {completada && <span id={`sub-tarea-${t.id}-porque`} className="sr-only">Ya está completada: no se reasigna.</span>}
                                     </li>
                                 );
