@@ -2773,6 +2773,9 @@ Diseño en `docs/superpowers/specs/2026-11-04-tareas-compartidas-design.md`.
   pendientes sin finalizados.
 - Las RPC cambiaron de firma: `PROBAR_agenda_plazos_y_repeticiones.sql` y
   `PROBAR_notif_catalogo.sql` ya la dan por aplicada.
+- **Aplicada en producción el 2026-11-04**, con el front todavía sin publicar. Las
+  firmas viejas siguen respondiendo porque los parámetros nuevos son opcionales.
+  `ROLLBACK_agenda_tareas_compartidas.sql` frena si ya existe alguna compartida.
 
 ### Las pantallas de los plazos y las repeticiones (desde el 2026-11-03)
 Lo puro (texto y geometría, nunca reglas) está en `pages/agenda/plazos.ts`.

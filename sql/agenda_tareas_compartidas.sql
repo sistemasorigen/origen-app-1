@@ -1,6 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Agenda Origen · tareas compartidas entre sub-departamentos
 -- 2026-11-04 · docs/superpowers/specs/2026-11-04-tareas-compartidas-design.md
+-- ✅ APLICADO en producción el 2026-11-04.
 --
 -- Una tarea compartida es UNA fila de agenda_tareas, con `compartida` en true y
 -- `subdepartamento_id` NULL. Sus equipos y lo que terminó cada uno viven en

@@ -137,10 +137,10 @@
 
 ### Task 6: Aplicar en producción
 
-- [ ] **Step 1: Pedir la aprobación explícita de Ignacio** con el resultado de las pruebas. Sin ella, frenar acá: las tareas siguientes se pueden hacer con datos interceptados, pero no se publican.
-- [ ] **Step 2: Aplicar** `sql/agenda_tareas_compartidas.sql`.
-- [ ] **Step 3: Verificar** como `authenticated`, en `BEGIN … ROLLBACK`, una compartida completa con personas de prueba. Esperado: los mismos resultados y 0 filas nuevas después.
-- [ ] **Step 4: Anotar** la aplicación en `instrucciones_ia.md`, sección 39.
+- [x] **Step 1: Pedir la aprobación explícita de Ignacio** con el resultado de las pruebas. Sin ella, frenar acá: las tareas siguientes se pueden hacer con datos interceptados, pero no se publican.
+- [x] **Step 2: Aplicar** `sql/agenda_tareas_compartidas.sql`.
+- [x] **Step 3: Verificar** como `authenticated`, en `BEGIN … ROLLBACK`, una compartida completa con personas de prueba. Esperado: los mismos resultados y 0 filas nuevas después.
+- [x] **Step 4: Anotar** la aplicación en `instrucciones_ia.md`, sección 39.
 
 ### Task 7: Servicio y pantallas del integrante
 
