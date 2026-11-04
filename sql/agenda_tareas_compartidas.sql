@@ -577,4 +577,499 @@ $function$
 REVOKE ALL ON FUNCTION public.agenda_crear_tarea(uuid, uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, uuid, date, text, uuid[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.agenda_crear_tarea(uuid, uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, uuid, date, text, uuid[]) TO authenticated;
 
+-- ── 9 · Auxiliares de escritura ───────────────────────────────────────────
+-- Deja el estado de la tarea de acuerdo con sus equipos. Sólo cuentan los que no
+-- están archivados. Toma la fila primero: dos equipos que terminan a la vez
+-- pasan de a uno, y uno solo la cierra.
+CREATE FUNCTION public.agenda_recalcular_compartida(p_tarea uuid)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+    t public.agenda_tareas;
+    v_cuentan integer;
+    v_faltan integer;
+    v_terminaron integer;
+BEGIN
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_tarea FOR UPDATE;
+    IF NOT FOUND OR NOT t.compartida THEN
+        RETURN;
+    END IF;
+    SELECT count(*) FILTER (WHERE s.archivado_at IS NULL),
+           count(*) FILTER (WHERE s.archivado_at IS NULL AND e.finalizado_at IS NULL),
+           count(*) FILTER (WHERE e.finalizado_at IS NOT NULL)
+      INTO v_cuentan, v_faltan, v_terminaron
+      FROM public.agenda_tarea_equipos e
+      JOIN public.agenda_subdepartamentos s ON s.id = e.subdepartamento_id
+     WHERE e.tarea_id = p_tarea;
+
+    IF v_faltan > 0 THEN
+        IF t.estado <> 'en_proceso' THEN
+            UPDATE public.agenda_tareas SET
+                estado = 'en_proceso', completada_at = NULL, completada_por = NULL,
+                asignada_at = COALESCE(asignada_at, now()), updated_at = now()
+             WHERE id = p_tarea;
+        END IF;
+    ELSIF v_cuentan > 0 OR v_terminaron > 0 THEN
+        IF t.estado <> 'completada' THEN
+            UPDATE public.agenda_tareas SET
+                estado = 'completada', completada_at = now(), completada_por = auth.uid(), updated_at = now()
+             WHERE id = p_tarea;
+        END IF;
+    ELSIF t.estado <> 'completada' THEN
+        -- Sin equipos que cuenten y nadie terminó: que el departamento asigne otros.
+        UPDATE public.agenda_tareas SET
+            estado = 'esperando', asignada_at = NULL, updated_at = now()
+         WHERE id = p_tarea;
+    END IF;
+END;
+$$;
+
+-- Deja a la tarea con esos equipos. Los que siguen conservan lo que terminaron.
+CREATE FUNCTION public.agenda_aplicar_equipos(p_tarea uuid, p_subs uuid[])
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+    PERFORM 1 FROM public.agenda_tareas WHERE id = p_tarea FOR UPDATE;
+    DELETE FROM public.agenda_tarea_equipos
+     WHERE tarea_id = p_tarea AND NOT (subdepartamento_id = ANY (p_subs));
+    INSERT INTO public.agenda_tarea_equipos (tarea_id, subdepartamento_id)
+    SELECT p_tarea, q FROM unnest(p_subs) q
+    ON CONFLICT (tarea_id, subdepartamento_id) DO NOTHING;
+    PERFORM public.agenda_recalcular_compartida(p_tarea);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agenda_recalcular_compartida(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agenda_aplicar_equipos(uuid, uuid[]) FROM PUBLIC, anon, authenticated;
+
+-- ── 10 · Finalizar y deshacer ─────────────────────────────────────────────
+DROP FUNCTION public.agenda_cambiar_estado_tarea(p_id uuid, p_estado text);
+CREATE OR REPLACE FUNCTION public.agenda_cambiar_estado_tarea(p_id uuid, p_estado text, p_sub uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    t public.agenda_tareas;
+    v_encargado boolean;
+    v_equipos uuid[];
+    v_n integer;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    IF p_estado IS NULL OR p_estado NOT IN ('completada', 'en_proceso') THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'estado_invalido');
+    END IF;
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    -- Compartida: lo que cambia es la parte de un equipo, no la tarea.
+    IF t.compartida THEN
+        v_encargado := public.agenda_es_encargado(t.departamento_id);
+        IF p_sub IS NOT NULL THEN
+            IF NOT EXISTS (SELECT 1 FROM public.agenda_tarea_equipos
+                            WHERE tarea_id = p_id AND subdepartamento_id = p_sub) THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', 'sub_ajeno');
+            END IF;
+            IF NOT (v_encargado OR public.agenda_es_miembro(p_sub)) THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+            END IF;
+            IF EXISTS (SELECT 1 FROM public.agenda_subdepartamentos
+                        WHERE id = p_sub AND archivado_at IS NOT NULL) THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', 'archivado');
+            END IF;
+            v_equipos := ARRAY[p_sub];
+        ELSIF v_encargado THEN
+            -- El encargado siempre dice de qué equipo: no es "su" parte.
+            RETURN jsonb_build_object('ok', false, 'motivo', 'sin_equipos');
+        ELSE
+            v_equipos := public.agenda_mis_equipos_de_tarea(p_id);
+            IF cardinality(v_equipos) = 0 THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+            END IF;
+        END IF;
+
+        IF p_estado = 'en_proceso' THEN
+            IF NOT v_encargado THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', 'solo_el_departamento');
+            END IF;
+            UPDATE public.agenda_tarea_equipos SET finalizado_at = NULL, finalizado_por = NULL
+             WHERE tarea_id = p_id AND subdepartamento_id = ANY (v_equipos) AND finalizado_at IS NOT NULL;
+        ELSE
+            UPDATE public.agenda_tarea_equipos SET finalizado_at = now(), finalizado_por = auth.uid()
+             WHERE tarea_id = p_id AND subdepartamento_id = ANY (v_equipos) AND finalizado_at IS NULL;
+        END IF;
+        GET DIAGNOSTICS v_n = ROW_COUNT;
+        IF v_n > 0 THEN
+            PERFORM public.agenda_recalcular_compartida(p_id);
+            SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id;
+        END IF;
+        RETURN jsonb_build_object('ok', true, 'sin_cambios', v_n = 0, 'tarea', public.agenda_tarea_json(t, p_sub));
+    END IF;
+
+    IF NOT (public.agenda_es_encargado(t.departamento_id)
+            OR (t.subdepartamento_id IS NOT NULL AND public.agenda_es_miembro(t.subdepartamento_id))) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    IF t.subdepartamento_id IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sub');
+    END IF;
+    -- Las completadas de un sub archivado son historial: volverlas a 'en
+    -- proceso' las dejaría pendientes en un equipo que ya no existe.
+    IF EXISTS (SELECT 1 FROM public.agenda_subdepartamentos
+                WHERE id = t.subdepartamento_id AND archivado_at IS NOT NULL) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'archivado');
+    END IF;
+    IF t.estado = p_estado THEN
+        RETURN jsonb_build_object('ok', true, 'sin_cambios', true, 'tarea', public.agenda_tarea_json(t));
+    END IF;
+
+    UPDATE public.agenda_tareas SET
+        estado = p_estado,
+        completada_at = CASE WHEN p_estado = 'completada' THEN now() END,
+        completada_por = CASE WHEN p_estado = 'completada' THEN auth.uid() END,
+        updated_at = now()
+     WHERE id = p_id
+    RETURNING * INTO t;
+
+    RETURN jsonb_build_object('ok', true, 'tarea', public.agenda_tarea_json(t));
+END;
+$function$
+;
+REVOKE ALL ON FUNCTION public.agenda_cambiar_estado_tarea(uuid, text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agenda_cambiar_estado_tarea(uuid, text, uuid) TO authenticated;
+
+-- ── 11 · Reasignar ────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_reasignar_tarea(p_id uuid, p_sub_nuevo uuid, p_alcance text DEFAULT 'solo_esta'::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_alcance text := COALESCE(NULLIF(btrim(COALESCE(p_alcance, '')), ''), 'solo_esta');
+    t public.agenda_tareas;
+    v_motivo text;
+    v_ids uuid[];
+    v_primera uuid;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    IF v_alcance NOT IN ('solo_esta', 'las_que_faltan') THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'alcance_invalido');
+    END IF;
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_es_encargado(t.departamento_id) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    -- Los equipos de una compartida se cambian editándola.
+    IF t.compartida THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'es_compartida');
+    END IF;
+    IF v_alcance = 'las_que_faltan' AND t.serie_id IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'alcance_invalido');
+    END IF;
+    v_motivo := public.agenda_valida_del_departamento(t.departamento_id, p_sub_nuevo, NULL, NULL);
+    IF v_motivo IS NOT NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', v_motivo);
+    END IF;
+
+    IF v_alcance = 'solo_esta' THEN
+        IF t.estado = 'completada' THEN
+            RETURN jsonb_build_object('ok', false, 'motivo', 'completada');
+        END IF;
+        IF p_sub_nuevo IS NOT DISTINCT FROM t.subdepartamento_id THEN
+            RETURN jsonb_build_object('ok', true, 'id', t.id, 'sin_cambios', true,
+                                      'tarea', public.agenda_tarea_json(t));
+        END IF;
+
+        UPDATE public.agenda_tareas SET
+            subdepartamento_id = p_sub_nuevo,
+            estado = CASE WHEN p_sub_nuevo IS NULL THEN 'esperando' ELSE 'en_proceso' END,
+            asignada_at = CASE WHEN p_sub_nuevo IS NULL THEN NULL ELSE now() END,
+            updated_at = now()
+         WHERE id = p_id
+        RETURNING * INTO t;
+
+        RETURN jsonb_build_object('ok', true, 'id', t.id, 'tarea', public.agenda_tarea_json(t));
+    END IF;
+
+    -- Toda la serie, de hoy en adelante. Las completadas se quedan con el
+    -- equipo que las hizo.
+    SELECT array_agg(id) INTO v_ids FROM public.agenda_serie_pendientes(t.serie_id);
+    IF v_ids IS NULL OR array_length(v_ids, 1) IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'serie_completada');
+    END IF;
+
+    PERFORM set_config('agenda.serie_en_lote', '1', true);
+    UPDATE public.agenda_tareas SET
+        subdepartamento_id = p_sub_nuevo,
+        estado = CASE WHEN p_sub_nuevo IS NULL THEN 'esperando' ELSE 'en_proceso' END,
+        asignada_at = CASE WHEN p_sub_nuevo IS NULL THEN NULL ELSE now() END,
+        updated_at = now()
+     WHERE id = ANY (v_ids);
+    PERFORM set_config('agenda.serie_en_lote', '', true);
+
+    v_primera := v_ids[1];
+    IF p_sub_nuevo IS NOT NULL THEN
+        PERFORM public.agenda_avisar_serie(v_primera);
+    END IF;
+
+    RETURN jsonb_build_object('ok', true, 'id', p_id, 'alcance', v_alcance,
+        'reasignadas', array_length(v_ids, 1),
+        'tareas', COALESCE((SELECT jsonb_agg(public.agenda_tarea_json(x) ORDER BY x.fecha)
+                              FROM public.agenda_tareas x WHERE x.serie_id = t.serie_id), '[]'::jsonb));
+END;
+$function$
+;
+
+-- ── 12 · Editar ───────────────────────────────────────────────────────────
+DROP FUNCTION public.agenda_editar_tarea(p_id uuid, p_sub uuid, p_carpeta uuid, p_prioridad uuid, p_nombre text, p_detalles text, p_fecha date, p_todo_el_dia boolean, p_desde time without time zone, p_hasta time without time zone, p_fecha_hasta date, p_frecuencia text, p_alcance text);
+CREATE OR REPLACE FUNCTION public.agenda_editar_tarea(p_id uuid, p_sub uuid, p_carpeta uuid, p_prioridad uuid, p_nombre text, p_detalles text, p_fecha date, p_todo_el_dia boolean, p_desde time without time zone, p_hasta time without time zone, p_fecha_hasta date DEFAULT NULL::date, p_frecuencia text DEFAULT NULL::text, p_alcance text DEFAULT 'solo_esta'::text, p_subs uuid[] DEFAULT NULL::uuid[])
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_alcance text := COALESCE(NULLIF(btrim(COALESCE(p_alcance, '')), ''), 'solo_esta');
+    v_todo boolean;
+    v_motivo text;
+    t public.agenda_tareas;
+    s public.agenda_series;
+    v_cambia_sub boolean;
+    v_pendientes integer;
+    v_fecha date;
+    v_primera uuid;
+    v_hay integer := 0;
+    v_subs uuid[];
+    v_equipo uuid;
+    v_equipos uuid[];
+    v_nueva uuid;
+    v_una uuid;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    IF v_alcance NOT IN ('solo_esta', 'las_que_faltan') THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'alcance_invalido');
+    END IF;
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_es_encargado(t.departamento_id) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    IF v_alcance = 'las_que_faltan' AND t.serie_id IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'alcance_invalido');
+    END IF;
+    -- Una repetición nunca lleva plazo, y una tarea suelta no se convierte en
+    -- serie editándola: para eso se crea una serie.
+    IF t.serie_id IS NULL AND p_frecuencia IS NOT NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'serie_invalida');
+    END IF;
+    IF t.serie_id IS NOT NULL AND v_alcance = 'solo_esta'
+       AND (p_frecuencia IS NOT NULL OR p_fecha_hasta IS NOT NULL) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'alcance_invalido');
+    END IF;
+
+    -- Una compartida no se vuelve común ni al revés. Sus equipos vienen en p_subs.
+    IF (t.compartida AND p_sub IS NOT NULL) OR (NOT t.compartida AND p_subs IS NOT NULL) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'es_compartida');
+    END IF;
+    IF p_subs IS NOT NULL THEN
+        SELECT array_agg(DISTINCT q) INTO v_subs FROM unnest(p_subs) q WHERE q IS NOT NULL;
+        IF COALESCE(cardinality(v_subs), 0) = 0 THEN
+            RETURN jsonb_build_object('ok', false, 'motivo', 'sin_equipos');
+        END IF;
+        FOREACH v_equipo IN ARRAY v_subs LOOP
+            -- Un equipo que ya está se puede conservar aunque esté archivado.
+            v_motivo := public.agenda_valida_del_departamento(t.departamento_id, v_equipo, NULL, NULL,
+                (SELECT e.subdepartamento_id FROM public.agenda_tarea_equipos e
+                  WHERE e.tarea_id = p_id AND e.subdepartamento_id = v_equipo));
+            IF v_motivo IS NOT NULL THEN
+                RETURN jsonb_build_object('ok', false, 'motivo', v_motivo);
+            END IF;
+        END LOOP;
+        IF t.estado = 'completada'
+           AND v_subs IS DISTINCT FROM (SELECT array_agg(e.subdepartamento_id ORDER BY e.subdepartamento_id)
+                                          FROM public.agenda_tarea_equipos e WHERE e.tarea_id = p_id) THEN
+            RETURN jsonb_build_object('ok', false, 'motivo', 'completada');
+        END IF;
+    END IF;
+
+    v_todo := CASE WHEN t.serie_id IS NULL AND p_fecha_hasta IS NOT NULL THEN true
+                   ELSE COALESCE(p_todo_el_dia, true) END;
+
+    v_motivo := public.agenda_valida_campos_tarea(p_nombre, p_detalles, p_fecha, v_todo, p_desde, p_hasta);
+    IF v_motivo IS NULL AND t.serie_id IS NULL THEN
+        v_motivo := public.agenda_valida_plazo(p_fecha, p_fecha_hasta, NULL, v_todo);
+    END IF;
+    IF v_motivo IS NULL AND t.serie_id IS NOT NULL AND p_frecuencia IS NOT NULL THEN
+        v_motivo := public.agenda_valida_plazo(p_fecha, p_fecha_hasta, p_frecuencia, v_todo);
+    END IF;
+    IF v_motivo IS NULL THEN
+        -- El 5º argumento es el sub que la tarea YA tiene: se puede conservar
+        -- uno archivado (historial), pero no mudarse a uno archivado.
+        v_motivo := public.agenda_valida_del_departamento(
+            t.departamento_id, p_sub, p_carpeta, p_prioridad, t.subdepartamento_id);
+    END IF;
+    IF v_motivo IS NOT NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', v_motivo);
+    END IF;
+
+    -- ── Una sola tarea (o una sola repetición) ──────────────────────────────
+    IF v_alcance = 'solo_esta' THEN
+        v_cambia_sub := p_sub IS DISTINCT FROM t.subdepartamento_id;
+        IF v_cambia_sub AND t.estado = 'completada' THEN
+            RETURN jsonb_build_object('ok', false, 'motivo', 'completada');
+        END IF;
+
+        UPDATE public.agenda_tareas SET
+            subdepartamento_id = p_sub,
+            carpeta_id = p_carpeta,
+            prioridad_id = p_prioridad,
+            nombre = btrim(p_nombre),
+            detalles = NULLIF(btrim(COALESCE(p_detalles, '')), ''),
+            fecha = p_fecha,
+            fecha_hasta = CASE WHEN t.serie_id IS NULL THEN p_fecha_hasta ELSE NULL END,
+            todo_el_dia = v_todo,
+            hora_desde = CASE WHEN v_todo THEN NULL ELSE p_desde END,
+            hora_hasta = CASE WHEN v_todo THEN NULL ELSE p_hasta END,
+            estado = CASE WHEN compartida THEN estado
+                          WHEN p_sub IS NULL THEN 'esperando'
+                          WHEN v_cambia_sub THEN 'en_proceso'
+                          ELSE estado END,
+            asignada_at = CASE WHEN compartida THEN asignada_at
+                               WHEN p_sub IS NULL THEN NULL
+                               WHEN v_cambia_sub THEN now()
+                               ELSE asignada_at END,
+            updated_at = now()
+         WHERE id = p_id
+        RETURNING * INTO t;
+
+        IF v_subs IS NOT NULL THEN
+            PERFORM public.agenda_aplicar_equipos(p_id, v_subs);
+            SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id;
+        END IF;
+
+        IF t.serie_id IS NOT NULL THEN
+            PERFORM public.agenda_serie_renumerar(t.serie_id);
+            SELECT * INTO t FROM public.agenda_tareas WHERE id = p_id;
+        END IF;
+        RETURN jsonb_build_object('ok', true, 'id', t.id, 'tarea', public.agenda_tarea_json(t));
+    END IF;
+
+    -- ── Toda la serie, de hoy en adelante ───────────────────────────────────
+    SELECT * INTO s FROM public.agenda_series WHERE id = t.serie_id FOR UPDATE;
+    SELECT count(*) INTO v_pendientes FROM public.agenda_serie_pendientes(t.serie_id);
+    IF v_pendientes = 0 THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'serie_completada');
+    END IF;
+    IF p_sub IS DISTINCT FROM t.subdepartamento_id AND t.estado = 'completada' THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'completada');
+    END IF;
+
+    PERFORM set_config('agenda.serie_en_lote', '1', true);
+
+    -- Cambió el plazo o la frecuencia: se rehacen los días que faltan.
+    IF p_frecuencia IS NOT NULL THEN
+        -- Antes de borrar: las repeticiones nuevas llevan los mismos equipos.
+        SELECT COALESCE(v_subs, array_agg(e.subdepartamento_id)) INTO v_equipos
+          FROM public.agenda_tarea_equipos e WHERE e.tarea_id = p_id;
+
+        DELETE FROM public.agenda_tareas
+         WHERE id IN (SELECT id FROM public.agenda_serie_pendientes(s.id));
+
+        UPDATE public.agenda_series SET
+            frecuencia = p_frecuencia, desde = p_fecha, hasta = p_fecha_hasta,
+            todo_el_dia = v_todo,
+            hora_desde = CASE WHEN v_todo THEN NULL ELSE p_desde END,
+            hora_hasta = CASE WHEN v_todo THEN NULL ELSE p_hasta END,
+            updated_at = now()
+         WHERE id = s.id;
+
+        FOR v_fecha IN SELECT * FROM public.agenda_serie_fechas(p_frecuencia, p_fecha, p_fecha_hasta) LOOP
+            -- Un día que ya tiene una repetición completada no se duplica.
+            CONTINUE WHEN v_fecha < public.agenda_hoy()
+                       OR EXISTS (SELECT 1 FROM public.agenda_tareas
+                                   WHERE serie_id = s.id AND fecha = v_fecha);
+            INSERT INTO public.agenda_tareas (
+                departamento_id, subdepartamento_id, carpeta_id, prioridad_id,
+                nombre, detalles, fecha, todo_el_dia, hora_desde, hora_hasta,
+                estado, asignada_at, created_by, serie_id, numero_en_serie, compartida)
+            VALUES (
+                t.departamento_id, p_sub, p_carpeta, p_prioridad,
+                btrim(p_nombre), NULLIF(btrim(COALESCE(p_detalles, '')), ''), v_fecha, v_todo,
+                CASE WHEN v_todo THEN NULL ELSE p_desde END,
+                CASE WHEN v_todo THEN NULL ELSE p_hasta END,
+                CASE WHEN p_sub IS NULL AND NOT t.compartida THEN 'esperando' ELSE 'en_proceso' END,
+                CASE WHEN p_sub IS NULL AND NOT t.compartida THEN NULL ELSE now() END,
+                auth.uid(), s.id,
+                -- Provisorio: agenda_serie_renumerar deja los definitivos.
+                1000000 + (v_fecha - s.desde), t.compartida)
+            RETURNING id INTO v_nueva;
+            IF t.compartida THEN
+                INSERT INTO public.agenda_tarea_equipos (tarea_id, subdepartamento_id)
+                SELECT v_nueva, q FROM unnest(v_equipos) q;
+            END IF;
+            v_hay := v_hay + 1;
+        END LOOP;
+    END IF;
+
+    -- Lo demás se aplica a todas las que faltan.
+    UPDATE public.agenda_tareas SET
+        subdepartamento_id = p_sub,
+        carpeta_id = p_carpeta,
+        prioridad_id = p_prioridad,
+        nombre = btrim(p_nombre),
+        detalles = NULLIF(btrim(COALESCE(p_detalles, '')), ''),
+        todo_el_dia = v_todo,
+        hora_desde = CASE WHEN v_todo THEN NULL ELSE p_desde END,
+        hora_hasta = CASE WHEN v_todo THEN NULL ELSE p_hasta END,
+        estado = CASE WHEN compartida THEN estado
+                      WHEN p_sub IS NULL THEN 'esperando'
+                      WHEN p_sub IS DISTINCT FROM subdepartamento_id THEN 'en_proceso'
+                      ELSE estado END,
+        asignada_at = CASE WHEN compartida THEN asignada_at
+                           WHEN p_sub IS NULL THEN NULL
+                           WHEN p_sub IS DISTINCT FROM subdepartamento_id THEN now()
+                           ELSE asignada_at END,
+        updated_at = now()
+     WHERE id IN (SELECT id FROM public.agenda_serie_pendientes(s.id));
+
+    IF v_subs IS NOT NULL THEN
+        FOR v_una IN SELECT id FROM public.agenda_serie_pendientes(s.id) LOOP
+            PERFORM public.agenda_aplicar_equipos(v_una, v_subs);
+        END LOOP;
+    END IF;
+
+    PERFORM public.agenda_serie_renumerar(s.id);
+    PERFORM set_config('agenda.serie_en_lote', '', true);
+
+    SELECT id INTO v_primera FROM public.agenda_serie_pendientes(s.id) LIMIT 1;
+    IF v_primera IS NOT NULL THEN
+        PERFORM public.agenda_avisar_serie(v_primera);
+    END IF;
+
+    SELECT * INTO s FROM public.agenda_series WHERE id = s.id;
+    RETURN jsonb_build_object('ok', true, 'id', p_id, 'alcance', v_alcance,
+        'serie', public.agenda_serie_json(s),
+        'tareas', COALESCE((SELECT jsonb_agg(public.agenda_tarea_json(x) ORDER BY x.fecha)
+                              FROM public.agenda_tareas x WHERE x.serie_id = s.id), '[]'::jsonb));
+END;
+$function$
+;
+REVOKE ALL ON FUNCTION public.agenda_editar_tarea(uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, date, text, text, uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.agenda_editar_tarea(uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, date, text, text, uuid[]) TO authenticated;
+
 COMMIT;

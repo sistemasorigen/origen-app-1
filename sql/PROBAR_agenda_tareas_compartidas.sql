@@ -111,6 +111,13 @@ DECLARE
     t1 uuid := gen_random_uuid();
     t_comun uuid := gen_random_uuid();
     s1 uuid := gen_random_uuid();
+    v_ids uuid[];
+    s2 uuid := gen_random_uuid();
+    t6 uuid := gen_random_uuid();
+    t5 uuid := gen_random_uuid();
+    t4 uuid := gen_random_uuid();
+    t3 uuid := gen_random_uuid();
+    t2 uuid := gen_random_uuid();
     j jsonb; v_n integer; v_txt text; v_id uuid;
     v_fallos integer; v_salida text;
 BEGIN
@@ -222,6 +229,186 @@ j := public.agenda_crear_tarea(t_comun, dep, a, NULL, NULL, 'PRUEBA común', NUL
 PERFORM pg_temp.chk('B15', 'una tarea común sigue con su equipo y no es compartida', 'Equipo A · en_proceso · false · null',
     (j->'tarea'->'subdepartamento'->>'nombre') || ' · ' || (j->'tarea'->>'estado') || ' · '
     || (j->'tarea'->>'compartida') || ' · ' || COALESCE(j->'tarea'->>'equipos', 'null'));
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- C · Finalizar y deshacer
+-- ═══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t2, dep, NULL, NULL, NULL, 'PRUEBA dos', NULL, HOY + 1, true, NULL, NULL, p_subs => ARRAY[a, b]);
+j := public.agenda_crear_tarea(t3, dep, NULL, NULL, NULL, 'PRUEBA tres', NULL, HOY + 1, true, NULL, NULL, p_subs => ARRAY[a, b]);
+
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t2, 'completada');
+PERFORM pg_temp.chk('C1', 'Lalo da el finalizado: vale por su equipo, la tarea sigue', 'true · en_proceso A:si B:no',
+    (j->>'ok') || ' · ' || pg_temp.avance(t2));
+PERFORM pg_temp.chk('C2', 'para su equipo ya está completada', 'Equipo A · completada · equipos:no', pg_temp.vista(t2));
+PERFORM pg_temp.como(mina);
+PERFORM pg_temp.chk('C3', 'también para Mina, de su mismo equipo', 'Equipo A · completada · equipos:no', pg_temp.vista(t2));
+PERFORM pg_temp.chk('C4', 'y le sale de la Agenda', '0', pg_temp.hay(public.agenda_mis_tareas(HOY + 1, HOY + 1), t2));
+PERFORM pg_temp.chk('C5', 'ya no tiene nada para cambiar', 'false', public.agenda_tarea(t2)->'tarea'->>'puede_cambiar_estado');
+j := public.agenda_cambiar_estado_tarea(t2, 'completada');
+PERFORM pg_temp.chk('C6', 'el mismo equipo otra vez: sin cambios', 'true', j->>'sin_cambios');
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('C7', 'queda registrado quien lo dio primero', 'Lalo',
+    (SELECT u.name FROM public.agenda_tarea_equipos e JOIN public.users u ON u.id = e.finalizado_por
+      WHERE e.tarea_id = t2 AND e.subdepartamento_id = a));
+PERFORM pg_temp.como(bea);
+PERFORM pg_temp.chk('C8', 'el otro equipo la sigue viendo en proceso', 'Equipo B · en_proceso · equipos:no', pg_temp.vista(t2));
+PERFORM pg_temp.chk('C9', 'y en su Agenda', '1', pg_temp.hay(public.agenda_mis_tareas(HOY + 1, HOY + 1), t2));
+PERFORM pg_temp.chk('C10', 'y la puede cambiar', 'true', public.agenda_tarea(t2)->'tarea'->>'puede_cambiar_estado');
+PERFORM pg_temp.como(elsa);
+PERFORM pg_temp.chk('C11', 'la encargada ve el avance', 'sin-sub · en_proceso · equipos:2', pg_temp.vista(t2));
+PERFORM pg_temp.chk('C12', 'con quién terminó', 'Equipo A:Lalo',
+    (SELECT string_agg((e->>'nombre') || ':' || (e->'finalizado_por'->>'nombre'), ',')
+       FROM jsonb_array_elements(public.agenda_tarea(t2)->'tarea'->'equipos') e WHERE e->>'finalizado_at' IS NOT NULL));
+PERFORM pg_temp.como(bea);
+j := public.agenda_cambiar_estado_tarea(t2, 'completada');
+PERFORM pg_temp.chk('C13', 'termina el último: la tarea queda completada', 'completada A:si B:si', pg_temp.avance(t2));
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('C14', 'la completó el último', 'Bea',
+    (SELECT u.name FROM public.agenda_tareas t JOIN public.users u ON u.id = t.completada_por WHERE t.id = t2));
+
+PERFORM pg_temp.como(bea);
+j := public.agenda_cambiar_estado_tarea(t3, 'completada');
+PERFORM pg_temp.como(mina);
+j := public.agenda_cambiar_estado_tarea(t3, 'completada');
+PERFORM pg_temp.chk('C15', 'en el orden inverso, igual', 'completada A:si B:si', pg_temp.avance(t3));
+
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t2, 'en_proceso');
+PERFORM pg_temp.chk('C16', 'un integrante no puede deshacer', 'solo_el_departamento', j->>'motivo');
+PERFORM pg_temp.como(elsa);
+j := public.agenda_cambiar_estado_tarea(t2, 'en_proceso');
+PERFORM pg_temp.chk('C17', 'la encargada, sin decir de qué equipo', 'sin_equipos', j->>'motivo');
+j := public.agenda_cambiar_estado_tarea(t2, 'en_proceso', a);
+PERFORM pg_temp.chk('C18', 'la encargada deshace el de A: vuelve a en proceso', 'true · en_proceso A:no B:si', (j->>'ok') || ' · ' || pg_temp.avance(t2));
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('C19', 'sin fecha de completada', 'null · null',
+    COALESCE((SELECT completada_at::text FROM public.agenda_tareas WHERE id = t2), 'null') || ' · '
+    || COALESCE((SELECT completada_por::text FROM public.agenda_tareas WHERE id = t2), 'null'));
+PERFORM pg_temp.como(mina);
+PERFORM pg_temp.chk('C20', 'vuelve a las pendientes de A', '1', pg_temp.hay(public.agenda_mis_tareas(HOY + 1, HOY + 1), t2));
+PERFORM pg_temp.como(elsa);
+j := public.agenda_cambiar_estado_tarea(t2, 'completada', a);
+PERFORM pg_temp.chk('C21', 'la encargada termina por A', 'completada A:si B:si', pg_temp.avance(t2));
+j := public.agenda_cambiar_estado_tarea(t2, 'completada');
+PERFORM pg_temp.chk('C22', 'la encargada sin equipo', 'sin_equipos', j->>'motivo');
+j := public.agenda_cambiar_estado_tarea(t2, 'completada', c);
+PERFORM pg_temp.chk('C23', 'un equipo que no está en la tarea', 'sub_ajeno', j->>'motivo');
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t3, 'completada', b);
+PERFORM pg_temp.chk('C24', 'Lalo no puede terminar por otro equipo', 'sin_permiso', j->>'motivo');
+PERFORM pg_temp.como(cora);
+j := public.agenda_cambiar_estado_tarea(t3, 'completada');
+PERFORM pg_temp.chk('C25', 'quien no está en la tarea', 'sin_permiso', j->>'motivo');
+
+-- Dos equipos a la vez (Review Focus 1). La fila se toma con FOR UPDATE antes de
+-- contar, y cerrar otra vez no vuelve a escribir la fecha.
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('C26', 'finalizar toma la fila antes de contar', 'true',
+    (pg_get_functiondef('public.agenda_cambiar_estado_tarea(uuid,text,uuid)'::regprocedure) LIKE '%FOR UPDATE%'
+     AND pg_get_functiondef('public.agenda_recalcular_compartida(uuid)'::regprocedure) LIKE '%FOR UPDATE%')::text);
+UPDATE public.agenda_tareas SET completada_at = now() - interval '2 days' WHERE id = t3;
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t3, 'completada');
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('C27', 'cerrar de nuevo no pisa la fecha de completada', 'true',
+    ((SELECT completada_at FROM public.agenda_tareas WHERE id = t3) < now() - interval '1 day')::text);
+
+-- Persona en dos equipos.
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t4, dep, NULL, NULL, NULL, 'PRUEBA cuatro', NULL, HOY + 1, true, NULL, NULL, p_subs => ARRAY[a, b]);
+j := public.agenda_crear_tarea(t5, dep, NULL, NULL, NULL, 'PRUEBA cinco', NULL, HOY + 1, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.como(ana);
+j := public.agenda_cambiar_estado_tarea(t4, 'completada');
+PERFORM pg_temp.chk('C28', 'Ana, en dos equipos, sin decir cuál: termina los dos', 'completada A:si B:si', pg_temp.avance(t4));
+j := public.agenda_cambiar_estado_tarea(t5, 'completada', a);
+PERFORM pg_temp.chk('C29', 'desde el panel de un equipo: sólo ese', 'en_proceso A:si B:no', pg_temp.avance(t5));
+PERFORM pg_temp.chk('C30', 'y la sigue viendo por el otro', 'Equipo B · en_proceso · equipos:no', pg_temp.vista(t5));
+
+-- Alguien sale del equipo con la tarea a medias (Review Focus 3).
+PERFORM pg_temp.como(bea);
+j := public.agenda_cambiar_estado_tarea(t5, 'completada', b);
+PERFORM pg_temp.chk('C31', 'Bea termina por su equipo', 'completada A:si B:si', pg_temp.avance(t5));
+PERFORM pg_temp.como(elsa);
+j := public.agenda_cambiar_estado_tarea(t5, 'en_proceso', a);
+PERFORM pg_temp.admin();
+DELETE FROM public.agenda_subdepartamento_miembros WHERE subdepartamento_id = b AND user_id = bea;
+PERFORM pg_temp.como(bea);
+PERFORM pg_temp.chk('C32', 'Bea sale del equipo: deja de verla', 'sin_permiso', pg_temp.vista(t5));
+PERFORM pg_temp.chk('C33', 'lo que su equipo terminó se conserva', 'en_proceso A:no B:si', pg_temp.avance(t5));
+PERFORM pg_temp.admin();
+INSERT INTO public.agenda_subdepartamento_miembros (subdepartamento_id, user_id) VALUES (b, bea);
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- D · Editar y reasignar
+-- ═══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t6, dep, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a, b]);
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis bis', NULL, HOY + 2, true, NULL, NULL);
+PERFORM pg_temp.chk('D1', 'editar sin tocar equipos los deja igual', 'true · en_proceso A:no B:no · PRUEBA seis bis',
+    (j->>'ok') || ' · ' || pg_temp.avance(t6) || ' · ' || (j->'tarea'->>'nombre'));
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a, b, c]);
+PERFORM pg_temp.chk('D2', 'sumar un equipo: arranca pendiente', 'true · en_proceso A:no B:no C:no', (j->>'ok') || ' · ' || pg_temp.avance(t6));
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t6, 'completada');
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a]);
+PERFORM pg_temp.chk('D3', 'un integrante no edita', 'sin_permiso', j->>'motivo');
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[]::uuid[]);
+PERFORM pg_temp.chk('D4', 'sin ningún equipo no se puede', 'sin_equipos', j->>'motivo');
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a, y]);
+PERFORM pg_temp.chk('D5', 'un equipo de otro departamento', 'sub_ajeno', j->>'motivo');
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.chk('D6', 'sacar uno pendiente: el resto sigue', 'en_proceso A:si B:no', pg_temp.avance(t6));
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a]);
+PERFORM pg_temp.chk('D7', 'sacar al único que faltaba: se completa', 'completada A:si', pg_temp.avance(t6));
+j := public.agenda_editar_tarea(t6, NULL, NULL, NULL, 'PRUEBA seis', NULL, HOY + 2, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.chk('D8', 'una completada no cambia de equipos', 'completada', j->>'motivo');
+j := public.agenda_editar_tarea(t_comun, a, NULL, NULL, 'PRUEBA común', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.chk('D9', 'una común no se vuelve compartida', 'es_compartida', j->>'motivo');
+j := public.agenda_editar_tarea(t5, a, NULL, NULL, 'PRUEBA cinco', NULL, HOY + 1, true, NULL, NULL);
+PERFORM pg_temp.chk('D10', 'una compartida no se vuelve común', 'es_compartida', j->>'motivo');
+j := public.agenda_reasignar_tarea(t5, c);
+PERFORM pg_temp.chk('D11', 'una compartida no se reasigna', 'es_compartida', j->>'motivo');
+
+-- Repeticiones.
+j := public.agenda_crear_tarea(s2, dep, NULL, NULL, NULL, 'PRUEBA serie dos', NULL, HOY, true, NULL, NULL,
+                               NULL, HOY + 35, 'cada_semana', ARRAY[a, b]);
+PERFORM pg_temp.admin();
+SELECT array_agg(id ORDER BY fecha) INTO v_ids FROM public.agenda_tareas WHERE serie_id = s2;
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(v_ids[1], 'completada');
+PERFORM pg_temp.chk('D12', 'cada repetición se finaliza por separado', 'en_proceso A:si B:no | en_proceso A:no B:no',
+    pg_temp.avance(v_ids[1]) || ' | ' || pg_temp.avance(v_ids[2]));
+PERFORM pg_temp.como(ben);
+j := public.agenda_cambiar_estado_tarea(v_ids[1], 'completada');
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(v_ids[3], NULL, NULL, NULL, 'PRUEBA serie dos', NULL, HOY + 14, true, NULL, NULL, p_subs => ARRAY[a, b, c]);
+PERFORM pg_temp.chk('D13', 'con "solo esta" cambia sólo esa repetición', 'en_proceso A:no B:no C:no | en_proceso A:no B:no',
+    pg_temp.avance(v_ids[3]) || ' | ' || pg_temp.avance(v_ids[4]));
+j := public.agenda_editar_tarea(v_ids[2], NULL, NULL, NULL, 'PRUEBA serie dos', NULL, HOY + 7, true, NULL, NULL,
+                                p_alcance => 'las_que_faltan', p_subs => ARRAY[a, c]);
+PERFORM pg_temp.chk('D14', 'con "las que faltan" cambia las pendientes y no la completada', 'completada A:si B:si | en_proceso A:no C:no | en_proceso A:no C:no',
+    pg_temp.avance(v_ids[1]) || ' | ' || pg_temp.avance(v_ids[2]) || ' | ' || pg_temp.avance(v_ids[5]));
+j := public.agenda_editar_tarea(v_ids[2], NULL, NULL, NULL, 'PRUEBA serie dos', NULL, HOY + 7, true, NULL, NULL,
+                                HOY + 21, 'cada_semana', 'las_que_faltan');
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('D15', 'rearmar la serie conserva la completada y copia los equipos', '4 · 4 · 8 · 2',
+    (SELECT count(*)::text FROM public.agenda_tareas WHERE serie_id = s2) || ' · '
+    || (SELECT count(*)::text FROM public.agenda_tareas WHERE serie_id = s2 AND compartida) || ' · '
+    || (SELECT count(*)::text FROM public.agenda_tarea_equipos e JOIN public.agenda_tareas t ON t.id = e.tarea_id WHERE t.serie_id = s2) || ' · '
+    || (SELECT count(*)::text FROM public.agenda_tarea_equipos e JOIN public.agenda_tareas t ON t.id = e.tarea_id WHERE t.serie_id = s2 AND e.finalizado_at IS NOT NULL));
+PERFORM pg_temp.chk('D16', 'la que ya estaba completada sigue igual', 'completada A:si B:si', pg_temp.avance(v_ids[1]));
+
+-- Lo común sigue igual.
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t_comun, 'completada');
+PERFORM pg_temp.chk('D17', 'una común se completa como siempre', 'completada', j->'tarea'->>'estado');
+j := public.agenda_cambiar_estado_tarea(t_comun, 'en_proceso');
+PERFORM pg_temp.chk('D18', 'y su integrante la reabre como siempre', 'en_proceso', j->'tarea'->>'estado');
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
