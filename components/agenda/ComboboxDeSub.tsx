@@ -46,11 +46,13 @@ const ComboboxDeSub: React.FC<{
     /** Por qué está bloqueado, en palabras. */
     motivoDelBloqueo?: string;
     error?: string | null;
+    /** Una tarea compartida siempre es de algún equipo. */
+    sinOpcionSinAsignar?: boolean;
     /** Para que el formulario pueda llevar hasta acá cuando falta elegir. */
     refCampo?: React.RefObject<HTMLInputElement | null>;
 }> = ({
     subdepartamentos, valores, sinAsignarElegido, varios = false, onCambiar,
-    bloqueado = false, motivoDelBloqueo, error, refCampo,
+    bloqueado = false, motivoDelBloqueo, error, sinOpcionSinAsignar = false, refCampo,
 }) => {
     const [abierta, setAbierta] = useState(false);
     const [consulta, setConsulta] = useState('');
@@ -81,8 +83,8 @@ const ComboboxDeSub: React.FC<{
                 meta: plural(subdepartamentos.length, 'equipo', 'equipos'),
             }]
             : [];
-        return [SIN_ASIGNAR, ...todos, ...equipos].filter(o => !k || sinAcentos(o.nombre).includes(k));
-    }, [subdepartamentos, consulta, varios]);
+        return [...(sinOpcionSinAsignar ? [] : [SIN_ASIGNAR]), ...todos, ...equipos].filter(o => !k || sinAcentos(o.nombre).includes(k));
+    }, [subdepartamentos, consulta, varios, sinOpcionSinAsignar]);
 
     const estaElegida = (o: Opcion) => {
         if (o.id === null) return sinAsignarElegido;

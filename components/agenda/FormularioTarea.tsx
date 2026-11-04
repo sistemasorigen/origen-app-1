@@ -9,7 +9,7 @@ import {
 } from '../../services/agenda';
 import { Avatar, ErrorDeCampo, RotuloDeCampo, tinte } from '../../pages/admin/departamentos/piezas';
 import { Hoja, PieDeHoja, Punto, TARJETA } from '../../pages/departamentos/equipo/piezas';
-import { diaYMes, largoDelPlazo, pendientesDeLaSerie, resumenCortoDeCuando, resumenDeCuando } from '../../pages/agenda/plazos';
+import { diaYMes, enLista, largoDelPlazo, pendientesDeLaSerie, resumenCortoDeCuando, resumenDeCuando } from '../../pages/agenda/plazos';
 import ComboboxDeSub from './ComboboxDeSub';
 import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
 
@@ -29,9 +29,12 @@ import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
  * El id se genera UNA vez al abrir en modo crear: un doble toque o un
  * reintento no crean dos tareas (agenda_crear_tarea es idempotente por id).
  *
- * VARIOS EQUIPOS: al crear se puede elegir más de uno, o "Todos". La base
- * guarda una tarea por equipo, así que sale una copia para cada uno, con su id:
- * cada equipo la completa por su lado, y un reintento no duplica ninguna.
+ * VARIOS EQUIPOS: al crear se puede elegir más de uno, o "Todos", y entonces es
+ * obligatorio decir si la tarea es compartida:
+ *   · Sí: UNA tarea con esos equipos (`p_subs`), que se completa cuando terminan
+ *     todos. Lo resuelve la base (sql/agenda_tareas_compartidas.sql).
+ *   · No: una copia por equipo, con su id. Cada uno la completa por su lado, y
+ *     un reintento no duplica ninguna.
  *
  * TRES SECCIONES: La tarea, Quién la hace y Cuándo. Desde 1024 px van en dos
  * columnas y se ve todo; debajo, en una sola, con tres pastillas fijas para
@@ -82,6 +85,7 @@ type Campo = 'nombre' | 'sub' | 'carpeta' | 'fecha' | 'plazo' | 'repeticion' | '
 const CAMPO: Partial<Record<MotivoAgenda, Campo>> = {
     nombre_invalido: 'nombre',
     sub_ajeno: 'sub', archivado: 'sub', completada: 'sub',
+    es_compartida: 'sub', sin_equipos: 'sub', compartida_minimo: 'sub',
     carpeta_ajena: 'carpeta',
     prioridad_ajena: 'prioridad', prioridad_requerida: 'prioridad',
     fecha_invalida: 'fecha',
@@ -163,9 +167,6 @@ const conBorde = (mal: boolean) => (mal ? ({ '--ag-borde': '#b42318' } as React.
 
 /** Desde acá entran las dos columnas sin apretar los campos. */
 const MEDIDA_DOS_COLUMNAS = '(min-width: 1024px)';
-
-/** "nombre, día y horario". */
-const enLista = (l: string[]) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
 
 /** Una de las tres tarjetas. El título se lee antes que los campos. */
 const Seccion: React.FC<{
@@ -254,13 +255,23 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
     const [id] = useState(nuevoId);
     /** Los equipos elegidos. Al editar es uno como máximo: una tarea es de un equipo. */
-    const [subs, setSubs] = useState<string[]>(inicial.subdepartamentoId ? [inicial.subdepartamentoId] : []);
+    const [subs, setSubs] = useState<string[]>(
+        tarea?.compartida
+            ? (tarea.equipos ?? []).filter(e => !e.archivado).map(e => e.id)
+            : (inicial.subdepartamentoId ? [inicial.subdepartamentoId] : []));
+    const eraCompartida = !!tarea?.compartida;
+    const subsIniciales = useRef(subs).current;
+    /** La respuesta a "¿La tarea es compartida?". null: todavía no contestó. */
+    const [compartida, setCompartida] = useState<boolean | null>(null);
+    const preguntaCompartida = modo === 'crear' && subs.length > 1;
+    const esCompartida = eraCompartida || (preguntaCompartida && compartida === true);
+    const faltaCompartida = preguntaCompartida && compartida === null;
     /**
      * "Sin asignar todavía", elegido a propósito. Es obligatorio elegir algo, y
      * esto es lo que distingue esa elección de no haber elegido nada: las dos
      * cosas tienen `subs` vacío. Una tarea que ya existe sin equipo la trae puesta.
      */
-    const [sinAsignar, setSinAsignar] = useState(modo === 'editar' && !inicial.subdepartamentoId);
+    const [sinAsignar, setSinAsignar] = useState(modo === 'editar' && !eraCompartida && !inicial.subdepartamentoId);
     const sub = subs[0] ?? null;
     const subDecidido = sinAsignar || subs.length > 0;
     const [carpetaId, setCarpetaId] = useState<string | null>(inicial.carpetaId);
@@ -314,6 +325,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const creadas = useRef<Array<{ sub: string | null; tarea: Tarea | null; veces: number }>>([]);
     const campoNombre = useRef<HTMLInputElement>(null);
     const campoSub = useRef<HTMLInputElement>(null);
+    const campoCompartida = useRef<HTMLButtonElement>(null);
     const campoFecha = useRef<HTMLInputElement>(null);
     const campoHasta = useRef<HTMLInputElement>(null);
     const campoHoraDesde = useRef<HTMLInputElement>(null);
@@ -381,11 +393,12 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         && !!opcionElegida && !opcionElegida.disponible;
 
     const sinEquipo = !subDecidido;
-    const invalido = sinNombre || sinEquipo || !fecha || horarioMal || plazoMal || repeticionNoEntra;
+    const invalido = sinNombre || sinEquipo || faltaCompartida || !fecha || horarioMal || plazoMal || repeticionNoEntra;
 
     const errorDe = (c: Campo) => (error?.campo === c ? error.texto : null);
     const errNombre = errorDe('nombre') ?? (tocado && sinNombre ? 'Escribí un nombre para la tarea.' : null);
     const errSub = errorDe('sub') ?? (tocado && sinEquipo ? 'Elegí al menos un sub-departamento, o “Sin asignar todavía”.' : null);
+    const errCompartida = tocado && faltaCompartida ? 'Elegí si la tarea es compartida.' : null;
     const errFecha = errorDe('fecha') ?? (tocado && !fecha ? 'Elegí el día.' : null);
     const errHorario = errorDe('horario') ?? (
         horarioAlReves ? 'La hora de “Hasta” tiene que ser después de “Desde”.'
@@ -417,10 +430,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         return [
             sinNombre ? { falta: 'nombre', campo: campoNombre } : null,
             sinEquipo ? { falta: 'sub-departamento', campo: campoSub } : null,
+            faltaCompartida ? { falta: 'si es compartida', campo: campoCompartida } : null,
             !fecha ? { falta: 'día', campo: campoFecha } : null,
             ...(conPlazo ? [delPlazo, delHorario] : [delHorario, delPlazo]),
         ].filter(x => x !== null);
-    }, [sinNombre, sinEquipo, fecha, plazoVacio, plazoAlReves, plazoLargo, repeticionNoEntra,
+    }, [sinNombre, sinEquipo, faltaCompartida, fecha, plazoVacio, plazoAlReves, plazoLargo, repeticionNoEntra,
         horarioIncompleto, horarioAlReves, horaDesde, conPlazo]);
 
     const queFalta = useMemo(() => {
@@ -456,7 +470,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     /** Lo obligatorio de cada sección, para el tilde de las pastillas. */
     const completas: [boolean, boolean, boolean] = [
         !sinNombre,
-        subDecidido,
+        subDecidido && !faltaCompartida,
         !!fecha && !horarioMal && !plazoMal && !repeticionNoEntra,
     ];
 
@@ -513,8 +527,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         });
     };
 
+    const cambiaronLosEquipos = [...subs].sort().join() !== [...subsIniciales].sort().join();
     const hayCambios = nombre !== inicial.nombre
-        || subs.join() !== (inicial.subdepartamentoId ?? '')
+        || cambiaronLosEquipos
         || carpetaId !== inicial.carpetaId
         || prioridadId !== inicial.prioridadId
         || (detalles || '') !== (inicial.detalles || '')
@@ -655,7 +670,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
      * salen de lo elegido, y reintentar crea sólo las que faltan.
      */
     const crearParaCadaEquipo = async (carga: DatosDeTarea) => {
-        const destinos: Array<string | null> = sinAsignar ? [null] : subs;
+        const destinos: Array<string | null> = sinAsignar || esCompartida ? [null] : subs;
         for (const destino of destinos) {
             if (!idsPorEquipo.current.has(destino)) {
                 idsPorEquipo.current.set(destino, idsPorEquipo.current.size === 0 ? id : nuevoId());
@@ -663,6 +678,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             const r = await crearTarea({
                 ...carga,
                 subdepartamentoId: destino,
+                subdepartamentoIds: esCompartida ? subs : null,
                 id: idsPorEquipo.current.get(destino),
                 departamentoId: datos.departamentoId,
                 // La solicitud se asigna una vez: con la primera copia.
@@ -702,7 +718,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         setError(null);
         const sinHora = !hayHorario || todoElDia;
         const carga: DatosDeTarea = {
-            subdepartamentoId: sub,
+            subdepartamentoId: eraCompartida ? null : sub,
+            // Si no cambiaron no viajan: la base dejaría igual lo que ya terminó cada uno.
+            subdepartamentoIds: eraCompartida && cambiaronLosEquipos ? subs : null,
             carpetaId,
             prioridadId,
             nombre,
@@ -747,7 +765,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                 <PieDeHoja
                     onCancelar={intentarCerrar}
                     onAceptar={guardar}
-                    etiqueta={modo === 'crear' && subs.length > 1 ? accion.replace('tarea', `${subs.length} tareas`) : accion}
+                    etiqueta={preguntaCompartida && compartida === false ? accion.replace('tarea', `${subs.length} tareas`) : accion}
                     guardando={guardando}
                     apagado={invalido}
                     falta={queFalta}
@@ -881,17 +899,53 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                 subdepartamentos={datos.subdepartamentos}
                                 valores={subs}
                                 sinAsignarElegido={sinAsignar}
-                                varios={modo === 'crear'}
+                                varios={modo === 'crear' || eraCompartida}
+                                sinOpcionSinAsignar={eraCompartida}
                                 refCampo={campoSub}
                                 onCambiar={(equipos, sinEquipos) => {
                                     setSubs(equipos);
                                     setSinAsignar(sinEquipos);
+                                    if (equipos.length < 2) setCompartida(null);
                                     if (error?.campo === 'sub') setError(null);
                                 }}
                                 bloqueado={completada}
                                 motivoDelBloqueo="Está completada: para cambiarle el equipo, primero volvela a En proceso."
                                 error={errSub}
                             />
+
+                            {preguntaCompartida && (
+                                <div className="flex flex-col gap-1.5">
+                                    <RotuloDeCampo id={`${idBase}-rot-compartida`}>¿La tarea es compartida?</RotuloDeCampo>
+                                    <div
+                                        role="radiogroup"
+                                        aria-labelledby={`${idBase}-rot-compartida`}
+                                        aria-describedby={errCompartida ? `${idBase}-err-compartida` : undefined}
+                                        className="flex gap-1.5 rounded-2xl bg-[#f6f6f4] p-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]"
+                                        style={errCompartida ? { boxShadow: 'inset 0 0 0 1.5px #b42318' } : undefined}
+                                    >
+                                        {[
+                                            { id: true, etiqueta: 'Sí, una sola tarea' },
+                                            { id: false, etiqueta: 'No, una por equipo' },
+                                        ].map(o => {
+                                            const on = compartida === o.id;
+                                            return (
+                                                <button
+                                                    key={String(o.id)}
+                                                    ref={o.id ? campoCompartida : undefined}
+                                                    type="button"
+                                                    role="radio"
+                                                    aria-checked={on}
+                                                    onClick={() => setCompartida(o.id)}
+                                                    className={`flex min-h-10 min-w-0 flex-1 items-center justify-center rounded-xl px-2 text-center text-[13px] font-bold leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${on ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,.1)]' : 'text-black/[.55] hover:text-[#0a0a0a]'}`}
+                                                >
+                                                    {o.etiqueta}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {errCompartida && <ErrorDeCampo id={`${idBase}-err-compartida`}>{errCompartida}</ErrorDeCampo>}
+                                </div>
+                            )}
 
                             {/* La van a ver: aparece recién cuando se decidió a quién le llega. */}
                             {subDecidido && (
@@ -910,7 +964,8 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                             </div>
                                             <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
                                                 Les aparece en su Agenda y les llega una notificación.
-                                        {subs.length > 1 && ' Cada equipo tiene su propia tarea.'}
+                                        {esCompartida && ' Se completa cuando todos los equipos dan el finalizado.'}
+                                        {preguntaCompartida && compartida === false && ' Cada equipo tiene su propia tarea.'}
                                                 {esSerie && ' Les llega un solo aviso, no uno por cada repetición.'}
                                             </p>
                                         </>

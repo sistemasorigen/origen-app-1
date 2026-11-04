@@ -236,7 +236,12 @@ const PestanaTareas: React.FC = () => {
             }));
         }
         const amplio = afueraDelPeriodo ? ' Ampliamos el período para mostrarla.' : '';
-        avisar(equipos > 1
+        const cuantos = tarea.equipos?.length ?? 0;
+        avisar(tarea.compartida
+            ? (veces > 1
+                ? `Se crearon ${veces} repeticiones compartidas entre ${cuantos} equipos.${amplio}`
+                : `Tarea compartida creada para ${cuantos} equipos.${amplio}`)
+            : equipos > 1
             ? `${veces > 1 ? `Se crearon ${veces} repeticiones` : 'Se creó una tarea'} para cada uno de los ${equipos} equipos.${amplio}`
             : veces > 1
             ? `Se crearon ${veces} repeticiones.${amplio}`

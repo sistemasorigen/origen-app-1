@@ -277,7 +277,9 @@ const PestanaSolicitudes: React.FC = () => {
                     onCerrar={() => setAsignando(null)}
                     onGuardada={async (tarea, _creada, _veces, equipos = 1) => {
                         setAsignando(null);
-                        avisar(equipos > 1
+                        avisar(tarea.compartida
+                            ? `Tarea compartida asignada a ${tarea.equipos?.length ?? 0} equipos.`
+                            : equipos > 1
                             ? `Tarea asignada a ${equipos} equipos: cada uno tiene la suya.`
                             : tarea.subdepartamento
                             ? `Tarea asignada a ${tarea.subdepartamento.nombre}.`
