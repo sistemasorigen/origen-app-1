@@ -2752,18 +2752,23 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   12/12" y "Plazo: 1/11 – 12/12 · faltan 9 días". Las etiquetas para lector de
   pantalla siguen con `fechaCorta`.
 - **Formulario en tres secciones** (`FormularioTarea`, 2026-11-04): tarjetas
-  blancas sobre una hoja gris (`Hoja gris`). ① La tarea: nombre, detalles,
-  prioridad, carpeta. ② Quién la hace: sub-departamento y "La van a ver". ③
+  blancas sobre una hoja gris (`Hoja gris`), sin numerar. La tarea: nombre, detalles,
+  prioridad, carpeta. Quién la hace: sub-departamento y "La van a ver".
   Cuándo: Un día · Con plazo, fechas, horario, "¿Se repite?" y resumen. Desde
   1024 px van en dos columnas (940 px) y "Cuándo" queda fija si entra entera;
   debajo, una columna con tres pastillas fijas (`bajoElTitulo`) que saltan a
   cada sección. Es sólo presentación: ni las reglas ni lo que se manda saben
   que existen. Tres cosas que no se ven a simple vista:
-  - **El sub-departamento NO es obligatorio**: sin él la tarea queda
-    "esperando". Por eso el aviso del pie nunca lo pide, aunque el pedido
-    original lo diera de ejemplo. `subDecidido` es sólo de pantalla: distingue
-    "todavía no eligió" de "Sin asignar todavía" (las dos mandan null) para
-    mostrar "La van a ver" y el tilde de ② Quién.
+  - **Hay que elegir sub-departamento** (Ignacio, 2026-11-04): uno o más
+    equipos, "Todos" o "Sin asignar todavía". Es regla de la pantalla: la base
+    sigue aceptando `p_sub` null, que es lo que manda "Sin asignar" y lo que deja
+    la tarea "esperando". `sinAsignar` distingue esa elección de no haber elegido.
+  - **Varios equipos = una tarea por equipo.** La base guarda un sub-departamento
+    por tarea, así que sale una copia para cada uno, cada una con su id: cada
+    equipo la completa por su lado. Se crean de a una con `agenda_crear_tarea`,
+    y un reintento no duplica porque el id es el mismo. Si una falla, las
+    anteriores salen de lo elegido y al cerrar la pantalla igual se entera. Una
+    solicitud se asigna con la primera copia. Al editar se elige uno solo.
   - **Las pastillas son un `<nav>` con `contenido-del-overlay`**: sin esa clase,
     `index.css` esconde todo `nav` mientras hay un modal abierto.
   - **El aviso del pie** (`queFrena`) lista todo lo que frena con las mismas

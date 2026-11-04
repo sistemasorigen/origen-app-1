@@ -223,7 +223,7 @@ const PestanaTareas: React.FC = () => {
         }
     }, [pedirVentana, haciaLaBase, depId, rango.desde, rango.hasta]);
 
-    const alCrearTarea = async (tarea: Tarea, _creada: boolean, veces = 1) => {
+    const alCrearTarea = async (tarea: Tarea, _creada: boolean, veces = 1, equipos = 1) => {
         setCreando(false);
         // El divisor donde cayó se abre: si no, la tarea se crea y no se ve.
         setPlegadas(p => { const n = { ...p, [tarea.estado]: false }; guardarPlegadas(depId, n); return n; });
@@ -236,7 +236,9 @@ const PestanaTareas: React.FC = () => {
             }));
         }
         const amplio = afueraDelPeriodo ? ' Ampliamos el período para mostrarla.' : '';
-        avisar(veces > 1
+        avisar(equipos > 1
+            ? `${veces > 1 ? `Se crearon ${veces} repeticiones` : 'Se creó una tarea'} para cada uno de los ${equipos} equipos.${amplio}`
+            : veces > 1
             ? `Se crearon ${veces} repeticiones.${amplio}`
             : tarea.subdepartamento
                 ? `Tarea creada.${amplio}`

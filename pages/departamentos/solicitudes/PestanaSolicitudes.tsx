@@ -275,9 +275,11 @@ const PestanaSolicitudes: React.FC = () => {
                     solicitudId={asignando.id}
                     referencia={referenciaDe(asignando)}
                     onCerrar={() => setAsignando(null)}
-                    onGuardada={async tarea => {
+                    onGuardada={async (tarea, _creada, _veces, equipos = 1) => {
                         setAsignando(null);
-                        avisar(tarea.subdepartamento
+                        avisar(equipos > 1
+                            ? `Tarea asignada a ${equipos} equipos: cada uno tiene la suya.`
+                            : tarea.subdepartamento
                             ? `Tarea asignada a ${tarea.subdepartamento.nombre}.`
                             : 'Tarea asignada: queda esperando asignación a un equipo.');
                         // La solicitud pasa a 'asignada' y sale de la lista.

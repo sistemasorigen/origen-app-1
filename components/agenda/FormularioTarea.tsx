@@ -5,7 +5,7 @@ import {
     crearTarea, editarTarea, fechaYHora, getRepeticionesPosibles, hoyIso, mensajeDeMotivo,
     nuevoId, sello, sumarDias,
     type AlcanceSerie, type Carpeta, type DatosDeTarea, type Frecuencia, type MotivoAgenda,
-    type OpcionRepeticion, type Tarea, type TareaDetalle,
+    type OpcionRepeticion, type Persona, type Tarea, type TareaDetalle,
 } from '../../services/agenda';
 import { Avatar, ErrorDeCampo, RotuloDeCampo, tinte } from '../../pages/admin/departamentos/piezas';
 import { Hoja, PieDeHoja, Punto, TARJETA } from '../../pages/departamentos/equipo/piezas';
@@ -28,6 +28,10 @@ import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
  *
  * El id se genera UNA vez al abrir en modo crear: un doble toque o un
  * reintento no crean dos tareas (agenda_crear_tarea es idempotente por id).
+ *
+ * VARIOS EQUIPOS: al crear se puede elegir más de uno, o "Todos". La base
+ * guarda una tarea por equipo, así que sale una copia para cada uno, con su id:
+ * cada equipo la completa por su lado, y un reintento no duplica ninguna.
  *
  * TRES SECCIONES: La tarea, Quién la hace y Cuándo. Desde 1024 px van en dos
  * columnas y se ve todo; debajo, en una sola, con tres pastillas fijas para
@@ -109,9 +113,10 @@ export interface PropsFormularioTarea {
     /**
      * La pantalla decide el aviso: el formulario no lo escribe. `veces` es
      * cuántas repeticiones se crearon o se cambiaron (1 si no es una serie),
-     * para que el aviso pueda decir "Se crearon 6 repeticiones".
+     * para que el aviso pueda decir "Se crearon 6 repeticiones". `equipos` es
+     * para cuántos equipos se creó (1 si fue uno solo o ninguno).
      */
-    onGuardada: (tarea: Tarea, creada: boolean, veces?: number) => void;
+    onGuardada: (tarea: Tarea, creada: boolean, veces?: number, equipos?: number) => void;
 }
 
 /**
@@ -162,7 +167,7 @@ const MEDIDA_DOS_COLUMNAS = '(min-width: 1024px)';
 /** "nombre, día y horario". */
 const enLista = (l: string[]) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
 
-/** Una de las tres tarjetas. El número y el título se leen antes que los campos. */
+/** Una de las tres tarjetas. El título se lee antes que los campos. */
 const Seccion: React.FC<{
     numero: 1 | 2 | 3;
     titulo: string;
@@ -175,9 +180,6 @@ const Seccion: React.FC<{
 }> = ({ numero, titulo, bajada, derecha, idBase, refSeccion, children }) => (
     <section ref={refSeccion} aria-labelledby={`${idBase}-seccion-${numero}`} className={`${TARJETA} flex flex-col gap-4 p-[18px] md:p-5`}>
         <div className="flex items-center gap-2.5">
-            <span aria-hidden="true" className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-[#0a0a0a] text-[11.5px] font-extrabold text-white">
-                {numero}
-            </span>
             <div className="min-w-0 flex-none">
                 <h3 id={`${idBase}-seccion-${numero}`} className="m-0 text-[12px] font-extrabold uppercase leading-[1.2] tracking-[0.08em] text-[#0a0a0a]">
                     {titulo}
@@ -210,12 +212,14 @@ const PastillasDeSeccion: React.FC<{
                     aria-current={on ? 'true' : undefined}
                     className={`flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black/[.66] shadow-[0_1px_2px_rgba(0,0,0,.04)]'}`}
                 >
-                    <span
-                        aria-hidden="true"
-                        className={`flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full text-[10.5px] font-extrabold ${on ? 'bg-white text-[#0a0a0a]' : lista ? 'bg-[#0a0a0a] text-white' : 'bg-black/[.08] text-black/[.66]'}`}
-                    >
-                        {lista ? <Check size={11} strokeWidth={3.2} /> : n}
-                    </span>
+                    {lista && (
+                        <span
+                            aria-hidden="true"
+                            className={`flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full ${on ? 'bg-white text-[#0a0a0a]' : 'bg-[#0a0a0a] text-white'}`}
+                        >
+                            <Check size={11} strokeWidth={3.2} />
+                        </span>
+                    )}
                     {texto}
                     {lista && <span className="sr-only">, completa</span>}
                 </button>
@@ -249,7 +253,16 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     })()).current;
 
     const [id] = useState(nuevoId);
-    const [sub, setSub] = useState<string | null>(inicial.subdepartamentoId);
+    /** Los equipos elegidos. Al editar es uno como máximo: una tarea es de un equipo. */
+    const [subs, setSubs] = useState<string[]>(inicial.subdepartamentoId ? [inicial.subdepartamentoId] : []);
+    /**
+     * "Sin asignar todavía", elegido a propósito. Es obligatorio elegir algo, y
+     * esto es lo que distingue esa elección de no haber elegido nada: las dos
+     * cosas tienen `subs` vacío. Una tarea que ya existe sin equipo la trae puesta.
+     */
+    const [sinAsignar, setSinAsignar] = useState(modo === 'editar' && !inicial.subdepartamentoId);
+    const sub = subs[0] ?? null;
+    const subDecidido = sinAsignar || subs.length > 0;
     const [carpetaId, setCarpetaId] = useState<string | null>(inicial.carpetaId);
     const [prioridadId, setPrioridadId] = useState<string | null>(inicial.prioridadId);
     const [nombre, setNombre] = useState(inicial.nombre);
@@ -282,13 +295,6 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     /** Si la persona eligió el "Hasta" a mano: entonces ya no se le propone otro. */
     const [hastaTocado, setHastaTocado] = useState(false);
 
-    /**
-     * Si ya se decidió a quién le llega. No es un dato de la tarea: "Sin asignar
-     * todavía" y no haber elegido nada mandan lo mismo (sin sub-departamento).
-     * Sirve para mostrar "La van a ver" y el tilde de la pastilla.
-     */
-    const [subDecidido, setSubDecidido] = useState(modo === 'editar' || !!inicial.subdepartamentoId);
-
     const [dosColumnas, setDosColumnas] = useState(
         () => typeof window !== 'undefined' && window.matchMedia(MEDIDA_DOS_COLUMNAS).matches,
     );
@@ -302,7 +308,12 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const seccion3 = useRef<HTMLElement>(null);
 
     const enviando = useRef(false);
+    /** El id de cada copia: el mismo en un reintento, para que la base no la duplique. */
+    const idsPorEquipo = useRef(new Map<string | null, string>());
+    /** Las copias que ya se crearon, por si una de las siguientes falla. */
+    const creadas = useRef<Array<{ sub: string | null; tarea: Tarea | null; veces: number }>>([]);
     const campoNombre = useRef<HTMLInputElement>(null);
+    const campoSub = useRef<HTMLInputElement>(null);
     const campoFecha = useRef<HTMLInputElement>(null);
     const campoHasta = useRef<HTMLInputElement>(null);
     const campoHoraDesde = useRef<HTMLInputElement>(null);
@@ -319,16 +330,24 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
     const completada = tarea?.estado === 'completada';
     const carpetas = useMemo(() => [...datos.carpetas, ...carpetasNuevas], [datos.carpetas, carpetasNuevas]);
-    const elegido = datos.subdepartamentos.find(s => s.id === sub) ?? null;
 
-    /** Quién la va a ver: quien dirige el equipo elegido y sus integrantes. */
+    /**
+     * Quién la va a ver: quien dirige cada equipo elegido y sus integrantes. Una
+     * persona de dos equipos aparece una vez, y como "dirige" si dirige alguno.
+     */
     const laVanAVer = useMemo(() => {
-        if (!elegido) return [];
-        return [
-            ...(elegido.lider ? [{ ...elegido.lider, dirige: true }] : []),
-            ...elegido.miembros.map(m => ({ ...m, dirige: false })),
-        ];
-    }, [elegido]);
+        const personas = new Map<string, Persona & { dirige: boolean; color: string }>();
+        datos.subdepartamentos.filter(s => subs.includes(s.id)).forEach(s => {
+            [
+                ...(s.lider ? [{ ...s.lider, dirige: true }] : []),
+                ...s.miembros.map(m => ({ ...m, dirige: false })),
+            ].forEach(p => {
+                const ya = personas.get(p.id);
+                personas.set(p.id, ya ? { ...ya, dirige: ya.dirige || p.dirige } : { ...p, color: s.color });
+            });
+        });
+        return [...personas.values()];
+    }, [datos.subdepartamentos, subs]);
 
     /** Sin repetición, una tarea con plazo es siempre todo el día (lo fuerza la base). */
     const hayHorario = !conPlazo || !!frecuencia;
@@ -361,10 +380,12 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     const repeticionNoEntra = !conPlazo && !!frecuencia && !plazoMal && !buscandoOpciones
         && !!opcionElegida && !opcionElegida.disponible;
 
-    const invalido = sinNombre || !fecha || horarioMal || plazoMal || repeticionNoEntra;
+    const sinEquipo = !subDecidido;
+    const invalido = sinNombre || sinEquipo || !fecha || horarioMal || plazoMal || repeticionNoEntra;
 
     const errorDe = (c: Campo) => (error?.campo === c ? error.texto : null);
     const errNombre = errorDe('nombre') ?? (tocado && sinNombre ? 'Escribí un nombre para la tarea.' : null);
+    const errSub = errorDe('sub') ?? (tocado && sinEquipo ? 'Elegí al menos un sub-departamento, o “Sin asignar todavía”.' : null);
     const errFecha = errorDe('fecha') ?? (tocado && !fecha ? 'Elegí el día.' : null);
     const errHorario = errorDe('horario') ?? (
         horarioAlReves ? 'La hora de “Hasta” tiene que ser después de “Desde”.'
@@ -395,10 +416,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         // En "Con plazo" el "Hasta" está arriba del horario; en "Un día", abajo.
         return [
             sinNombre ? { falta: 'nombre', campo: campoNombre } : null,
+            sinEquipo ? { falta: 'sub-departamento', campo: campoSub } : null,
             !fecha ? { falta: 'día', campo: campoFecha } : null,
             ...(conPlazo ? [delPlazo, delHorario] : [delHorario, delPlazo]),
         ].filter(x => x !== null);
-    }, [sinNombre, fecha, plazoVacio, plazoAlReves, plazoLargo, repeticionNoEntra,
+    }, [sinNombre, sinEquipo, fecha, plazoVacio, plazoAlReves, plazoLargo, repeticionNoEntra,
         horarioIncompleto, horarioAlReves, horaDesde, conPlazo]);
 
     const queFalta = useMemo(() => {
@@ -492,7 +514,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     };
 
     const hayCambios = nombre !== inicial.nombre
-        || sub !== inicial.subdepartamentoId
+        || subs.join() !== (inicial.subdepartamentoId ?? '')
         || carpetaId !== inicial.carpetaId
         || prioridadId !== inicial.prioridadId
         || (detalles || '') !== (inicial.detalles || '')
@@ -503,8 +525,17 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         || (usaHasta ? fechaHasta : '') !== (laTarea?.fechaHasta || laTarea?.serie?.hasta || '')
         || frecuencia !== (laTarea?.serie?.frecuencia ?? null);
 
+    /** Avisa a la pantalla lo que se creó; con varios equipos, cuántos fueron. */
+    const terminarDeCrear = () => {
+        const primera = creadas.current.find(c => c.tarea)?.tarea;
+        if (primera) onGuardada(primera, true, creadas.current[0].veces, creadas.current.length);
+        else onCerrar();
+    };
+
     const intentarCerrar = () => {
         if (guardando) return;
+        // Ya hay copias creadas: lo de atrás tiene que enterarse aunque falte alguna.
+        if (creadas.current.length > 0) { terminarDeCrear(); return; }
         if (!hayCambios) { onCerrar(); return; }
         acciones.confirmar({
             tipo: 'destructivo',
@@ -616,6 +647,55 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             : { fechaHasta: null, frecuencia: null };
     };
 
+    const nombreDeEquipo = (equipo: string | null) =>
+        datos.subdepartamentos.find(s => s.id === equipo)?.nombre ?? 'ese equipo';
+
+    /**
+     * Una copia por equipo, de a una. Si una falla, las anteriores ya existen:
+     * salen de lo elegido, y reintentar crea sólo las que faltan.
+     */
+    const crearParaCadaEquipo = async (carga: DatosDeTarea) => {
+        const destinos: Array<string | null> = sinAsignar ? [null] : subs;
+        for (const destino of destinos) {
+            if (!idsPorEquipo.current.has(destino)) {
+                idsPorEquipo.current.set(destino, idsPorEquipo.current.size === 0 ? id : nuevoId());
+            }
+            const r = await crearTarea({
+                ...carga,
+                subdepartamentoId: destino,
+                id: idsPorEquipo.current.get(destino),
+                departamentoId: datos.departamentoId,
+                // La solicitud se asigna una vez: con la primera copia.
+                solicitudId: creadas.current.length === 0 ? (solicitudId ?? null) : null,
+            });
+            if (!r.ok) {
+                enviando.current = false;
+                setGuardando(false);
+                if (creadas.current.length === 0) {
+                    setError({ campo: CAMPO[r.motivo] ?? 'general', texto: mensajeDeMotivo(r.motivo) });
+                    return;
+                }
+                const hechas = creadas.current.map(c => c.sub);
+                setSubs(l => l.filter(s => !hechas.includes(s)));
+                setError({
+                    campo: 'general',
+                    texto: `Ya se crearon las de ${enLista(hechas.map(nombreDeEquipo))}. La de ${nombreDeEquipo(destino)} no: ${mensajeDeMotivo(r.motivo)}`,
+                });
+                const cuerpo = raiz.current?.closest('[data-cuerpo]');
+                if (cuerpo) window.requestAnimationFrame(() => cuerpo.scrollTo({ top: cuerpo.scrollHeight }));
+                return;
+            }
+            creadas.current.push({
+                sub: destino,
+                tarea: r.tarea ?? r.tareas[0] ?? null,
+                veces: (r as { veces?: number }).veces ?? 1,
+            });
+        }
+        enviando.current = false;
+        setGuardando(false);
+        terminarDeCrear();
+    };
+
     const guardarDeVerdad = async (alcance: AlcanceSerie) => {
         enviando.current = true;
         setGuardando(true);
@@ -633,17 +713,13 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             horaHasta: sinHora ? null : horaHasta,
             ...plazoQueViaja(alcance),
         };
-        const r = modo === 'crear'
-            ? await crearTarea({ ...carga, id, departamentoId: datos.departamentoId, solicitudId: solicitudId ?? null })
-            : await editarTarea(tarea?.id ?? '', carga, alcance);
+        if (modo === 'crear') { await crearParaCadaEquipo(carga); return; }
+        const r = await editarTarea(tarea?.id ?? '', carga, alcance);
         enviando.current = false;
         setGuardando(false);
         if (!r.ok) { setError({ campo: CAMPO[r.motivo] ?? 'general', texto: mensajeDeMotivo(r.motivo) }); return; }
-        const cuantas = modo === 'crear'
-            ? ((r as { veces?: number }).veces ?? 1)
-            : Math.max(1, r.tareas.length || 1);
         const guardada = r.tarea ?? r.tareas[0] ?? null;
-        if (guardada) onGuardada(guardada, modo === 'crear', cuantas);
+        if (guardada) onGuardada(guardada, false, Math.max(1, r.tareas.length || 1));
         else onCerrar();
     };
 
@@ -654,6 +730,8 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         if (modo === 'editar' && eraSerie) { setPreguntandoAlcance(true); return; }
         await guardarDeVerdad('solo_esta');
     };
+
+    const accion = etiquetaDeAccion ?? (modo === 'crear' ? 'Crear tarea' : 'Guardar cambios');
 
     return (
         <Hoja
@@ -669,7 +747,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                 <PieDeHoja
                     onCancelar={intentarCerrar}
                     onAceptar={guardar}
-                    etiqueta={etiquetaDeAccion ?? (modo === 'crear' ? 'Crear tarea' : 'Guardar cambios')}
+                    etiqueta={modo === 'crear' && subs.length > 1 ? accion.replace('tarea', `${subs.length} tareas`) : accion}
                     guardando={guardando}
                     apagado={invalido}
                     falta={queFalta}
@@ -801,12 +879,18 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                         <Seccion numero={2} titulo="Quién la hace" bajada="A qué equipo le llega" idBase={idBase} refSeccion={seccion2}>
                             <ComboboxDeSub
                                 subdepartamentos={datos.subdepartamentos}
-                                valor={sub}
-                                sinAsignarElegido={subDecidido && !sub}
-                                    onCambiar={elegido2 => { setSub(elegido2); setSubDecidido(true); if (error?.campo === 'sub') setError(null); }}
+                                valores={subs}
+                                sinAsignarElegido={sinAsignar}
+                                varios={modo === 'crear'}
+                                refCampo={campoSub}
+                                onCambiar={(equipos, sinEquipos) => {
+                                    setSubs(equipos);
+                                    setSinAsignar(sinEquipos);
+                                    if (error?.campo === 'sub') setError(null);
+                                }}
                                 bloqueado={completada}
                                 motivoDelBloqueo="Está completada: para cambiarle el equipo, primero volvela a En proceso."
-                                error={errorDe('sub')}
+                                error={errSub}
                             />
 
                             {/* La van a ver: aparece recién cuando se decidió a quién le llega. */}
@@ -818,7 +902,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                             <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-2.5">
                                                 {laVanAVer.map(p => (
                                                     <span key={p.id} className="flex items-center gap-2 text-[13px] font-bold">
-                                                        <Avatar persona={p} color={elegido?.color ?? '#0a0a0a'} tam={28} />
+                                                        <Avatar persona={p} color={p.color} tam={28} />
                                                         {p.nombre || 'Sin nombre'}
                                                         {p.dirige && <span className="font-semibold text-black/[.5]">· dirige</span>}
                                                     </span>
@@ -826,6 +910,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                                             </div>
                                             <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
                                                 Les aparece en su Agenda y les llega una notificación.
+                                        {subs.length > 1 && ' Cada equipo tiene su propia tarea.'}
                                                 {esSerie && ' Les llega un solo aviso, no uno por cada repetición.'}
                                             </p>
                                         </>
