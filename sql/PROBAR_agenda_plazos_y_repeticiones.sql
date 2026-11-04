@@ -553,15 +553,15 @@ PERFORM pg_temp.chk('J12', 'las cuatro RPC de tareas siguen abiertas sólo a aut
     'sí sí sí sí · no no no no',
     (SELECT string_agg(CASE WHEN has_function_privilege('authenticated', f, 'EXECUTE') THEN 'sí' ELSE 'NO' END, ' ')
        FROM unnest(ARRAY[
-           'public.agenda_crear_tarea(uuid,uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,uuid,date,text)',
-           'public.agenda_editar_tarea(uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,date,text,text)',
+           'public.agenda_crear_tarea(uuid,uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,uuid,date,text,uuid[])',
+           'public.agenda_editar_tarea(uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,date,text,text,uuid[])',
            'public.agenda_eliminar_tarea(uuid,text)',
            'public.agenda_reasignar_tarea(uuid,uuid,text)']) f)
     || ' · ' ||
     (SELECT string_agg(CASE WHEN has_function_privilege('anon', f, 'EXECUTE') THEN 'SÍ' ELSE 'no' END, ' ')
        FROM unnest(ARRAY[
-           'public.agenda_crear_tarea(uuid,uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,uuid,date,text)',
-           'public.agenda_editar_tarea(uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,date,text,text)',
+           'public.agenda_crear_tarea(uuid,uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,uuid,date,text,uuid[])',
+           'public.agenda_editar_tarea(uuid,uuid,uuid,uuid,text,text,date,boolean,time,time,date,text,text,uuid[])',
            'public.agenda_eliminar_tarea(uuid,text)',
            'public.agenda_reasignar_tarea(uuid,uuid,text)']) f));
 
