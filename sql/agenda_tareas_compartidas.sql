@@ -1072,4 +1072,349 @@ $function$
 REVOKE ALL ON FUNCTION public.agenda_editar_tarea(uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, date, text, text, uuid[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.agenda_editar_tarea(uuid, uuid, uuid, uuid, text, text, date, boolean, time, time, date, text, text, uuid[]) TO authenticated;
 
+-- ── 13 · El aviso nuevo ───────────────────────────────────────────────────
+-- `tipo` también dice de qué equipo: terminó A y terminó B son dos avisos.
+ALTER TABLE public.agenda_avisos DROP CONSTRAINT agenda_avisos_tipo_check;
+ALTER TABLE public.agenda_avisos ADD CONSTRAINT agenda_avisos_tipo_check CHECK (
+    tipo IN ('asignada', 'completada') OR tipo LIKE 'equipo\_termino:%'
+);
+
+INSERT INTO public.notif_alertas
+    (clave, tipo, nombre, descripcion_evento, destinatario_texto, variables,
+     titulo_plantilla, mensaje_plantilla, url_plantilla, type_legacy,
+     permite_apagar, nombre_publico, descripcion_publica, area)
+VALUES
+    ('agenda_tarea_equipo_termino', 'automatica',
+     'Un equipo terminó su parte (Agenda)',
+     'un equipo termina su parte de una tarea compartida y todavía falta otro',
+     'Los encargados del departamento, menos quien dio el finalizado',
+     ARRAY['tarea', 'subdepartamento', 'pendientes'],
+     'Terminó {subdepartamento}: {tarea}',
+     'Falta: {pendientes}',
+     '/agenda', 'AGENDA_TAREA_EQUIPO_TERMINO',
+     true, 'Avance de tareas compartidas',
+     'Cuando un equipo termina su parte de una tarea compartida de un departamento que encargás.',
+     'Agenda');
+CREATE OR REPLACE FUNCTION public.notif_ejemplos()
+ RETURNS jsonb
+ LANGUAGE sql
+ IMMUTABLE
+ SET search_path TO 'public'
+AS $function$
+    SELECT jsonb_build_object(
+        'nombre', 'Sofía Ejemplo',
+        'pareja', 'Martín Ejemplo',
+        'grupo', 'GCX Palermo Martes',
+        'fecha', '28/10',
+        'horario', '20:00 – 21:30',
+        'presentes', '7',
+        'dia', 'Martes',
+        'motivo', ' Motivo: faltan el día y el horario.',
+        'tarea', 'Armar la mesa de bienvenida',
+        'departamento', 'Bienvenida',
+        'subdepartamento', 'Recepción',
+        'detalle', 'Necesitamos un flyer para el anuncio del domingo',
+        'codigo', 'REP-0001',
+        'numero', '0001',
+        'tipo', 'Acceso a mis datos',
+        'pantalla', 'Eventos',
+        'resultado', 'aprobado',
+        'pedido', 'la baja',
+        'pendientes', 'Sonido y Video');
+$function$
+;
+
+-- ── 14 · Auxiliares de los avisos ─────────────────────────────────────────
+-- "Equipo A y Equipo B". Con p_faltan, sólo los que no terminaron y cuentan.
+CREATE FUNCTION public.agenda_nombres_de_equipos(p_tarea uuid, p_faltan boolean DEFAULT false)
+RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    WITH n AS (
+        SELECT array_agg(s.nombre ORDER BY lower(s.nombre)) AS l
+          FROM public.agenda_tarea_equipos e
+          JOIN public.agenda_subdepartamentos s ON s.id = e.subdepartamento_id
+         WHERE e.tarea_id = p_tarea
+           AND (NOT p_faltan OR (e.finalizado_at IS NULL AND s.archivado_at IS NULL))
+    )
+    SELECT CASE WHEN cardinality(l) = 1 THEN l[1]
+                WHEN cardinality(l) > 1 THEN array_to_string(l[1:cardinality(l) - 1], ', ') || ' y ' || l[cardinality(l)]
+           END
+      FROM n;
+$$;
+
+-- Quien dirige un equipo y sus miembros, sin los encargados del departamento.
+CREATE FUNCTION public.agenda_gente_de_equipo(p_dep uuid, p_sub uuid)
+RETURNS uuid[]
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT array_agg(DISTINCT x.uid)
+      FROM (SELECT s.lider_id AS uid FROM public.agenda_subdepartamentos s
+             WHERE s.id = p_sub AND s.lider_id IS NOT NULL
+            UNION
+            SELECT m.user_id FROM public.agenda_subdepartamento_miembros m
+             WHERE m.subdepartamento_id = p_sub) x
+      JOIN public.users u ON u.id = x.uid AND u.is_active IS NOT FALSE
+     WHERE NOT EXISTS (SELECT 1 FROM public.agenda_departamento_encargados e
+                        WHERE e.departamento_id = p_dep AND e.user_id = x.uid);
+$$;
+
+-- Avisa a un equipo que le toca esta tarea.
+CREATE FUNCTION public.agenda_avisar_equipo(t public.agenda_tareas, p_sub uuid)
+RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+    v_cuando jsonb := public.agenda_cuando_json(t);
+BEGIN
+    RETURN public.agenda_registrar_avisos(
+        t.id, 'asignada', public.agenda_gente_de_equipo(t.departamento_id, p_sub), 'agenda_tarea_asignada',
+        jsonb_build_object(
+            'tarea', t.nombre,
+            'subdepartamento', COALESCE((SELECT nombre FROM public.agenda_subdepartamentos WHERE id = p_sub), 'Tu equipo'),
+            'fecha', v_cuando->>'fecha',
+            'horario', v_cuando->>'horario'));
+END;
+$$;
+
+CREATE FUNCTION public.agenda_tarea_equipos_avisar()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+    t public.agenda_tareas;
+    v_faltan text;
+    v_users uuid[];
+BEGIN
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = NEW.tarea_id;
+
+    IF TG_OP = 'INSERT' THEN
+        -- La serie avisa una sola vez, desde la RPC que la armó.
+        IF COALESCE(current_setting('agenda.serie_en_lote', true), '') <> '1' THEN
+            PERFORM public.agenda_avisar_equipo(t, NEW.subdepartamento_id);
+        END IF;
+        RETURN NULL;
+    END IF;
+
+    -- Terminó un equipo. Si era el último, avisa la tarea completada: dos avisos
+    -- por el mismo hecho serían ruido.
+    IF NEW.finalizado_at IS NOT NULL AND OLD.finalizado_at IS NULL THEN
+        v_faltan := public.agenda_nombres_de_equipos(t.id, true);
+        IF v_faltan IS NOT NULL THEN
+            SELECT array_agg(e.user_id) INTO v_users
+              FROM public.agenda_departamento_encargados e
+              JOIN public.users u ON u.id = e.user_id AND u.is_active IS NOT FALSE
+             WHERE e.departamento_id = t.departamento_id
+               AND e.user_id IS DISTINCT FROM COALESCE(auth.uid(), NEW.finalizado_por);
+            PERFORM public.agenda_registrar_avisos(
+                t.id, 'equipo_termino:' || NEW.subdepartamento_id, v_users, 'agenda_tarea_equipo_termino',
+                jsonb_build_object(
+                    'tarea', t.nombre,
+                    'subdepartamento', (SELECT nombre FROM public.agenda_subdepartamentos WHERE id = NEW.subdepartamento_id),
+                    'pendientes', v_faltan));
+        END IF;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_agenda_tarea_equipos_avisar
+    AFTER INSERT OR UPDATE OF finalizado_at ON public.agenda_tarea_equipos
+    FOR EACH ROW EXECUTE FUNCTION public.agenda_tarea_equipos_avisar();
+REVOKE ALL ON FUNCTION public.agenda_nombres_de_equipos(uuid, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agenda_gente_de_equipo(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agenda_avisar_equipo(public.agenda_tareas, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agenda_tarea_equipos_avisar() FROM PUBLIC, anon, authenticated;
+
+-- ── 15 · Avisos de la tarea ───────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_tareas_avisar()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_sub_nombre text;
+    v_users uuid[];
+    v_cuando jsonb;
+    v_quien text;
+BEGIN
+    SELECT nombre INTO v_sub_nombre FROM public.agenda_subdepartamentos WHERE id = NEW.subdepartamento_id;
+    -- Una compartida no tiene un equipo: los nombra a todos. Su "asignada" sale
+    -- del trigger de agenda_tarea_equipos.
+    IF NEW.compartida THEN
+        v_sub_nombre := public.agenda_nombres_de_equipos(NEW.id);
+    END IF;
+
+    -- ASIGNADA: se crea con sub, o le cambia asignada_at (reasignar, editar
+    -- el sub, asignar una que esperaba). También si cambia el sub: dentro de
+    -- una misma transacción now() no avanza y asignada_at quedaría igual.
+    IF NEW.subdepartamento_id IS NOT NULL
+       AND (TG_OP = 'INSERT'
+            OR NEW.asignada_at IS DISTINCT FROM OLD.asignada_at
+            OR NEW.subdepartamento_id IS DISTINCT FROM OLD.subdepartamento_id)
+       -- La serie avisa una sola vez, desde la RPC que la armó.
+       AND NOT (NEW.serie_id IS NOT NULL
+                AND COALESCE(current_setting('agenda.serie_en_lote', true), '') = '1') THEN
+
+        SELECT array_agg(DISTINCT x.uid) INTO v_users
+          FROM (SELECT s.lider_id AS uid FROM public.agenda_subdepartamentos s
+                 WHERE s.id = NEW.subdepartamento_id AND s.lider_id IS NOT NULL
+                UNION
+                SELECT m.user_id FROM public.agenda_subdepartamento_miembros m
+                 WHERE m.subdepartamento_id = NEW.subdepartamento_id) x
+          JOIN public.users u ON u.id = x.uid AND u.is_active IS NOT FALSE
+         WHERE NOT EXISTS (SELECT 1 FROM public.agenda_departamento_encargados e
+                            WHERE e.departamento_id = NEW.departamento_id AND e.user_id = x.uid);
+
+        v_cuando := public.agenda_cuando_json(NEW);
+
+        PERFORM public.agenda_registrar_avisos(
+            NEW.id, 'asignada', v_users, 'agenda_tarea_asignada',
+            jsonb_build_object(
+                'tarea', NEW.nombre,
+                'subdepartamento', COALESCE(v_sub_nombre, 'Tu equipo'),
+                'fecha', v_cuando->>'fecha',
+                'horario', v_cuando->>'horario'));
+    END IF;
+
+    -- COMPLETADA: pasa a 'completada' desde otro estado.
+    IF TG_OP = 'UPDATE' AND NEW.estado = 'completada' AND OLD.estado IS DISTINCT FROM 'completada' THEN
+        SELECT array_agg(e.user_id) INTO v_users
+          FROM public.agenda_departamento_encargados e
+          JOIN public.users u ON u.id = e.user_id AND u.is_active IS NOT FALSE
+         WHERE e.departamento_id = NEW.departamento_id
+           AND e.user_id IS DISTINCT FROM COALESCE(auth.uid(), NEW.completada_por);
+
+        SELECT NULLIF(btrim(COALESCE(name, '')), '') INTO v_quien FROM public.users WHERE id = NEW.completada_por;
+
+        PERFORM public.agenda_registrar_avisos(
+            NEW.id, 'completada', v_users, 'agenda_tarea_completada',
+            jsonb_build_object(
+                'tarea', NEW.nombre,
+                'subdepartamento', COALESCE(v_sub_nombre, 'Sin equipo'),
+                'nombre', COALESCE(v_quien, 'alguien del equipo')));
+    END IF;
+
+    RETURN NULL;
+END;
+$function$
+;
+
+-- ── 16 · El aviso de una serie ────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_avisar_serie(p_tarea uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    t public.agenda_tareas;
+    v_sub_nombre text;
+    v_users uuid[];
+    v_cuando jsonb;
+    v_n integer;
+BEGIN
+    SELECT * INTO t FROM public.agenda_tareas WHERE id = p_tarea;
+    IF FOUND AND t.compartida THEN
+        -- Un aviso por persona y por tarea: quien está en dos equipos recibe uno.
+        SELECT COALESCE(sum(public.agenda_avisar_equipo(t, e.subdepartamento_id)), 0)::integer INTO v_n
+          FROM public.agenda_tarea_equipos e WHERE e.tarea_id = t.id;
+        RETURN v_n;
+    END IF;
+    IF NOT FOUND OR t.subdepartamento_id IS NULL THEN
+        RETURN 0;
+    END IF;
+    SELECT nombre INTO v_sub_nombre FROM public.agenda_subdepartamentos WHERE id = t.subdepartamento_id;
+
+    SELECT array_agg(DISTINCT x.uid) INTO v_users
+      FROM (SELECT s.lider_id AS uid FROM public.agenda_subdepartamentos s
+             WHERE s.id = t.subdepartamento_id AND s.lider_id IS NOT NULL
+            UNION
+            SELECT m.user_id FROM public.agenda_subdepartamento_miembros m
+             WHERE m.subdepartamento_id = t.subdepartamento_id) x
+      JOIN public.users u ON u.id = x.uid AND u.is_active IS NOT FALSE
+     WHERE NOT EXISTS (SELECT 1 FROM public.agenda_departamento_encargados e
+                        WHERE e.departamento_id = t.departamento_id AND e.user_id = x.uid);
+
+    v_cuando := public.agenda_cuando_json(t);
+
+    RETURN public.agenda_registrar_avisos(
+        t.id, 'asignada', v_users, 'agenda_tarea_asignada',
+        jsonb_build_object(
+            'tarea', t.nombre,
+            'subdepartamento', COALESCE(v_sub_nombre, 'Tu equipo'),
+            'fecha', v_cuando->>'fecha',
+            'horario', v_cuando->>'horario'));
+END;
+$function$
+;
+
+-- ── 17 · Plazos vencidos ──────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_plazos_vencidos_tick(p_ahora timestamp with time zone DEFAULT now())
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_hoy date := (p_ahora AT TIME ZONE 'America/Argentina/Buenos_Aires')::date;
+    t record;
+    v_sub text;
+    v_quien uuid;
+    v_personas integer;
+    v_tareas integer := 0;
+BEGIN
+    FOR t IN
+        SELECT x.id, x.nombre, x.departamento_id, x.subdepartamento_id, x.fecha_hasta, x.compartida
+          FROM public.agenda_tareas x
+         WHERE x.fecha_hasta IS NOT NULL
+           AND x.serie_id IS NULL
+           AND x.estado <> 'completada'
+           AND x.fecha_hasta < v_hoy
+           AND NOT EXISTS (SELECT 1 FROM public.agenda_plazos_avisados a
+                            WHERE a.tarea_id = x.id AND a.fecha_hasta = x.fecha_hasta)
+         ORDER BY x.fecha_hasta
+    LOOP
+        -- Reservar primero: si esto no entra, otra corrida ya lo tomó.
+        INSERT INTO public.agenda_plazos_avisados (tarea_id, fecha_hasta)
+        VALUES (t.id, t.fecha_hasta)
+        ON CONFLICT (tarea_id, fecha_hasta) DO NOTHING;
+        CONTINUE WHEN NOT FOUND;
+
+        SELECT nombre INTO v_sub FROM public.agenda_subdepartamentos WHERE id = t.subdepartamento_id;
+        -- En una compartida, los que todavía no terminaron.
+        IF t.compartida THEN
+            v_sub := public.agenda_nombres_de_equipos(t.id, true);
+        END IF;
+        v_personas := 0;
+
+        -- Sólo los encargados del departamento. A nadie más: una tarea
+        -- vencida es algo que resuelve quien lleva el departamento.
+        FOR v_quien IN
+            SELECT e.user_id FROM public.agenda_departamento_encargados e
+              JOIN public.users u ON u.id = e.user_id AND u.is_active IS NOT FALSE
+             WHERE e.departamento_id = t.departamento_id
+        LOOP
+            PERFORM public.notif_emitir(
+                'agenda_plazo_vencido', v_quien,
+                jsonb_build_object(
+                    'tarea', t.nombre,
+                    'subdepartamento', COALESCE(v_sub, 'Sin equipo'),
+                    'fecha', public.agenda_fecha_dm(t.fecha_hasta)),
+                '/departamentos/' || t.departamento_id || '?tarea=' || t.id);
+            v_personas := v_personas + 1;
+        END LOOP;
+
+        UPDATE public.agenda_plazos_avisados SET personas = v_personas
+         WHERE tarea_id = t.id AND fecha_hasta = t.fecha_hasta;
+
+        v_tareas := v_tareas + 1;
+    END LOOP;
+
+    RETURN v_tareas;
+END;
+$function$
+;
+
 COMMIT;

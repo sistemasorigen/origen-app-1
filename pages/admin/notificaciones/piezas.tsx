@@ -48,6 +48,7 @@ export const EJEMPLOS: Record<string, string> = {
     tarea: 'Armar la mesa de bienvenida', departamento: 'Bienvenida', subdepartamento: 'Recepción',
     detalle: 'Necesitamos un flyer para el anuncio del domingo', codigo: 'REP-0001', numero: '0001',
     tipo: 'Acceso a mis datos', pantalla: 'Eventos', resultado: 'aprobado', pedido: 'la baja',
+    pendientes: 'Sonido y Video',
 };
 
 /** El texto con las variables reemplazadas, como lo arma notif_render. */

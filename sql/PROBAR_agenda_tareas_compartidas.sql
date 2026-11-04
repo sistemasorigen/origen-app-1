@@ -111,6 +111,11 @@ DECLARE
     t1 uuid := gen_random_uuid();
     t_comun uuid := gen_random_uuid();
     s1 uuid := gen_random_uuid();
+    t_comun2 uuid := gen_random_uuid();
+    s3 uuid := gen_random_uuid();
+    t9 uuid := gen_random_uuid();
+    t8 uuid := gen_random_uuid();
+    t7 uuid := gen_random_uuid();
     v_ids uuid[];
     s2 uuid := gen_random_uuid();
     t6 uuid := gen_random_uuid();
@@ -409,6 +414,93 @@ j := public.agenda_cambiar_estado_tarea(t_comun, 'completada');
 PERFORM pg_temp.chk('D17', 'una común se completa como siempre', 'completada', j->'tarea'->>'estado');
 j := public.agenda_cambiar_estado_tarea(t_comun, 'en_proceso');
 PERFORM pg_temp.chk('D18', 'y su integrante la reabre como siempre', 'en_proceso', j->'tarea'->>'estado');
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- E · Avisos
+-- ═══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.admin();
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t7, dep, NULL, NULL, NULL, 'PRUEBA avisos', NULL, HOY + 3, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.chk('E1', 'a la gente de los dos equipos le llega un "asignada"', '1 1 1 1',
+    pg_temp.avisos(lalo, 'agenda_tarea_asignada') || ' ' || pg_temp.avisos(mina, 'agenda_tarea_asignada') || ' '
+    || pg_temp.avisos(ben, 'agenda_tarea_asignada') || ' ' || pg_temp.avisos(bea, 'agenda_tarea_asignada'));
+PERFORM pg_temp.chk('E2', 'quien está en los dos recibe uno solo', '1', pg_temp.avisos(ana, 'agenda_tarea_asignada')::text);
+PERFORM pg_temp.chk('E3', 'la encargada no', '0', pg_temp.avisos(elsa, 'agenda_tarea_asignada')::text);
+PERFORM pg_temp.chk('E4', 'el aviso nombra a su equipo y a nadie más', 'true · false',
+    (pg_temp.ultimo(bea, 'agenda_tarea_asignada') LIKE '%Equipo B%')::text || ' · '
+    || (pg_temp.ultimo(bea, 'agenda_tarea_asignada') LIKE '%Equipo A%')::text);
+
+PERFORM pg_temp.admin();
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(s3, dep, NULL, NULL, NULL, 'PRUEBA serie avisos', NULL, HOY, true, NULL, NULL,
+                               NULL, HOY + 14, 'cada_semana', ARRAY[a, b]);
+PERFORM pg_temp.chk('E5', 'una serie compartida avisa una sola vez a cada persona', '1 1 1',
+    pg_temp.avisos(mina, 'agenda_tarea_asignada') || ' ' || pg_temp.avisos(bea, 'agenda_tarea_asignada') || ' ' || pg_temp.avisos(ana, 'agenda_tarea_asignada'));
+
+PERFORM pg_temp.admin();
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t7, 'completada');
+PERFORM pg_temp.chk('E6', 'termina un equipo: a la encargada le llega un aviso', '1', pg_temp.avisos(elsa, 'agenda_tarea_equipo_termino')::text);
+PERFORM pg_temp.chk('E7', 'dice quién terminó y quién falta', 'true · true',
+    (pg_temp.ultimo(elsa, 'agenda_tarea_equipo_termino') LIKE '%Equipo A%')::text || ' · '
+    || (pg_temp.ultimo(elsa, 'agenda_tarea_equipo_termino') LIKE '%Falta: Equipo B%')::text);
+PERFORM pg_temp.chk('E8', 'a los equipos no les llega', '0 0',
+    pg_temp.avisos(lalo, 'agenda_tarea_equipo_termino') || ' ' || pg_temp.avisos(bea, 'agenda_tarea_equipo_termino'));
+PERFORM pg_temp.chk('E9', 'todavía no llega el de completada', '0', pg_temp.avisos(elsa, 'agenda_tarea_completada')::text);
+PERFORM pg_temp.como(elsa);
+j := public.agenda_cambiar_estado_tarea(t7, 'en_proceso', a);
+PERFORM pg_temp.como(mina);
+j := public.agenda_cambiar_estado_tarea(t7, 'completada');
+PERFORM pg_temp.chk('E10', 'deshacer y volver a terminar no repite el aviso', '1', pg_temp.avisos(elsa, 'agenda_tarea_equipo_termino')::text);
+PERFORM pg_temp.como(ben);
+j := public.agenda_cambiar_estado_tarea(t7, 'completada');
+PERFORM pg_temp.chk('E11', 'el último: un solo aviso, el de completada', '1 · 1',
+    pg_temp.avisos(elsa, 'agenda_tarea_equipo_termino') || ' · ' || pg_temp.avisos(elsa, 'agenda_tarea_completada'));
+PERFORM pg_temp.chk('E12', 'nombra a los equipos y a quien la cerró', 'true · true',
+    (pg_temp.ultimo(elsa, 'agenda_tarea_completada') LIKE '%Equipo A y Equipo B%')::text || ' · '
+    || (pg_temp.ultimo(elsa, 'agenda_tarea_completada') LIKE '%Ben%')::text);
+
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t8, dep, NULL, NULL, NULL, 'PRUEBA sumar', NULL, HOY + 3, true, NULL, NULL, p_subs => ARRAY[a, b]);
+PERFORM pg_temp.admin();
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(elsa);
+j := public.agenda_editar_tarea(t8, NULL, NULL, NULL, 'PRUEBA sumar', NULL, HOY + 3, true, NULL, NULL, p_subs => ARRAY[a, b, c]);
+PERFORM pg_temp.chk('E13', 'sumar un equipo: el aviso le llega sólo a ese', '1 · 0', pg_temp.avisos(cora, 'agenda_tarea_asignada') || ' · ' || pg_temp.avisos(mina, 'agenda_tarea_asignada'));
+
+j := public.agenda_crear_tarea(t9, dep, NULL, NULL, NULL, 'PRUEBA vencida', NULL, HOY + 1, true, NULL, NULL, NULL, HOY + 5, NULL, ARRAY[a, b]);
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t9, 'completada');
+PERFORM pg_temp.admin();
+UPDATE public.agenda_tareas SET fecha = HOY - 5, fecha_hasta = HOY - 1 WHERE id = t9;
+PERFORM pg_temp.limpiar();
+PERFORM public.agenda_plazos_vencidos_tick(now());
+PERFORM pg_temp.chk('E14', 'plazo vencido: a la encargada, nombrando sólo a los que faltan', '1 · true · false',
+    pg_temp.avisos(elsa, 'agenda_plazo_vencido') || ' · '
+    || (pg_temp.ultimo(elsa, 'agenda_plazo_vencido') LIKE '%Equipo B%')::text || ' · '
+    || (pg_temp.ultimo(elsa, 'agenda_plazo_vencido') LIKE '%Equipo A%')::text);
+PERFORM pg_temp.como(lalo);
+PERFORM pg_temp.chk('E15', 'quien ya terminó no la ve vencida', 'false', public.agenda_tarea(t9)->'tarea'->>'vencida');
+PERFORM pg_temp.como(ben);
+PERFORM pg_temp.chk('E16', 'quien falta, sí', 'true', public.agenda_tarea(t9)->'tarea'->>'vencida');
+PERFORM pg_temp.como(elsa);
+PERFORM pg_temp.chk('E17', 'la encargada también', 'true', public.agenda_tarea(t9)->'tarea'->>'vencida');
+
+-- Lo común, igual.
+PERFORM pg_temp.admin();
+PERFORM pg_temp.limpiar();
+PERFORM pg_temp.como(elsa);
+j := public.agenda_crear_tarea(t_comun2, dep, a, NULL, NULL, 'PRUEBA común dos', NULL, HOY, true, NULL, NULL);
+PERFORM pg_temp.como(lalo);
+j := public.agenda_cambiar_estado_tarea(t_comun2, 'completada');
+PERFORM pg_temp.chk('E18', 'una común avisa igual que antes', '1 · 1 · 0 · true',
+    pg_temp.avisos(mina, 'agenda_tarea_asignada') || ' · ' || pg_temp.avisos(elsa, 'agenda_tarea_completada') || ' · '
+    || pg_temp.avisos(elsa, 'agenda_tarea_equipo_termino') || ' · '
+    || (pg_temp.ultimo(elsa, 'agenda_tarea_completada') LIKE '%Equipo A%')::text);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════

@@ -84,6 +84,7 @@ const ICONOS: Record<string, React.ElementType> = {
     // Agenda Origen (sql/agenda_avisos.sql)
     AGENDA_TAREA_ASIGNADA: CalendarCheck,
     AGENDA_TAREA_COMPLETADA: CheckCircle2,
+    AGENDA_TAREA_EQUIPO_TERMINO: CheckCircle2,
     AGENDA_SOLICITUD_NUEVA: Inbox,
     AGENDA_SOLICITUD_REVISADA: MessageSquareReply,
     // La de prueba de Mi cuenta → Notificaciones en este dispositivo.
