@@ -87,9 +87,9 @@ Todo en `sql/agenda_tareas_compartidas.sql`, con `ROLLBACK_` y `PROBAR_`. Compat
 | `agenda_avisar_serie`, `agenda_tareas_avisar` | Aviso de asignada a cada equipo, un solo aviso por serie. `completada` nombra a los equipos en vez de "Sin equipo" |
 | `agenda_archivar_subdepartamento`, `agenda_eliminar_subdepartamento` | Sacan al equipo de la cuenta; completan o devuelven a `esperando` según corresponda |
 
-Las otras funciones de las 24 (`agenda_agregar_miembros`, `agenda_cambiar_lider`, `agenda_es_miembro`, `agenda_guardar_subdepartamento`, `agenda_mover_miembro`, `agenda_quitar_miembro`) miran `subdepartamento_id` de los miembros, no de las tareas. Hay que confirmarlo una por una.
+Las otras funciones de las 24 (`agenda_agregar_miembros`, `agenda_cambiar_lider`, `agenda_es_miembro`, `agenda_guardar_subdepartamento`, `agenda_mover_miembro`, `agenda_quitar_miembro`) no leen ni escriben tareas: miran `subdepartamento_id` de los miembros, y no cambian.
 
-**Avisos.** `agenda_avisos` no repite por `(tarea, usuario, tipo, canal)`, así que "terminó un equipo" necesita un `tipo` por equipo, por ejemplo `equipo_termino:<sub>`; hay que revisar si `tipo` tiene un CHECK que lo impida. Por esa misma regla, deshacer y volver a finalizar no repite el aviso, igual que hoy al reabrir y completar. El aviso nuevo se llama `agenda_tarea_equipo_termino` y va al catálogo de `sql/notif_catalogo.sql`, con su fila en la pantalla de notificaciones.
+**Avisos.** `agenda_avisos` no repite por `(tarea, usuario, tipo, canal)` y su `tipo` hoy sólo admite `asignada` y `completada`. "Terminó un equipo" necesita un `tipo` por equipo: se amplía ese CHECK para aceptar `equipo_termino:<sub>`. Por esa misma regla, deshacer y volver a finalizar no repite el aviso, igual que hoy al reabrir y completar, y una persona en dos equipos recibe un solo "asignada". Al sumar un equipo después, le llega "asignada" a su gente. El aviso nuevo se llama `agenda_tarea_equipo_termino` y va al catálogo de `sql/notif_catalogo.sql`, con su fila en la pantalla de notificaciones.
 
 ## Cambios en las pantallas
 
