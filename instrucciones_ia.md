@@ -2737,6 +2737,36 @@ Desde el **2026-11-03** una tarea puede ser de tres formas. Pruebas en
   tope de 100 días de `agenda_mis_tareas` sigue siendo del rango que se pide,
   no del largo de un plazo.
 
+### Tareas compartidas (sql/agenda_tareas_compartidas.sql, 2026-11-04)
+
+Una tarea de varios equipos que se completa cuando TODOS dieron el finalizado.
+Diseño en `docs/superpowers/specs/2026-11-04-tareas-compartidas-design.md`.
+
+- **Modelo.** `agenda_tareas.compartida` en true y `subdepartamento_id` NULL; los
+  equipos y lo que terminó cada uno, en `agenda_tarea_equipos`. El `estado` de la
+  fila es el de la tarea entera y lo mantiene `agenda_recalcular_compartida`:
+  cuentan los equipos no archivados.
+- **Lo que ve cada uno lo arma `agenda_tarea_json`.** El integrante recibe SU
+  equipo en `subdepartamento`, el `estado` de su equipo y `equipos: null`: sus
+  pantallas casi no cambian y no se entera de cómo van los demás. El encargado
+  recibe `subdepartamento: null` y el avance en `equipos`. Con `p_contexto` (el
+  panel de un equipo), como lo ve ese equipo.
+- **Finalizar** es `agenda_cambiar_estado_tarea(id, estado, p_sub)`. Sin `p_sub`,
+  el integrante marca todos sus equipos pendientes; el encargado siempre dice
+  cuál. Deshacer es sólo del encargado.
+- **Quien terminó deja de verla en su Agenda** (`agenda_mis_tareas`), también
+  cuando se completa la tarea entera: un integrante común sólo llega por link.
+  Quien dirige la ve en el panel, como completada.
+- **Avisos.** "Asignada" a cada equipo, sale del trigger de
+  `agenda_tarea_equipos`. "Terminó un equipo" (`agenda_tarea_equipo_termino`) a
+  los encargados, con un `tipo` por equipo en `agenda_avisos` para que no se pise;
+  para el último equipo sale sólo "completada".
+- **Una compartida no se vuelve común ni al revés**: motivo `es_compartida`. Sus
+  equipos se cambian editándola, con `p_subs`. Rearmar una serie recrea las
+  pendientes sin finalizados.
+- Las RPC cambiaron de firma: `PROBAR_agenda_plazos_y_repeticiones.sql` y
+  `PROBAR_notif_catalogo.sql` ya la dan por aplicada.
+
 ### Las pantallas de los plazos y las repeticiones (desde el 2026-11-03)
 Lo puro (texto y geometría, nunca reglas) está en `pages/agenda/plazos.ts`.
 Las piezas visuales compartidas están en `components/agenda/piezasPlazo.tsx`:
@@ -2753,7 +2783,7 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   pantalla siguen con `fechaCorta`.
 - **Formulario en tres secciones** (`FormularioTarea`, 2026-11-04): tarjetas
   blancas sobre una hoja gris (`Hoja gris`), sin numerar. La tarea: nombre, detalles,
-  prioridad, carpeta. Quién la hace: sub-departamento y "La van a ver".
+  prioridad, carpeta. Quién la hace: sub-departamento, "¿La tarea es compartida?" y "La van a ver".
   Cuándo: Un día · Con plazo, fechas, horario, "¿Se repite?" y resumen. Desde
   1024 px van en dos columnas (940 px) y "Cuándo" queda fija si entra entera;
   debajo, una columna con tres pastillas fijas (`bajoElTitulo`) que saltan a
@@ -2763,12 +2793,12 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
     equipos, "Todos" o "Sin asignar todavía". Es regla de la pantalla: la base
     sigue aceptando `p_sub` null, que es lo que manda "Sin asignar" y lo que deja
     la tarea "esperando". `sinAsignar` distingue esa elección de no haber elegido.
-  - **Varios equipos = una tarea por equipo.** La base guarda un sub-departamento
-    por tarea, así que sale una copia para cada uno, cada una con su id: cada
-    equipo la completa por su lado. Se crean de a una con `agenda_crear_tarea`,
-    y un reintento no duplica porque el id es el mismo. Si una falla, las
-    anteriores salen de lo elegido y al cerrar la pantalla igual se entera. Una
-    solicitud se asigna con la primera copia. Al editar se elige uno solo.
+  - **Con dos o más equipos se pregunta si es compartida**, y es obligatorio
+    contestar. "No": una copia por equipo, cada una con su id; cada equipo la
+    completa por su lado. Se crean de a una con `agenda_crear_tarea`, y un
+    reintento no duplica porque el id es el mismo. Si una falla, las anteriores
+    salen de lo elegido y al cerrar la pantalla igual se entera. La solicitud va
+    con la primera copia. "Sí": una sola tarea (abajo).
   - **Las pastillas son un `<nav>` con `contenido-del-overlay`**: sin esa clase,
     `index.css` esconde todo `nav` mientras hay un modal abierto.
   - **El aviso del pie** (`queFrena`) lista todo lo que frena con las mismas

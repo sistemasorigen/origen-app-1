@@ -13,8 +13,8 @@ import {
     BOTON_CHICO, ChipEstado, HojaElegir, Punto, ROTULO,
 } from '../../pages/departamentos/equipo/piezas';
 import FormularioTarea from './FormularioTarea';
-import { BloqueDePlazo, ChipVencida, LineaDeSerie } from './piezasPlazo';
-import { diaDelPlazo, diasDePlazo, esConPlazo, pendientesDeLaSerie } from '../../pages/agenda/plazos';
+import { BloqueDePlazo, ChipVencida, EtiquetaCompartida, LineaDeSerie } from './piezasPlazo';
+import { avanceDeTarea, diaDelPlazo, diasDePlazo, esConPlazo, pendientesDeLaSerie } from '../../pages/agenda/plazos';
 import type { AccionesDeAgenda, CambioDeTarea, DatosParaEditar } from './contratos';
 
 /**
@@ -164,13 +164,22 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
         [edicion, tarea],
     );
 
-    const cambiarEstado = async (a: 'completada' | 'en_proceso') => {
+    /** El encargado en una compartida: ve el avance y actúa por cada equipo. */
+    const compartidaDelAdmin = !!tarea?.compartida && !!tarea.equipos;
+
+    const cambiarEstado = async (a: 'completada' | 'en_proceso', equipo?: { id: string; nombre: string }) => {
         setOcupado(true);
-        const r = await cambiarEstadoTarea(tareaId, a);
+        const r = await cambiarEstadoTarea(tareaId, a, equipo?.id);
         setOcupado(false);
         if (!r.ok) { acciones.avisar(mensajeDeMotivo(r.motivo), 'error'); return; }
-        setRecienCompletada(a === 'completada');
-        acciones.avisar(a === 'completada' ? 'Tarea completada.' : 'La tarea volvió a En proceso.');
+        setRecienCompletada(a === 'completada' && r.tarea.estado === 'completada');
+        if (equipo) {
+            acciones.avisar(a === 'completada' ? `${equipo.nombre} ya terminó.` : `Se deshizo el finalizado de ${equipo.nombre}.`);
+        } else if (tarea?.compartida) {
+            acciones.avisar('Listo: tu equipo terminó su parte.');
+        } else {
+            acciones.avisar(a === 'completada' ? 'Tarea completada.' : 'La tarea volvió a En proceso.');
+        }
         onCambio?.({ tipo: 'guardada', tarea: r.tarea, creada: false });
         await cargar();
     };
@@ -179,9 +188,29 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
         tipo: 'control',
         rotulo: 'Completar',
         titulo: `¿Marcar “${tarea.nombre}” como completada?`,
-        texto: 'Pasa a Completadas y les llega una notificación a los encargados del departamento. Se puede volver a En proceso en cualquier momento.',
+        texto: tarea.compartida
+            ? 'Se marca como terminada para tu equipo. Le avisamos al departamento y, si fue un error, el departamento puede deshacerlo.'
+            : 'Pasa a Completadas y les llega una notificación a los encargados del departamento. Se puede volver a En proceso en cualquier momento.',
         etiquetaBoton: 'Sí, completada',
         onConfirmar: () => { cambiarEstado('completada'); },
+    });
+
+    const pedirTerminarEquipo = (equipo: { id: string; nombre: string }) => tarea && acciones.confirmar({
+        tipo: 'control',
+        rotulo: 'Marcar terminado',
+        titulo: `¿${equipo.nombre} terminó su parte?`,
+        texto: 'Le sale de sus pendientes. Cuando terminan todos los equipos, la tarea queda completada.',
+        etiquetaBoton: 'Sí, terminó',
+        onConfirmar: () => { cambiarEstado('completada', equipo); },
+    });
+
+    const pedirDeshacerEquipo = (equipo: { id: string; nombre: string }) => tarea && acciones.confirmar({
+        tipo: 'control',
+        rotulo: 'Deshacer',
+        titulo: `¿Deshacer el finalizado de ${equipo.nombre}?`,
+        texto: 'La tarea vuelve a sus pendientes y, si ya estaba completada, vuelve a En proceso.',
+        etiquetaBoton: 'Sí, deshacer',
+        onConfirmar: () => { cambiarEstado('en_proceso', equipo); },
     });
 
     /**
@@ -408,7 +437,10 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                                     <span className="font-semibold text-black/[.5]">(archivado)</span>
                                                 )}
                                             </span>
+                                        ) : compartidaDelAdmin ? (
+                                            <span>Compartida · {avanceDeTarea(tarea)}</span>
                                         ) : <span className="text-black/[.55]">Sin asignar</span>}
+                                        <EtiquetaCompartida tarea={tarea} />
                                     </Dato>
 
                                     <Dato icono={<Signal size={18} strokeWidth={1.75} />}>
@@ -429,6 +461,38 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                         ) : <span className="text-black/[.55]">Sin carpeta</span>}
                                     </Dato>
                                 </div>
+
+                                {compartidaDelAdmin && (
+                                    <>
+                                        <h3 className={`${ROTULO} mb-2.5 mt-6`}>Equipos</h3>
+                                        <ul aria-label="Equipos de la tarea" className="m-0 flex list-none flex-col gap-2 p-0">
+                                            {(tarea.equipos ?? []).map(e => (
+                                                <li key={e.id} className="flex min-h-11 items-center gap-2.5">
+                                                    <Punto color={e.color} tam={10} />
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block truncate text-[14px] font-semibold">{e.nombre}</span>
+                                                        <span className="block truncate text-[12.5px] font-medium text-black/[.62]">
+                                                            {e.finalizadoAt
+                                                                ? `Terminó${e.finalizadoPor?.nombre ? ` · ${e.finalizadoPor.nombre}` : ''}`
+                                                                : e.archivado ? 'Archivado: no cuenta' : 'Falta'}
+                                                        </span>
+                                                    </span>
+                                                    {!e.archivado && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={ocupado}
+                                                            aria-label={`${e.finalizadoAt ? 'Deshacer' : 'Marcar terminado'}: ${e.nombre}`}
+                                                            onClick={() => (e.finalizadoAt ? pedirDeshacerEquipo(e) : pedirTerminarEquipo(e))}
+                                                            className={BOTON_CHICO}
+                                                        >
+                                                            {e.finalizadoAt ? 'Deshacer' : 'Marcar terminado'}
+                                                        </button>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
 
                                 <h3 className={`${ROTULO} mb-2.5 mt-6`}>La tienen</h3>
                                 {tarea.laTienen.length > 0 ? (
@@ -486,6 +550,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                                 <Pencil size={15} strokeWidth={2} aria-hidden="true" />
                                                 Editar
                                             </button>
+                                            {!tarea.compartida && (
                                             <button
                                                 type="button"
                                                 onClick={() => setReasignando(true)}
@@ -498,6 +563,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                                 <ArrowLeftRight size={15} strokeWidth={2} aria-hidden="true" />
                                                 {tarea.subdepartamento ? 'Reasignar' : 'Asignar'}
                                             </button>
+                                            )}
                                         </>
                                     )}
                                     <button
@@ -510,13 +576,13 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                     </button>
                                 </div>
                             )}
-                            {completada && (
+                            {completada && !tarea.compartida && (
                                 <span id="detalle-tarea-porque" className="sr-only">
                                     Ya está completada: para cambiarle el equipo, primero volvela a En proceso.
                                 </span>
                             )}
 
-                            {tarea.puedeCambiarEstado && tarea.estado === 'en_proceso' && (
+                            {tarea.puedeCambiarEstado && !compartidaDelAdmin && tarea.estado === 'en_proceso' && (
                                 <button
                                     type="button"
                                     onClick={pedirCompletar}
@@ -527,7 +593,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                     Marcar como completada
                                 </button>
                             )}
-                            {tarea.puedeCambiarEstado && completada && (
+                            {tarea.puedeCambiarEstado && !compartidaDelAdmin && completada && (
                                 <button
                                     type="button"
                                     onClick={() => cambiarEstado('en_proceso')}
@@ -537,7 +603,7 @@ const DetalleTarea: React.FC<PropsDetalleTarea> = ({ tareaId, acciones, edicion,
                                     Volver a En proceso
                                 </button>
                             )}
-                            {tarea.puedeCambiarEstado && tarea.estado === 'esperando' && (
+                            {tarea.puedeCambiarEstado && !compartidaDelAdmin && tarea.estado === 'esperando' && (
                                 <p className="m-0 text-center text-[13px] font-semibold text-black/[.55]">
                                     Se puede completar cuando esté asignada a un sub-departamento.
                                 </p>
