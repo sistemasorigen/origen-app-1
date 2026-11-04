@@ -1417,4 +1417,314 @@ END;
 $function$
 ;
 
+-- ── 18 · Los contadores ───────────────────────────────────────────────────
+-- Lo que le queda a un equipo de sus tareas compartidas.
+CREATE FUNCTION public.agenda_partes_pendientes(p_sub uuid)
+RETURNS integer
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT count(*)::integer
+      FROM public.agenda_tarea_equipos e
+      JOIN public.agenda_tareas t ON t.id = e.tarea_id
+     WHERE e.subdepartamento_id = p_sub AND e.finalizado_at IS NULL AND t.estado = 'en_proceso';
+$$;
+REVOKE ALL ON FUNCTION public.agenda_partes_pendientes(uuid) FROM PUBLIC, anon, authenticated;
+
+-- ── 19 · El panel de un equipo ────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_subdepartamento(p_sub uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    s public.agenda_subdepartamentos;
+    d public.agenda_departamentos;
+    v_hoy date := public.agenda_hoy();
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    SELECT * INTO s FROM public.agenda_subdepartamentos WHERE id = p_sub;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT (public.agenda_dirige(p_sub) OR public.agenda_es_encargado(s.departamento_id)) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    IF s.archivado_at IS NOT NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'archivado');
+    END IF;
+    SELECT * INTO d FROM public.agenda_departamentos WHERE id = s.departamento_id;
+
+    RETURN jsonb_build_object(
+        'ok', true,
+        'hoy', v_hoy,
+        'subdepartamento', jsonb_build_object('id', s.id, 'nombre', s.nombre, 'color', s.color),
+        'departamento', jsonb_build_object('id', d.id, 'nombre', d.nombre, 'color', d.color, 'icono', d.icono),
+        'lider', public.agenda_persona(s.lider_id),
+        'miembros', COALESCE((
+            SELECT jsonb_agg(public.agenda_persona(m.user_id) ORDER BY m.created_at)
+              FROM public.agenda_subdepartamento_miembros m
+             WHERE m.subdepartamento_id = s.id AND m.user_id IS DISTINCT FROM s.lider_id), '[]'::jsonb),
+        -- Sólo nombre y foto: "a quién recurrir".
+        'encargados', COALESCE((
+            SELECT jsonb_agg(public.agenda_persona(e.user_id) ORDER BY e.created_at)
+              FROM public.agenda_departamento_encargados e WHERE e.departamento_id = d.id), '[]'::jsonb),
+        'contadores', jsonb_build_object(
+            'en_proceso', (SELECT count(*) FROM public.agenda_tareas t
+                            WHERE t.subdepartamento_id = s.id AND t.estado = 'en_proceso')
+                          + public.agenda_partes_pendientes(s.id),
+            'completadas_mes', (SELECT count(*) FROM public.agenda_tareas t
+                                 WHERE t.subdepartamento_id = s.id AND t.estado = 'completada'
+                                   AND (t.completada_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
+                                       >= date_trunc('month', v_hoy)::date)
+                               + (SELECT count(*) FROM public.agenda_tarea_equipos e
+                                   WHERE e.subdepartamento_id = s.id AND e.finalizado_at IS NOT NULL
+                                     AND (e.finalizado_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date
+                                         >= date_trunc('month', v_hoy)::date),
+            'para_hoy', (SELECT count(*) FROM public.agenda_tareas t
+                          WHERE t.subdepartamento_id = s.id AND t.fecha = v_hoy
+                            AND t.estado <> 'completada')
+                        + (SELECT count(*) FROM public.agenda_tarea_equipos e
+                             JOIN public.agenda_tareas t ON t.id = e.tarea_id
+                            WHERE e.subdepartamento_id = s.id AND e.finalizado_at IS NULL
+                              AND t.fecha = v_hoy AND t.estado <> 'completada'))
+    );
+END;
+$function$
+;
+
+-- ── 20 · Los equipos de un departamento ───────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_departamento(p_dep uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    d public.agenda_departamentos;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    SELECT * INTO d FROM public.agenda_departamentos WHERE id = p_dep;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_es_encargado(p_dep) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+
+    RETURN jsonb_build_object(
+        'ok', true,
+        'departamento', jsonb_build_object('id', d.id, 'nombre', d.nombre, 'color', d.color,
+                                           'icono', d.icono, 'created_at', d.created_at),
+        'encargados', COALESCE((
+            SELECT jsonb_agg(public.agenda_persona(e.user_id) ORDER BY e.created_at)
+              FROM public.agenda_departamento_encargados e WHERE e.departamento_id = p_dep), '[]'::jsonb),
+        'subdepartamentos', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', s.id, 'nombre', s.nombre, 'color', s.color,
+                       'lider', public.agenda_persona(s.lider_id),
+                       -- Sin quien dirige: ya viene en 'lider'.
+                       'miembros', COALESCE((
+                           SELECT jsonb_agg(public.agenda_persona(m.user_id) ORDER BY m.created_at)
+                             FROM public.agenda_subdepartamento_miembros m
+                            WHERE m.subdepartamento_id = s.id
+                              AND m.user_id IS DISTINCT FROM s.lider_id), '[]'::jsonb),
+                       'cant_miembros', (SELECT count(DISTINCT p.user_id) FROM (
+                                             SELECT s.lider_id AS user_id WHERE s.lider_id IS NOT NULL
+                                             UNION
+                                             SELECT m.user_id FROM public.agenda_subdepartamento_miembros m
+                                              WHERE m.subdepartamento_id = s.id) p),
+                       'en_proceso', (SELECT count(*) FROM public.agenda_tareas t
+                                       WHERE t.subdepartamento_id = s.id AND t.estado = 'en_proceso')
+                                     + public.agenda_partes_pendientes(s.id))
+                   ORDER BY lower(s.nombre))
+              FROM public.agenda_subdepartamentos s
+             WHERE s.departamento_id = p_dep AND s.archivado_at IS NULL), '[]'::jsonb),
+        'carpetas', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', c.id, 'nombre', c.nombre, 'color', c.color, 'created_at', c.created_at,
+                       'cant_tareas', (SELECT count(*) FROM public.agenda_tareas t WHERE t.carpeta_id = c.id))
+                   ORDER BY c.created_at)
+              FROM public.agenda_carpetas c WHERE c.departamento_id = p_dep), '[]'::jsonb),
+        'prioridades', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', p.id, 'nombre', p.nombre, 'color', p.color, 'orden', p.orden,
+                       -- "La usan N tareas" de la hoja de borrar.
+                       'cant_tareas', (SELECT count(*) FROM public.agenda_tareas t WHERE t.prioridad_id = p.id))
+                   ORDER BY p.orden, p.created_at)
+              FROM public.agenda_prioridades p WHERE p.departamento_id = p_dep), '[]'::jsonb)
+    );
+END;
+$function$
+;
+
+-- ── 21 · Mi acceso ────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_mi_acceso()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_uid uuid := auth.uid();
+    v_super boolean;
+BEGIN
+    IF v_uid IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    v_super := public.agenda_es_super_admin();
+
+    RETURN jsonb_build_object(
+        'ok', true,
+        'super_admin', v_super,
+        'encargado', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', d.id, 'nombre', d.nombre, 'color', d.color, 'icono', d.icono,
+                       'en_proceso', (SELECT count(*) FROM public.agenda_tareas t
+                                       WHERE t.departamento_id = d.id AND t.estado = 'en_proceso'),
+                       'esperando', (SELECT count(*) FROM public.agenda_tareas t
+                                      WHERE t.departamento_id = d.id AND t.estado = 'esperando'),
+                       'solicitudes_nuevas', (SELECT count(*) FROM public.agenda_solicitudes r
+                                               WHERE r.departamento_id = d.id AND r.estado = 'nueva'))
+                   ORDER BY lower(d.nombre))
+              FROM public.agenda_departamentos d
+             WHERE v_super
+                OR EXISTS (SELECT 1 FROM public.agenda_departamento_encargados e
+                            WHERE e.departamento_id = d.id AND e.user_id = v_uid)), '[]'::jsonb),
+        'dirijo', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', s.id, 'departamento_id', d.id, 'departamento_nombre', d.nombre,
+                       'nombre', s.nombre, 'color', s.color,
+                       'en_proceso', (SELECT count(*) FROM public.agenda_tareas t
+                                       WHERE t.subdepartamento_id = s.id AND t.estado = 'en_proceso')
+                                     + public.agenda_partes_pendientes(s.id))
+                   ORDER BY lower(d.nombre), lower(s.nombre))
+              FROM public.agenda_subdepartamentos s
+              JOIN public.agenda_departamentos d ON d.id = s.departamento_id
+             WHERE s.lider_id = v_uid AND s.archivado_at IS NULL), '[]'::jsonb),
+        'miembro', COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+                       'id', s.id, 'departamento_id', s.departamento_id, 'departamento_nombre', d.nombre,
+                       'nombre', s.nombre, 'color', s.color, 'dirige', s.lider_id IS NOT DISTINCT FROM v_uid)
+                   ORDER BY lower(d.nombre), lower(s.nombre))
+              FROM public.agenda_subdepartamentos s
+              JOIN public.agenda_departamentos d ON d.id = s.departamento_id
+             WHERE s.archivado_at IS NULL
+               AND (s.lider_id = v_uid
+                    OR EXISTS (SELECT 1 FROM public.agenda_subdepartamento_miembros m
+                                WHERE m.subdepartamento_id = s.id AND m.user_id = v_uid))), '[]'::jsonb)
+    );
+END;
+$function$
+;
+
+-- ── 22 · Archivar un equipo ───────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_archivar_subdepartamento(p_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_uid uuid := auth.uid();
+    s public.agenda_subdepartamentos;
+    v_a_esperando integer;
+    v_conservadas integer;
+    v_tarea uuid;
+BEGIN
+    IF v_uid IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    SELECT * INTO s FROM public.agenda_subdepartamentos WHERE id = p_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_es_encargado(s.departamento_id) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+    IF s.archivado_at IS NOT NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'archivado');
+    END IF;
+
+    UPDATE public.agenda_tareas
+       SET subdepartamento_id = NULL, estado = 'esperando', asignada_at = NULL, updated_at = now()
+     WHERE subdepartamento_id = p_id AND estado <> 'completada';
+    GET DIAGNOSTICS v_a_esperando = ROW_COUNT;
+
+    SELECT count(*) INTO v_conservadas
+      FROM public.agenda_tareas WHERE subdepartamento_id = p_id AND estado = 'completada';
+
+    UPDATE public.agenda_subdepartamentos
+       SET archivado_at = now(), archivado_por = v_uid, updated_at = now()
+     WHERE id = p_id;
+
+    -- En una compartida, este equipo deja de contar para completarla.
+    FOR v_tarea IN SELECT tarea_id FROM public.agenda_tarea_equipos WHERE subdepartamento_id = p_id LOOP
+        PERFORM public.agenda_recalcular_compartida(v_tarea);
+    END LOOP;
+
+    RETURN jsonb_build_object('ok', true, 'id', p_id,
+                              'tareas_a_esperando', v_a_esperando,
+                              'completadas_conservadas', v_conservadas);
+END;
+$function$
+;
+
+-- ── 23 · Eliminar un equipo ───────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.agenda_eliminar_subdepartamento(p_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    v_dep uuid;
+    v_esperando integer;
+    v_completadas integer;
+    v_compartidas uuid[];
+    v_tarea uuid;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_sesion');
+    END IF;
+    SELECT departamento_id INTO v_dep FROM public.agenda_subdepartamentos WHERE id = p_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'no_existe');
+    END IF;
+    IF NOT public.agenda_es_encargado(v_dep) THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'sin_permiso');
+    END IF;
+
+    UPDATE public.agenda_tareas
+       SET subdepartamento_id = NULL, estado = 'esperando', asignada_at = NULL, updated_at = now()
+     WHERE subdepartamento_id = p_id AND estado <> 'completada';
+    GET DIAGNOSTICS v_esperando = ROW_COUNT;
+
+    UPDATE public.agenda_solicitudes SET estado = 'aceptada', tarea_id = NULL
+     WHERE estado = 'asignada'
+       AND tarea_id IN (SELECT id FROM public.agenda_tareas
+                         WHERE subdepartamento_id = p_id AND estado = 'completada');
+    DELETE FROM public.agenda_tareas WHERE subdepartamento_id = p_id AND estado = 'completada';
+    GET DIAGNOSTICS v_completadas = ROW_COUNT;
+
+    -- Se calculan después de borrar: su fila de equipos se va por cascada.
+    SELECT array_agg(tarea_id) INTO v_compartidas FROM public.agenda_tarea_equipos WHERE subdepartamento_id = p_id;
+
+    DELETE FROM public.agenda_subdepartamentos WHERE id = p_id;
+
+    FOREACH v_tarea IN ARRAY COALESCE(v_compartidas, '{}'::uuid[]) LOOP
+        PERFORM public.agenda_recalcular_compartida(v_tarea);
+    END LOOP;
+
+    RETURN jsonb_build_object('ok', true, 'id', p_id,
+                              'pasaron_a_esperando', v_esperando,
+                              'completadas_borradas', v_completadas);
+END;
+$function$
+;
+
 COMMIT;

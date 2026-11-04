@@ -111,6 +111,26 @@ DECLARE
     t1 uuid := gen_random_uuid();
     t_comun uuid := gen_random_uuid();
     s1 uuid := gen_random_uuid();
+    v_antes integer;
+    t16 uuid := gen_random_uuid();
+    t15 uuid := gen_random_uuid();
+    t14 uuid := gen_random_uuid();
+    t13 uuid := gen_random_uuid();
+    t12 uuid := gen_random_uuid();
+    t11 uuid := gen_random_uuid();
+    t10 uuid := gen_random_uuid();
+    sw uuid := gen_random_uuid();
+    su uuid := gen_random_uuid();
+    sq uuid := gen_random_uuid();
+    sp uuid := gen_random_uuid();
+    so uuid := gen_random_uuid();
+    sn uuid := gen_random_uuid();
+    sl uuid := gen_random_uuid();
+    sk uuid := gen_random_uuid();
+    si uuid := gen_random_uuid();
+    sh uuid := gen_random_uuid();
+    sg uuid := gen_random_uuid();
+    sf uuid := gen_random_uuid();
     t_comun2 uuid := gen_random_uuid();
     s3 uuid := gen_random_uuid();
     t9 uuid := gen_random_uuid();
@@ -501,6 +521,91 @@ PERFORM pg_temp.chk('E18', 'una común avisa igual que antes', '1 · 1 · 0 · t
     pg_temp.avisos(mina, 'agenda_tarea_asignada') || ' · ' || pg_temp.avisos(elsa, 'agenda_tarea_completada') || ' · '
     || pg_temp.avisos(elsa, 'agenda_tarea_equipo_termino') || ' · '
     || (pg_temp.ultimo(elsa, 'agenda_tarea_completada') LIKE '%Equipo A%')::text);
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- F · Contadores
+-- ═══════════════════════════════════════════════════════════════════════════
+PERFORM pg_temp.admin();
+INSERT INTO public.agenda_subdepartamentos (id, departamento_id, nombre, color, lider_id) VALUES
+    (sf, dep, 'Equipo F', '#101010', lalo), (sg, dep, 'Equipo G', '#202020', ben),
+    (sh, dep, 'Equipo H', '#303030', NULL), (si, dep, 'Equipo I', '#404040', ben),
+    (sk, dep, 'Equipo K', '#505050', NULL), (sl, dep, 'Equipo L', '#606060', NULL),
+    (sn, dep, 'Equipo N', '#707070', NULL), (so, dep, 'Equipo O', '#808080', NULL),
+    (sp, dep, 'Equipo P', '#909090', NULL), (sq, dep, 'Equipo Q', '#a0a0a0', ben),
+    (su, dep, 'Equipo U', '#b0b0b0', NULL), (sw, dep, 'Equipo W', '#c0c0c0', NULL);
+
+PERFORM pg_temp.como(elsa);
+v_antes := (SELECT (d->>'en_proceso')::integer FROM jsonb_array_elements(public.agenda_mi_acceso()->'encargado') d WHERE (d->>'id')::uuid = dep);
+j := public.agenda_crear_tarea(t10, dep, NULL, NULL, NULL, 'PRUEBA contar', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sf, sg]);
+PERFORM pg_temp.chk('F1', 'en el departamento, una compartida cuenta una vez', (v_antes + 1)::text,
+    (SELECT d->>'en_proceso' FROM jsonb_array_elements(public.agenda_mi_acceso()->'encargado') d WHERE (d->>'id')::uuid = dep));
+j := public.agenda_subdepartamento(sf);
+PERFORM pg_temp.chk('F2', 'en cada equipo, su parte pendiente', '1 · 1 · 0',
+    (j->'contadores'->>'en_proceso') || ' · ' || (j->'contadores'->>'para_hoy') || ' · ' || (j->'contadores'->>'completadas_mes'));
+PERFORM pg_temp.chk('F3', 'en la lista de equipos del departamento', '1',
+    (SELECT s->>'en_proceso' FROM jsonb_array_elements(public.agenda_departamento(dep)->'subdepartamentos') s WHERE (s->>'id')::uuid = sf));
+PERFORM pg_temp.como(lalo);
+PERFORM pg_temp.chk('F4', 'en lo que dirige Lalo', '1',
+    (SELECT s->>'en_proceso' FROM jsonb_array_elements(public.agenda_mi_acceso()->'dirijo') s WHERE (s->>'id')::uuid = sf));
+j := public.agenda_cambiar_estado_tarea(t10, 'completada', sf);
+PERFORM pg_temp.como(elsa);
+j := public.agenda_subdepartamento(sf);
+PERFORM pg_temp.chk('F5', 'el equipo que terminó: 0 pendientes, 1 completada este mes', '0 · 0 · 1',
+    (j->'contadores'->>'en_proceso') || ' · ' || (j->'contadores'->>'para_hoy') || ' · ' || (j->'contadores'->>'completadas_mes'));
+j := public.agenda_subdepartamento(sg);
+PERFORM pg_temp.chk('F6', 'el que falta sigue igual', '1 · 1 · 0',
+    (j->'contadores'->>'en_proceso') || ' · ' || (j->'contadores'->>'para_hoy') || ' · ' || (j->'contadores'->>'completadas_mes'));
+j := public.agenda_crear_tarea(t11, dep, sf, NULL, NULL, 'PRUEBA común de F', NULL, HOY, true, NULL, NULL);
+PERFORM pg_temp.chk('F7', 'las comunes se siguen sumando', '1',
+    public.agenda_subdepartamento(sf)->'contadores'->>'en_proceso');
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- G · Archivar so eliminar un equipo
+-- ═══════════════════════════════════════════════════════════════════════════
+j := public.agenda_crear_tarea(t12, dep, NULL, NULL, NULL, 'PRUEBA archivar', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sh, si]);
+PERFORM pg_temp.como(ben);
+j := public.agenda_cambiar_estado_tarea(t12, 'completada');
+PERFORM pg_temp.como(elsa);
+j := public.agenda_archivar_subdepartamento(sh);
+PERFORM pg_temp.chk('G1', 'archivar al único que faltaba: se completa', 'true · completada H:no I:si', (j->>'ok') || ' · ' || pg_temp.avance(t12));
+
+j := public.agenda_crear_tarea(t13, dep, NULL, NULL, NULL, 'PRUEBA archivar dos', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sk, sl]);
+j := public.agenda_archivar_subdepartamento(sk);
+PERFORM pg_temp.chk('G2', 'archivar a uno con otro pendiente: sigue en proceso', 'en_proceso K:no L:no', pg_temp.avance(t13));
+PERFORM pg_temp.chk('G3', 'la tarea no pasa a esperando ni toma otro equipo', 'false',
+    (public.agenda_tarea(t13)->'tarea'->>'estado' = 'esperando')::text);
+j := public.agenda_archivar_subdepartamento(sl);
+PERFORM pg_temp.chk('G4', 'archivarlos a todos sin que nadie terminara: espera que le asignen otros', 'esperando K:no L:no', pg_temp.avance(t13));
+j := public.agenda_editar_tarea(t13, NULL, NULL, NULL, 'PRUEBA archivar dos', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sn]);
+PERFORM pg_temp.chk('G5', 'asignarle otro equipo la vuelve a poner en proceso', 'en_proceso N:no', pg_temp.avance(t13));
+
+j := public.agenda_crear_tarea(t14, dep, NULL, NULL, NULL, 'PRUEBA archivar tres', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[so, sp]);
+j := public.agenda_cambiar_estado_tarea(t14, 'completada', sp);
+j := public.agenda_archivar_subdepartamento(sp);
+PERFORM pg_temp.chk('G6', 'archivar a uno que ya terminó, con otro pendiente: sigue', 'en_proceso O:no P:si', pg_temp.avance(t14));
+j := public.agenda_archivar_subdepartamento(so);
+PERFORM pg_temp.chk('G7', 'sin equipos que cuenten, pero alguno terminó: se completa', 'completada O:no P:si', pg_temp.avance(t14));
+
+j := public.agenda_crear_tarea(t15, dep, NULL, NULL, NULL, 'PRUEBA eliminar', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[sq, su]);
+j := public.agenda_cambiar_estado_tarea(t15, 'completada', sq);
+j := public.agenda_crear_tarea(t16, dep, NULL, NULL, NULL, 'PRUEBA eliminar dos', NULL, HOY, true, NULL, NULL, p_subs => ARRAY[su, sw]);
+-- agenda_eliminar_subdepartamento está cerrada: la llama el sistema con la sesión del encargado.
+PERFORM pg_temp.admin();
+PERFORM set_config('request.jwt.claims', json_build_object('sub', elsa::text, 'role', 'authenticated')::text, true);
+j := public.agenda_eliminar_subdepartamento(su);
+PERFORM pg_temp.chk('G8', 'eliminar al único que faltaba: se completa y su fila se va', 'true · completada Q:si', (j->>'ok') || ' · ' || pg_temp.avance(t15));
+PERFORM pg_temp.chk('G9', 'eliminar a uno con otro pendiente: sigue', 'en_proceso W:no', pg_temp.avance(t16));
+j := public.agenda_eliminar_subdepartamento(sw);
+PERFORM pg_temp.chk('G10', 'eliminarlos a todos: espera que le asignen otros', 'esperando -', pg_temp.avance(t16));
+
+PERFORM pg_temp.como(elsa);
+j := public.agenda_eliminar_tarea(t15);
+PERFORM pg_temp.admin();
+PERFORM pg_temp.chk('G11', 'borrar la tarea se lleva sus equipos', 'true · 0',
+    (j->>'ok') || ' · ' || (SELECT count(*)::text FROM public.agenda_tarea_equipos WHERE tarea_id = t15));
+
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
