@@ -163,10 +163,8 @@ export const Hoja: React.FC<{
     encima?: boolean;
     /** Fondo #f6f6f4 para apoyar tarjetas blancas; el pie sigue blanco. */
     gris?: boolean;
-    /** Lo que va fijo entre el título y el cuerpo: no se arrastra ni se desplaza. */
-    bajoElTitulo?: React.ReactNode;
     children: React.ReactNode;
-}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, encima = false, gris = false, bajoElTitulo, children }) => {
+}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, encima = false, gris = false, children }) => {
     useBloqueoDeFondo(true);
     const panel = useRef<HTMLDivElement>(null);
     const { confirmacionAbierta } = usePanelOpcional() ?? { confirmacionAbierta: false };
@@ -243,7 +241,6 @@ export const Hoja: React.FC<{
                         {subtitulo && <p className="m-0 mt-1 text-[13.5px] font-medium leading-[1.45] text-black/[.62]">{subtitulo}</p>}
                     </div>
                 </div>
-                {bajoElTitulo}
                 <div
                     className={`flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pb-4 pt-2.5 ${gris ? 'px-4 md:px-[22px]' : 'px-[22px]'}`}
                     data-cuerpo="true"

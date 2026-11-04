@@ -2796,9 +2796,9 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
   prioridad, carpeta. Quién la hace: sub-departamento, "¿La tarea es compartida?" y "La van a ver".
   Cuándo: Un día · Con plazo, fechas, horario, "¿Se repite?" y resumen. Desde
   1024 px van en dos columnas (940 px) y "Cuándo" queda fija si entra entera;
-  debajo, una columna con tres pastillas fijas (`bajoElTitulo`) que saltan a
-  cada sección. Es sólo presentación: ni las reglas ni lo que se manda saben
-  que existen. Tres cosas que no se ven a simple vista:
+  debajo, una columna, sin barra de secciones (Ignacio la sacó el mismo día). Es
+  sólo presentación: ni las reglas ni lo que se manda saben que existen. Dos
+  cosas que no se ven a simple vista:
   - **Hay que elegir sub-departamento** (Ignacio, 2026-11-04): uno o más
     equipos, "Todos" o "Sin asignar todavía". Es regla de la pantalla: la base
     sigue aceptando `p_sub` null, que es lo que manda "Sin asignar" y lo que deja
@@ -2809,8 +2809,6 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
     reintento no duplica porque el id es el mismo. Si una falla, las anteriores
     salen de lo elegido y al cerrar la pantalla igual se entera. La solicitud va
     con la primera copia. "Sí": una sola tarea (abajo).
-  - **Las pastillas son un `<nav>` con `contenido-del-overlay`**: sin esa clase,
-    `index.css` esconde todo `nav` mientras hay un modal abierto.
   - **El aviso del pie** (`queFrena`) lista todo lo que frena con las mismas
     condiciones de `invalido`; tocarlo marca los errores y baja al primero.
     Baja en un `requestAnimationFrame`: si arranca antes de que aparezcan los

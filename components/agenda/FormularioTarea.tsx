@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
-import { CalendarRange, Check, ChevronDown, Clock } from 'lucide-react';
+import { CalendarRange, ChevronDown, Clock } from 'lucide-react';
 import {
     crearTarea, editarTarea, fechaYHora, getRepeticionesPosibles, hoyIso, mensajeDeMotivo,
     nuevoId, sello, sumarDias,
@@ -37,9 +37,8 @@ import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
  *     un reintento no duplica ninguna.
  *
  * TRES SECCIONES: La tarea, Quién la hace y Cuándo. Desde 1024 px van en dos
- * columnas y se ve todo; debajo, en una sola, con tres pastillas fijas para
- * saltar entre ellas. Las secciones son sólo presentación: las reglas y lo
- * que se manda no saben que existen.
+ * columnas y se ve todo; debajo, en una sola. Las secciones son sólo
+ * presentación: las reglas y lo que se manda no saben que existen.
  */
 
 const MAXIMO_NOMBRE = 120;
@@ -176,10 +175,9 @@ const Seccion: React.FC<{
     /** Lo que va a la derecha del título. */
     derecha?: string;
     idBase: string;
-    refSeccion: React.RefObject<HTMLElement | null>;
     children: React.ReactNode;
-}> = ({ numero, titulo, bajada, derecha, idBase, refSeccion, children }) => (
-    <section ref={refSeccion} aria-labelledby={`${idBase}-seccion-${numero}`} className={`${TARJETA} flex flex-col gap-4 p-[18px] md:p-5`}>
+}> = ({ numero, titulo, bajada, derecha, idBase, children }) => (
+    <section aria-labelledby={`${idBase}-seccion-${numero}`} className={`${TARJETA} flex flex-col gap-4 p-[18px] md:p-5`}>
         <div className="flex items-center gap-2.5">
             <div className="min-w-0 flex-none">
                 <h3 id={`${idBase}-seccion-${numero}`} className="m-0 text-[12px] font-extrabold uppercase leading-[1.2] tracking-[0.08em] text-[#0a0a0a]">
@@ -193,40 +191,6 @@ const Seccion: React.FC<{
         </div>
         {children}
     </section>
-);
-
-/** Las tres pastillas de arriba, cuando las secciones van una abajo de la otra. */
-const PastillasDeSeccion: React.FC<{
-    visible: 1 | 2 | 3;
-    completas: [boolean, boolean, boolean];
-    onElegir: (n: 1 | 2 | 3) => void;
-}> = ({ visible, completas, onElegir }) => (
-    <nav aria-label="Secciones del formulario" className="contenido-del-overlay flex flex-none gap-1.5 px-4 pb-2.5 md:px-[22px]">
-        {([[1, 'Tarea'], [2, 'Quién'], [3, 'Cuándo']] as const).map(([n, texto]) => {
-            const on = visible === n;
-            const lista = completas[n - 1];
-            return (
-                <button
-                    key={n}
-                    type="button"
-                    onClick={() => onElegir(n)}
-                    aria-current={on ? 'true' : undefined}
-                    className={`flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black/[.66] shadow-[0_1px_2px_rgba(0,0,0,.04)]'}`}
-                >
-                    {lista && (
-                        <span
-                            aria-hidden="true"
-                            className={`flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full ${on ? 'bg-white text-[#0a0a0a]' : 'bg-[#0a0a0a] text-white'}`}
-                        >
-                            <Check size={11} strokeWidth={3.2} />
-                        </span>
-                    )}
-                    {texto}
-                    {lista && <span className="sr-only">, completa</span>}
-                </button>
-            );
-        })}
-    </nav>
 );
 
 const FormularioTarea: React.FC<PropsFormularioTarea> = ({
@@ -310,13 +274,9 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         () => typeof window !== 'undefined' && window.matchMedia(MEDIDA_DOS_COLUMNAS).matches,
     );
     const [cuandoFija, setCuandoFija] = useState(false);
-    const [seccionVisible, setSeccionVisible] = useState<1 | 2 | 3>(1);
     const sinMovimiento = useReducedMotion();
     const raiz = useRef<HTMLDivElement>(null);
     const columnaCuando = useRef<HTMLDivElement>(null);
-    const seccion1 = useRef<HTMLElement>(null);
-    const seccion2 = useRef<HTMLElement>(null);
-    const seccion3 = useRef<HTMLElement>(null);
 
     const enviando = useRef(false);
     /** El id de cada copia: el mismo en un reintento, para que la base no la duplique. */
@@ -469,13 +429,6 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         });
     };
 
-    /** Lo obligatorio de cada sección, para el tilde de las pastillas. */
-    const completas: [boolean, boolean, boolean] = [
-        !sinNombre,
-        subDecidido && !faltaCompartida,
-        !!fecha && !horarioMal && !plazoMal && !repeticionNoEntra,
-    ];
-
     useEffect(() => {
         const medida = window.matchMedia(MEDIDA_DOS_COLUMNAS);
         const alCambiar = () => setDosColumnas(medida.matches);
@@ -494,40 +447,6 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         observador.observe(cuerpo);
         return () => observador.disconnect();
     }, [dosColumnas]);
-
-    /** Qué sección se está viendo: la última cuyo borde de arriba ya llegó al tope. */
-    useEffect(() => {
-        const cuerpo = raiz.current?.closest('[data-cuerpo]');
-        if (dosColumnas || !cuerpo) return;
-        let cuadro = 0;
-        const mirar = () => {
-            cuadro = 0;
-            const tope = cuerpo.getBoundingClientRect().top + 48;
-            let vista: 1 | 2 | 3 = 1;
-            if ((seccion2.current?.getBoundingClientRect().top ?? Infinity) <= tope) vista = 2;
-            if ((seccion3.current?.getBoundingClientRect().top ?? Infinity) <= tope) vista = 3;
-            const alFinal = cuerpo.scrollHeight > cuerpo.clientHeight
-                && cuerpo.scrollTop + cuerpo.clientHeight >= cuerpo.scrollHeight - 2;
-            setSeccionVisible(alFinal ? 3 : vista);
-        };
-        const alMover = () => { if (!cuadro) cuadro = window.requestAnimationFrame(mirar); };
-        cuerpo.addEventListener('scroll', alMover, { passive: true });
-        return () => {
-            cuerpo.removeEventListener('scroll', alMover);
-            if (cuadro) window.cancelAnimationFrame(cuadro);
-        };
-    }, [dosColumnas]);
-
-    const irASeccion = (n: 1 | 2 | 3) => {
-        const seccion = [seccion1, seccion2, seccion3][n - 1].current;
-        const cuerpo = raiz.current?.closest('[data-cuerpo]');
-        if (!seccion || !cuerpo) return;
-        setSeccionVisible(n);
-        cuerpo.scrollTo({
-            top: cuerpo.scrollTop + seccion.getBoundingClientRect().top - cuerpo.getBoundingClientRect().top - 8,
-            behavior: sinMovimiento ? 'auto' : 'smooth',
-        });
-    };
 
     const cambiaronLosEquipos = [...subs].sort().join() !== [...subsIniciales].sort().join();
     const hayCambios = nombre !== inicial.nombre
@@ -763,9 +682,6 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             ocupada={guardando}
             ancho={dosColumnas ? 940 : 620}
             gris
-            bajoElTitulo={dosColumnas ? undefined : (
-                <PastillasDeSeccion visible={seccionVisible} completas={completas} onElegir={irASeccion} />
-            )}
             pie={(
                 <PieDeHoja
                     onCancelar={intentarCerrar}
@@ -783,7 +699,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
                 <div className={dosColumnas ? 'grid grid-cols-2 items-start gap-6' : 'flex flex-col gap-6'}>
                     <div className="flex min-w-0 flex-col gap-6">
-                        <Seccion numero={1} titulo="La tarea" bajada="Qué hay que hacer" idBase={idBase} refSeccion={seccion1}>
+                        <Seccion numero={1} titulo="La tarea" bajada="Qué hay que hacer" idBase={idBase}>
                             {/* Nombre */}
                             <label className="flex flex-col gap-1.5">
                                 <RotuloDeCampo>Nombre de la tarea</RotuloDeCampo>
@@ -899,7 +815,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                         </label>
                         </Seccion>
 
-                        <Seccion numero={2} titulo="Quién la hace" bajada="A qué equipo le llega" idBase={idBase} refSeccion={seccion2}>
+                        <Seccion numero={2} titulo="Quién la hace" bajada="A qué equipo le llega" idBase={idBase}>
                             <ComboboxDeSub
                                 subdepartamentos={datos.subdepartamentos}
                                 valores={subs}
@@ -988,7 +904,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
                     {/* Se queda quieta mientras se baja por la izquierda, si entra entera. */}
                     <div ref={columnaCuando} className={`min-w-0 ${cuandoFija ? 'sticky top-0' : ''}`}>
-                        <Seccion numero={3} titulo="Cuándo" derecha={resumenCorto} idBase={idBase} refSeccion={seccion3}>
+                        <Seccion numero={3} titulo="Cuándo" derecha={resumenCorto} idBase={idBase}>
                             {/* Un día · Con plazo. En edición, una repetición no cambia
                                 de forma: siempre es un día de su serie. */}
                             {!eraSerie && (
