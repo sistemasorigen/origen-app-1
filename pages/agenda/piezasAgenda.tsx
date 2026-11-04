@@ -4,9 +4,9 @@ import { fechaCorta, horarioDeTarea, type Tarea } from '../../services/agenda';
 import { ESTADOS, VENCIDA } from '../../src/contenido/agendaPaleta';
 import { tinte } from '../admin/departamentos/piezas';
 import { ChipEstado, Punto } from '../departamentos/equipo/piezas';
-import { ChipVencida, IconoSerie, PuntoVencida } from '../../components/agenda/piezasPlazo';
+import { ChipVencida, EtiquetaCompartida, IconoSerie, LineaDeAvance, PuntoVencida } from '../../components/agenda/piezasPlazo';
 import { horarioHablado } from './calendario';
-import { esConPlazo, textoDeSerie, textoDeVencimiento, textoDelPlazo, type Barra } from './plazos';
+import { avanceDeTarea, esConPlazo, nombreDeEquipos, textoDeSerie, textoDeVencimiento, textoDelPlazo, type Barra } from './plazos';
 
 /**
  * Cómo se ve una tarea en la Agenda (design-claude/Agenda Origen), igual en
@@ -25,14 +25,15 @@ const GRIS = '#8a8a86';
 
 export const colorDe = (t: Tarea): string => t.subdepartamento?.color || GRIS;
 export const estaCompletada = (t: Tarea) => t.estado === 'completada';
-export const estaEsperando = (t: Tarea) => t.estado === 'esperando' || !t.subdepartamento;
+export const estaEsperando = (t: Tarea) => t.estado === 'esperando' || (!t.subdepartamento && !t.compartida);
 
 export const etiquetaDe = (t: Tarea): string =>
     [
         t.nombre,
         t.fechaHasta ? `del ${fechaCorta(t.fecha)} al ${fechaCorta(t.fechaHasta)}` : horarioHablado(t),
         t.serie ? `repetición ${textoDeSerie(t)}` : null,
-        t.subdepartamento?.nombre || 'sin asignar',
+        avanceDeTarea(t) || (t.subdepartamento?.nombre ?? (t.compartida ? 'compartida' : 'sin asignar')),
+        t.compartida && t.subdepartamento ? 'compartida' : null,
         ESTADOS[t.estado].etiqueta.toLowerCase(),
         t.vencida ? textoDeVencimiento(t).toLowerCase() : null,
     ].filter(Boolean).join(', ');
@@ -108,8 +109,9 @@ export const TarjetaDeLista: React.FC<{ tarea: Tarea; onAbrir: (id: string) => v
                     </span>
                     <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] text-[11.5px] font-bold text-black/[.78]" style={{ background: esperando ? 'rgba(0,0,0,.06)' : tinte(colorDe(tarea)) }}>
                         <Punto color={colorDe(tarea)} tam={7} />
-                        {tarea.subdepartamento?.nombre || 'Sin asignar'}
+                        {nombreDeEquipos(tarea)}
                     </span>
+                    <EtiquetaCompartida tarea={tarea} />
                     <ChipEstado estado={tarea.estado} />
                     {tarea.vencida && <ChipVencida />}
                     {tarea.prioridad && (
@@ -122,6 +124,7 @@ export const TarjetaDeLista: React.FC<{ tarea: Tarea; onAbrir: (id: string) => v
                             <Folder size={12} strokeWidth={2} aria-hidden="true" style={{ color: tarea.carpeta.color }} />{tarea.carpeta.nombre}
                         </span>
                     )}
+                    <LineaDeAvance tarea={tarea} />
                 </span>
             </span>
             <ChevronRight size={18} strokeWidth={2.2} className="flex-none self-center text-black/[.38]" aria-hidden="true" />
@@ -206,7 +209,7 @@ export const TarjetaDePlazo: React.FC<{ tarea: Tarea; onAbrir: (id: string) => v
                 <NombreDeTarea tarea={tarea} />
             </span>
             <span className="truncate text-[12.5px] font-semibold text-black/[.62]">
-                {textoDelPlazo(tarea)} · {tarea.subdepartamento?.nombre || 'Sin asignar'}
+                {textoDelPlazo(tarea)} · {avanceDeTarea(tarea) || nombreDeEquipos(tarea)}
             </span>
         </span>
         {tarea.vencida

@@ -1,3 +1,4 @@
+import { equiposDeLaTarea } from './plazos';
 import {
     diaCompleto, fechaDesdeIso, fechaIso, fechaLarga, mesYAnio, rangoDeDias, sumarDias,
     type Tarea,
@@ -217,5 +218,7 @@ export const recordarTodo = (v: boolean) => escribir(CLAVE.todo, v ? '1' : '0');
 export const SIN_ASIGNAR = '_sin_asignar';
 
 /** Si una tarea pasa el filtro de la leyenda. */
-export const pasaElFiltro = (t: Tarea, apagados: Set<string>): boolean =>
-    t.subdepartamento ? !apagados.has(t.subdepartamento.id) : !apagados.has(SIN_ASIGNAR);
+export const pasaElFiltro = (t: Tarea, apagados: Set<string>): boolean => {
+    const equipos = equiposDeLaTarea(t);
+    return equipos.length > 0 ? equipos.some(id => !apagados.has(id)) : !apagados.has(SIN_ASIGNAR);
+};

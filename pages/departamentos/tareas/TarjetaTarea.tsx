@@ -2,8 +2,8 @@ import React from 'react';
 import { Folder } from 'lucide-react';
 import { horarioDeTarea, type Tarea } from '../../../services/agenda';
 import { ChipColor, Punto } from '../equipo/piezas';
-import { ChipVencida, EtiquetaDePlazo, IconoSerie } from '../../../components/agenda/piezasPlazo';
-import { esConPlazo, textoDeSerie, textoDeVencimiento, textoDelPlazo } from '../../agenda/plazos';
+import { ChipVencida, EtiquetaCompartida, EtiquetaDePlazo, IconoSerie, LineaDeAvance } from '../../../components/agenda/piezasPlazo';
+import { avanceDeTarea, esConPlazo, nombreDeEquipos, textoDeSerie, textoDeVencimiento, textoDelPlazo } from '../../agenda/plazos';
 
 /**
  * Una tarea en la lista (design-claude/Departamento - Tareas).
@@ -36,7 +36,8 @@ const TarjetaTarea: React.FC<{
         esConPlazo(tarea) ? `${textoDelPlazo(tarea)}, ${textoDeVencimiento(tarea).toLowerCase()}` : horario,
         tarea.serie ? `repetición ${textoDeSerie(tarea)}` : '',
         tarea.vencida ? 'vencida' : '',
-        tarea.subdepartamento ? tarea.subdepartamento.nombre : 'Sin asignar',
+        nombreDeEquipos(tarea),
+        avanceDeTarea(tarea),
         tarea.prioridad ? `prioridad ${tarea.prioridad.nombre}` : '',
         tarea.carpeta ? `carpeta ${tarea.carpeta.nombre}` : '',
     ].filter(Boolean).join(' · ');
@@ -63,7 +64,8 @@ const TarjetaTarea: React.FC<{
                         <span className="whitespace-nowrap text-[12px] font-semibold text-black/[.55]">{textoDeSerie(tarea)}</span>
                     )}
                     {tarea.vencida && <ChipVencida />}
-                    <ChipColor color={color}>{tarea.subdepartamento ? tarea.subdepartamento.nombre : 'Sin asignar'}</ChipColor>
+                    <ChipColor color={color}>{nombreDeEquipos(tarea)}</ChipColor>
+                    <EtiquetaCompartida tarea={tarea} />
                     {tarea.prioridad && <ChipColor color={tarea.prioridad.color}>{tarea.prioridad.nombre}</ChipColor>}
                     {tarea.carpeta && (
                         <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-black/[.62]">
@@ -77,6 +79,7 @@ const TarjetaTarea: React.FC<{
                             Equipo archivado
                         </span>
                     )}
+                    <LineaDeAvance tarea={tarea} />
                 </span>
             </span>
         </button>

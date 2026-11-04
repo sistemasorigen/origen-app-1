@@ -85,6 +85,7 @@ export type MotivoAgenda =
     | 'sin_encargados' | 'usuario_inexistente' | 'lider_requerido'
     | 'detalles_largos' | 'detalles_cortos' | 'fecha_invalida' | 'horario_invalido'
     | 'sub_ajeno' | 'carpeta_ajena' | 'prioridad_ajena' | 'prioridad_requerida'
+    | 'solo_el_departamento' | 'es_compartida' | 'sin_equipos' | 'compartida_minimo'
     | 'completada' | 'sin_sub' | 'estado_invalido'
     | 'rango_invalido' | 'rango_grande'
     | 'en_uso' | 'reemplazo_invalido' | 'ya_tiene' | 'lista_incompleta'
@@ -212,6 +213,16 @@ export interface PanelDepartamento {
     prioridades: Prioridad[];
 }
 
+/** La parte de un equipo en una tarea compartida. Sólo la recibe el encargado. */
+export interface EquipoDeTarea {
+    id: string;
+    nombre: string;
+    color: string;
+    archivado: boolean;
+    finalizadoAt: string | null;
+    finalizadoPor: Persona | null;
+}
+
 export interface Tarea {
     id: string;
     departamento: DepartamentoBase;
@@ -220,6 +231,13 @@ export interface Tarea {
      * que se conservan como historial (sql/agenda_archivar_subdepartamentos.sql).
      */
     subdepartamento: { id: string; nombre: string; color: string; archivado?: boolean } | null;
+    /**
+     * De varios equipos, y se completa cuando terminaron todos. Lo arma la base
+     * según quién mira: un integrante recibe su `subdepartamento` y el `estado`
+     * de su equipo; el encargado, `subdepartamento` null y el avance en `equipos`.
+     */
+    compartida: boolean;
+    equipos: EquipoDeTarea[] | null;
     carpeta: { id: string; nombre: string; color: string } | null;
     prioridad: { id: string; nombre: string; color: string; orden: number } | null;
     nombre: string;
@@ -327,6 +345,8 @@ export interface DepartamentoParaSolicitar extends DepartamentoBase {
 export interface DatosDeTarea {
     /** null = "Sin asignar todavía": la tarea queda 'esperando'. */
     subdepartamentoId: string | null;
+    /** Los equipos de una tarea compartida. Con esto, `subdepartamentoId` va en null. */
+    subdepartamentoIds?: string[] | null;
     carpetaId: string | null;
     prioridadId: string | null;
     nombre: string;
@@ -527,6 +547,10 @@ export const mensajeDeMotivo = (motivo: MotivoAgenda, falla?: Pick<Falla, 'canti
         case 'fecha_invalida': return 'Elegí el día.';
         case 'horario_invalido': return 'La hora de fin tiene que ser después de la de inicio.';
         case 'sub_ajeno': return 'Ese sub-departamento no es de este departamento.';
+        case 'solo_el_departamento': return 'Sólo el departamento puede deshacer el finalizado de un equipo.';
+        case 'es_compartida': return 'Esta tarea no cambia de tipo: los equipos de una compartida se cambian editándola.';
+        case 'sin_equipos': return 'Elegí al menos un sub-departamento.';
+        case 'compartida_minimo': return 'Una tarea compartida necesita al menos dos sub-departamentos.';
         case 'carpeta_ajena': return 'Esa carpeta no es de este departamento.';
         case 'prioridad_ajena': return 'Esa prioridad no es de este departamento.';
         case 'prioridad_requerida': return 'Elegí una prioridad.';
@@ -608,6 +632,17 @@ const tarea = (t: Crudo): Tarea => {
             const s = colorido(t.subdepartamento);
             return s ? { ...s, archivado: obj(t.subdepartamento)?.archivado === true } : null;
         })(),
+        compartida: t.compartida === true,
+        equipos: Array.isArray(t.equipos)
+            ? lista(t.equipos).map(e => ({
+                id: txt(e.id),
+                nombre: txt(e.nombre),
+                color: txt(e.color),
+                archivado: e.archivado === true,
+                finalizadoAt: txtONull(e.finalizado_at),
+                finalizadoPor: persona(e.finalizado_por),
+            }))
+            : null,
         carpeta: colorido(t.carpeta),
         prioridad: prio ? { id: txt(prio.id), nombre: txt(prio.nombre), color: txt(prio.color), orden: num(prio.orden) } : null,
         nombre: txt(t.nombre),
@@ -831,6 +866,8 @@ export const getTareasDepartamento = (departamentoId: string, desde: string, has
 
 const argsDeTarea = (datos: DatosDeTarea) => ({
     p_sub: datos.subdepartamentoId,
+    // Sólo si hay: una tarea común manda exactamente lo mismo que siempre.
+    ...(datos.subdepartamentoIds ? { p_subs: datos.subdepartamentoIds } : {}),
     p_carpeta: datos.carpetaId,
     p_prioridad: datos.prioridadId,
     p_nombre: datos.nombre.trim(),
@@ -1074,8 +1111,9 @@ export const getTarea = (id: string) =>
     });
 
 /** 'completada' o volver a 'en_proceso'. Una 'esperando' no se completa ('sin_sub'). */
-export const cambiarEstadoTarea = (id: string, estado: 'completada' | 'en_proceso') =>
-    llamar<{ tarea: Tarea }>('agenda_cambiar_estado_tarea', { p_id: id, p_estado: estado },
+/** `subId`: el equipo por el que marca o deshace el encargado en una compartida. */
+export const cambiarEstadoTarea = (id: string, estado: 'completada' | 'en_proceso', subId?: string) =>
+    llamar<{ tarea: Tarea }>('agenda_cambiar_estado_tarea', { p_id: id, p_estado: estado, ...(subId ? { p_sub: subId } : {}) },
         d => ({ tarea: tarea(obj(d.tarea) ?? {}) }));
 
 // ── Solicitudes (cualquiera con sesión) ─────────────────────────────────

@@ -271,6 +271,31 @@ export const resumenCortoDeCuando = (c: Cuando): string => {
     return c.horaDesde && c.horaHasta ? `${dia} · ${c.horaDesde} a ${c.horaHasta}` : dia;
 };
 
+/** "nombre, día y horario". */
+export const enLista = (l: string[]): string =>
+    (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
+
+/**
+ * "Diseño ya terminó · falta Video". Vacío si quien mira no recibió el avance:
+ * un integrante no ve a los otros equipos.
+ */
+export const avanceDeTarea = (t: Pick<Tarea, 'compartida' | 'equipos'>): string => {
+    if (!t.compartida || !t.equipos) return '';
+    const hechos = t.equipos.filter(e => e.finalizadoAt).map(e => e.nombre);
+    const faltan = t.equipos.filter(e => !e.finalizadoAt && !e.archivado).map(e => e.nombre);
+    if (faltan.length === 0) return 'Terminaron todos los equipos';
+    if (hechos.length === 0) return `Falta ${enLista(faltan)}`;
+    return `${enLista(hechos)} ya ${hechos.length === 1 ? 'terminó' : 'terminaron'} · ${faltan.length === 1 ? 'falta' : 'faltan'} ${enLista(faltan)}`;
+};
+
+/** Qué equipo nombrar en una tarjeta. */
+export const nombreDeEquipos = (t: Pick<Tarea, 'subdepartamento' | 'compartida' | 'equipos'>): string =>
+    t.subdepartamento?.nombre ?? (t.compartida ? 'Compartida' : 'Sin asignar');
+
+/** Los equipos de una tarea, para el filtro de la Agenda. */
+export const equiposDeLaTarea = (t: Pick<Tarea, 'subdepartamento' | 'equipos'>): string[] =>
+    (t.subdepartamento ? [t.subdepartamento.id] : (t.equipos ?? []).map(e => e.id));
+
 /** Los días que cubre algún plazo, para marcarlos en la tira del teléfono. */
 export const diasCubiertos = (tareas: Tarea[], desde: string, hasta: string): Set<string> => {
     const cubiertos = new Set<string>();

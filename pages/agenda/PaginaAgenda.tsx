@@ -188,10 +188,11 @@ const PaginaAgenda: React.FC = () => {
         const mios = new Set(acceso.miembro.map(m => m.id));
         let nuevos: Map<string, ItemDeLeyenda> | null = null;
         tareas.forEach(t => {
-            const s = t.subdepartamento;
-            if (!s || mios.has(s.id) || ajenos.has(s.id) || nuevos?.has(s.id)) return;
-            nuevos = nuevos ?? new Map(ajenos);
-            nuevos.set(s.id, { id: s.id, nombre: s.nombre, color: s.color, detalle: t.departamento.nombre });
+            [...(t.subdepartamento ? [t.subdepartamento] : []), ...(t.equipos ?? [])].forEach(s => {
+                if (mios.has(s.id) || ajenos.has(s.id) || nuevos?.has(s.id)) return;
+                nuevos = nuevos ?? new Map(ajenos);
+                nuevos.set(s.id, { id: s.id, nombre: s.nombre, color: s.color, detalle: t.departamento.nombre });
+            });
         });
         if (nuevos) setAjenos(nuevos);
     }, [tareas, todo, acceso.miembro]); // eslint-disable-line react-hooks/exhaustive-deps

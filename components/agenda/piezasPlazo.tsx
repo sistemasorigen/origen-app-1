@@ -1,7 +1,8 @@
 import React from 'react';
-import { Repeat, TriangleAlert } from 'lucide-react';
+import { Repeat, TriangleAlert, Users } from 'lucide-react';
 import { type Tarea } from '../../services/agenda';
 import { VENCIDA } from '../../src/contenido/agendaPaleta';
+import { avanceDeTarea } from '../../pages/agenda/plazos';
 import {
     diaDelPlazo, diaYMes, diasDePlazo, esConPlazo, progresoDePlazo,
     textoDeSerie, textoDeVencimiento, textoDelPlazo,
@@ -93,6 +94,24 @@ export const BloqueDePlazo: React.FC<{ tarea: Tarea; hoy: string }> = ({ tarea, 
             </span>
         </div>
     );
+};
+
+/** Para quien integra un equipo: es compartida, sin decir con quién ni cómo van. */
+export const EtiquetaCompartida: React.FC<{ tarea: Tarea }> = ({ tarea }) => {
+    if (!tarea.compartida || !tarea.subdepartamento) return null;
+    return (
+        <span className="inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-[#f2f2f0] px-[9px] text-[12px] font-bold text-black/[.62]">
+            <Users size={12} strokeWidth={2.2} aria-hidden="true" />
+            Compartida
+        </span>
+    );
+};
+
+/** Para el encargado: "Diseño ya terminó · falta Video". */
+export const LineaDeAvance: React.FC<{ tarea: Tarea }> = ({ tarea }) => {
+    const avance = avanceDeTarea(tarea);
+    if (!avance) return null;
+    return <span className="w-full text-[12.5px] font-semibold leading-[1.4] text-black/[.62]">{avance}</span>;
 };
 
 /** "Plazo: 1/11 – 12/12 · faltan 9 días", para las tarjetas de los paneles. */
