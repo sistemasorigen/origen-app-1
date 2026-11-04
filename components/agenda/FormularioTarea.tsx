@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarRange, ChevronDown, Clock, Repeat } from 'lucide-react';
+import { useReducedMotion } from 'framer-motion';
+import { CalendarRange, Check, ChevronDown, Clock } from 'lucide-react';
 import {
     crearTarea, editarTarea, fechaYHora, getRepeticionesPosibles, hoyIso, mensajeDeMotivo,
     nuevoId, sello, sumarDias,
     type AlcanceSerie, type Carpeta, type DatosDeTarea, type Frecuencia, type MotivoAgenda,
     type OpcionRepeticion, type Tarea, type TareaDetalle,
 } from '../../services/agenda';
-import { Avatar, ErrorDeCampo, RotuloPaso, tinte } from '../../pages/admin/departamentos/piezas';
-import { Hoja, PieDeHoja, Punto } from '../../pages/departamentos/equipo/piezas';
-import { diaYMes, largoDelPlazo, pendientesDeLaSerie, resumenDeCuando } from '../../pages/agenda/plazos';
+import { Avatar, ErrorDeCampo, RotuloDeCampo, tinte } from '../../pages/admin/departamentos/piezas';
+import { Hoja, PieDeHoja, Punto, TARJETA } from '../../pages/departamentos/equipo/piezas';
+import { diaYMes, largoDelPlazo, pendientesDeLaSerie, resumenCortoDeCuando, resumenDeCuando } from '../../pages/agenda/plazos';
 import ComboboxDeSub from './ComboboxDeSub';
 import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
 
@@ -27,6 +28,11 @@ import type { AccionesDeAgenda, DatosParaEditar } from './contratos';
  *
  * El id se genera UNA vez al abrir en modo crear: un doble toque o un
  * reintento no crean dos tareas (agenda_crear_tarea es idempotente por id).
+ *
+ * TRES SECCIONES: La tarea, Quién la hace y Cuándo. Desde 1024 px van en dos
+ * columnas y se ve todo; debajo, en una sola, con tres pastillas fijas para
+ * saltar entre ellas. Las secciones son sólo presentación: las reglas y lo
+ * que se manda no saben que existen.
  */
 
 const MAXIMO_NOMBRE = 120;
@@ -150,6 +156,74 @@ const BarraDeRepeticion: React.FC<{
 const CAMPO_CLASE = 'h-[50px] w-full px-4 text-[15px] font-semibold';
 const conBorde = (mal: boolean) => (mal ? ({ '--ag-borde': '#b42318' } as React.CSSProperties) : undefined);
 
+/** Desde acá entran las dos columnas sin apretar los campos. */
+const MEDIDA_DOS_COLUMNAS = '(min-width: 1024px)';
+
+/** "nombre, día y horario". */
+const enLista = (l: string[]) => (l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`);
+
+/** Una de las tres tarjetas. El número y el título se leen antes que los campos. */
+const Seccion: React.FC<{
+    numero: 1 | 2 | 3;
+    titulo: string;
+    bajada?: string;
+    /** Lo que va a la derecha del título. */
+    derecha?: string;
+    idBase: string;
+    refSeccion: React.RefObject<HTMLElement | null>;
+    children: React.ReactNode;
+}> = ({ numero, titulo, bajada, derecha, idBase, refSeccion, children }) => (
+    <section ref={refSeccion} aria-labelledby={`${idBase}-seccion-${numero}`} className={`${TARJETA} flex flex-col gap-4 p-[18px] md:p-5`}>
+        <div className="flex items-center gap-2.5">
+            <span aria-hidden="true" className="flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-[#0a0a0a] text-[11.5px] font-extrabold text-white">
+                {numero}
+            </span>
+            <div className="min-w-0 flex-none">
+                <h3 id={`${idBase}-seccion-${numero}`} className="m-0 text-[12px] font-extrabold uppercase leading-[1.2] tracking-[0.08em] text-[#0a0a0a]">
+                    {titulo}
+                </h3>
+                {bajada && <p className="m-0 mt-0.5 text-[12.5px] font-medium leading-[1.3] text-black/[.55]">{bajada}</p>}
+            </div>
+            {derecha && (
+                <span className="ml-auto min-w-0 truncate text-right text-[12.5px] font-bold text-black/[.72]">{derecha}</span>
+            )}
+        </div>
+        {children}
+    </section>
+);
+
+/** Las tres pastillas de arriba, cuando las secciones van una abajo de la otra. */
+const PastillasDeSeccion: React.FC<{
+    visible: 1 | 2 | 3;
+    completas: [boolean, boolean, boolean];
+    onElegir: (n: 1 | 2 | 3) => void;
+}> = ({ visible, completas, onElegir }) => (
+    <nav aria-label="Secciones del formulario" className="contenido-del-overlay flex flex-none gap-1.5 px-4 pb-2.5 md:px-[22px]">
+        {([[1, 'Tarea'], [2, 'Quién'], [3, 'Cuándo']] as const).map(([n, texto]) => {
+            const on = visible === n;
+            const lista = completas[n - 1];
+            return (
+                <button
+                    key={n}
+                    type="button"
+                    onClick={() => onElegir(n)}
+                    aria-current={on ? 'true' : undefined}
+                    className={`flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black/[.66] shadow-[0_1px_2px_rgba(0,0,0,.04)]'}`}
+                >
+                    <span
+                        aria-hidden="true"
+                        className={`flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full text-[10.5px] font-extrabold ${on ? 'bg-white text-[#0a0a0a]' : lista ? 'bg-[#0a0a0a] text-white' : 'bg-black/[.08] text-black/[.66]'}`}
+                    >
+                        {lista ? <Check size={11} strokeWidth={3.2} /> : n}
+                    </span>
+                    {texto}
+                    {lista && <span className="sr-only">, completa</span>}
+                </button>
+            );
+        })}
+    </nav>
+);
+
 const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     modo, datos, acciones, tarea, valoresIniciales, referencia, solicitudId,
     titulo, etiquetaDeAccion, onCerrar, onGuardada,
@@ -208,10 +282,31 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
     /** Si la persona eligió el "Hasta" a mano: entonces ya no se le propone otro. */
     const [hastaTocado, setHastaTocado] = useState(false);
 
+    /**
+     * Si ya se decidió a quién le llega. No es un dato de la tarea: "Sin asignar
+     * todavía" y no haber elegido nada mandan lo mismo (sin sub-departamento).
+     * Sirve para mostrar "La van a ver" y el tilde de la pastilla.
+     */
+    const [subDecidido, setSubDecidido] = useState(modo === 'editar' || !!inicial.subdepartamentoId);
+
+    const [dosColumnas, setDosColumnas] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia(MEDIDA_DOS_COLUMNAS).matches,
+    );
+    const [cuandoFija, setCuandoFija] = useState(false);
+    const [seccionVisible, setSeccionVisible] = useState<1 | 2 | 3>(1);
+    const sinMovimiento = useReducedMotion();
+    const raiz = useRef<HTMLDivElement>(null);
+    const columnaCuando = useRef<HTMLDivElement>(null);
+    const seccion1 = useRef<HTMLElement>(null);
+    const seccion2 = useRef<HTMLElement>(null);
+    const seccion3 = useRef<HTMLElement>(null);
+
     const enviando = useRef(false);
     const campoNombre = useRef<HTMLInputElement>(null);
     const campoFecha = useRef<HTMLInputElement>(null);
     const campoHasta = useRef<HTMLInputElement>(null);
+    const campoHoraDesde = useRef<HTMLInputElement>(null);
+    const campoHoraHasta = useRef<HTMLInputElement>(null);
     const idBase = useRef(`tarea-${Math.random().toString(36).slice(2, 8)}`).current;
 
     // La hora que corre, para la nota al pie de "crear".
@@ -285,18 +380,116 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         : null);
 
     /**
-     * Lo primero que falta, para el pie de la hoja. Es un RESUMEN que apunta
-     * al campo: el detalle lo dice el error del campo, y repetir la misma
-     * frase dos veces en la misma hoja es ruido.
+     * TODO lo que no deja guardar, en el orden en que se ve en la hoja: el aviso
+     * del pie lo dice y tocarlo lleva al primero. Son las mismas condiciones de
+     * `invalido`: si no está acá, no frena el botón.
      */
-    const queFalta = sinNombre ? 'Falta el nombre de la tarea.'
-        : !fecha ? 'Falta el día.'
-            : plazoVacio ? 'Falta hasta qué día.'
-                : plazoAlReves || plazoLargo ? 'Revisá el plazo.'
-                    : repeticionNoEntra ? 'Revisá hasta cuándo se repite.'
-                    : horarioIncompleto ? 'Falta completar el horario.'
-                        : horarioAlReves ? 'Revisá el horario.'
-                            : null;
+    const queFrena = useMemo(() => {
+        const delPlazo = plazoVacio ? { falta: 'hasta qué día', campo: campoHasta }
+            : plazoAlReves || plazoLargo ? { revisar: 'el plazo', campo: campoHasta }
+                : repeticionNoEntra ? { revisar: 'hasta cuándo se repite', campo: campoHasta }
+                    : null;
+        const delHorario = horarioIncompleto ? { falta: 'horario', campo: horaDesde ? campoHoraHasta : campoHoraDesde }
+            : horarioAlReves ? { revisar: 'el horario', campo: campoHoraHasta }
+                : null;
+        // En "Con plazo" el "Hasta" está arriba del horario; en "Un día", abajo.
+        return [
+            sinNombre ? { falta: 'nombre', campo: campoNombre } : null,
+            !fecha ? { falta: 'día', campo: campoFecha } : null,
+            ...(conPlazo ? [delPlazo, delHorario] : [delHorario, delPlazo]),
+        ].filter(x => x !== null);
+    }, [sinNombre, fecha, plazoVacio, plazoAlReves, plazoLargo, repeticionNoEntra,
+        horarioIncompleto, horarioAlReves, horaDesde, conPlazo]);
+
+    const queFalta = useMemo(() => {
+        const faltan = queFrena.flatMap(x => ('falta' in x && x.falta ? [x.falta] : []));
+        const revisar = queFrena.flatMap(x => ('revisar' in x && x.revisar ? [x.revisar] : []));
+        return [
+            faltan.length ? `Falta: ${enLista(faltan)}.` : '',
+            revisar.length ? `Revisá ${enLista(revisar)}.` : '',
+        ].filter(Boolean).join(' ') || null;
+    }, [queFrena]);
+
+    /** Marca los errores y lleva al primer campo que frena. */
+    const irAlQueFalta = () => {
+        setTocado(true);
+        const campo = queFrena[0]?.campo.current;
+        if (!campo) return;
+        campo.focus({ preventScroll: true });
+        const cuerpo = raiz.current?.closest('[data-cuerpo]');
+        if (!cuerpo) return;
+        // Después de pintar: los errores que aparecen ahora cambian el alto, y en
+        // WebKit eso frena en seco un desplazamiento suave que ya arrancó. Y a
+        // mano, no con scrollIntoView: sólo se mueve la hoja, nunca lo de atrás.
+        window.requestAnimationFrame(() => {
+            const caja = cuerpo.getBoundingClientRect();
+            const lugar = campo.getBoundingClientRect();
+            cuerpo.scrollTo({
+                top: cuerpo.scrollTop + lugar.top - caja.top - (caja.height - lugar.height) / 2,
+                behavior: sinMovimiento ? 'auto' : 'smooth',
+            });
+        });
+    };
+
+    /** Lo obligatorio de cada sección, para el tilde de las pastillas. */
+    const completas: [boolean, boolean, boolean] = [
+        !sinNombre,
+        subDecidido,
+        !!fecha && !horarioMal && !plazoMal && !repeticionNoEntra,
+    ];
+
+    useEffect(() => {
+        const medida = window.matchMedia(MEDIDA_DOS_COLUMNAS);
+        const alCambiar = () => setDosColumnas(medida.matches);
+        medida.addEventListener('change', alCambiar);
+        return () => medida.removeEventListener('change', alCambiar);
+    }, []);
+
+    /** "Cuándo" queda fija sólo si entra entera: si no, su final sería inalcanzable. */
+    useEffect(() => {
+        const cuerpo = raiz.current?.closest('[data-cuerpo]');
+        const columna = columnaCuando.current;
+        if (!dosColumnas || !cuerpo || !columna) { setCuandoFija(false); return; }
+        const medir = () => setCuandoFija(columna.offsetHeight + 26 <= cuerpo.clientHeight);
+        const observador = new ResizeObserver(medir);
+        observador.observe(columna);
+        observador.observe(cuerpo);
+        return () => observador.disconnect();
+    }, [dosColumnas]);
+
+    /** Qué sección se está viendo: la última cuyo borde de arriba ya llegó al tope. */
+    useEffect(() => {
+        const cuerpo = raiz.current?.closest('[data-cuerpo]');
+        if (dosColumnas || !cuerpo) return;
+        let cuadro = 0;
+        const mirar = () => {
+            cuadro = 0;
+            const tope = cuerpo.getBoundingClientRect().top + 48;
+            let vista: 1 | 2 | 3 = 1;
+            if ((seccion2.current?.getBoundingClientRect().top ?? Infinity) <= tope) vista = 2;
+            if ((seccion3.current?.getBoundingClientRect().top ?? Infinity) <= tope) vista = 3;
+            const alFinal = cuerpo.scrollHeight > cuerpo.clientHeight
+                && cuerpo.scrollTop + cuerpo.clientHeight >= cuerpo.scrollHeight - 2;
+            setSeccionVisible(alFinal ? 3 : vista);
+        };
+        const alMover = () => { if (!cuadro) cuadro = window.requestAnimationFrame(mirar); };
+        cuerpo.addEventListener('scroll', alMover, { passive: true });
+        return () => {
+            cuerpo.removeEventListener('scroll', alMover);
+            if (cuadro) window.cancelAnimationFrame(cuadro);
+        };
+    }, [dosColumnas]);
+
+    const irASeccion = (n: 1 | 2 | 3) => {
+        const seccion = [seccion1, seccion2, seccion3][n - 1].current;
+        const cuerpo = raiz.current?.closest('[data-cuerpo]');
+        if (!seccion || !cuerpo) return;
+        setSeccionVisible(n);
+        cuerpo.scrollTo({
+            top: cuerpo.scrollTop + seccion.getBoundingClientRect().top - cuerpo.getBoundingClientRect().top - 8,
+            behavior: sinMovimiento ? 'auto' : 'smooth',
+        });
+    };
 
     const hayCambios = nombre !== inicial.nombre
         || sub !== inicial.subdepartamentoId
@@ -369,6 +562,18 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
         horaDesde,
         horaHasta,
     }), [fecha, fechaHasta, usaHasta, frecuencia, opciones, hayHorario, todoElDia, horaDesde, horaHasta]);
+
+    /** Lo elegido en pocas palabras, para el encabezado de "Cuándo". */
+    const resumenCorto = !fecha || plazoMal ? '' : resumenCortoDeCuando({
+        desde: fecha,
+        hasta: usaHasta ? fechaHasta : null,
+        frecuencia,
+        frecuenciaTexto: opcionElegida?.nombre ?? FRECUENCIAS.find(f => f.id === frecuencia)?.nombre ?? null,
+        veces: !buscandoOpciones && opcionElegida?.disponible ? opcionElegida.veces : null,
+        todoElDia: !hayHorario || todoElDia,
+        horaDesde,
+        horaHasta,
+    });
 
     /** Cuántas repeticiones quedan por hacer, para el texto del alcance. */
     const pendientes = useMemo(() => (laTarea ? pendientesDeLaSerie(laTarea) : 0), [laTarea]);
@@ -444,13 +649,7 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
 
     const guardar = async () => {
         if (enviando.current) return;
-        if (invalido) {
-            setTocado(true);
-            if (sinNombre) campoNombre.current?.focus();
-            else if (!fecha) campoFecha.current?.focus();
-            else if (plazoMal) campoHasta.current?.focus();
-            return;
-        }
+        if (invalido) { irAlQueFalta(); return; }
         // Editar una repetición: primero hay que saber a cuáles alcanza.
         if (modo === 'editar' && eraSerie) { setPreguntandoAlcance(true); return; }
         await guardarDeVerdad('solo_esta');
@@ -461,7 +660,11 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
             titulo={titulo ?? (modo === 'crear' ? 'Crear tarea' : 'Editar tarea')}
             onCerrar={intentarCerrar}
             ocupada={guardando}
-            ancho={620}
+            ancho={dosColumnas ? 940 : 620}
+            gris
+            bajoElTitulo={dosColumnas ? undefined : (
+                <PastillasDeSeccion visible={seccionVisible} completas={completas} onElegir={irASeccion} />
+            )}
             pie={(
                 <PieDeHoja
                     onCancelar={intentarCerrar}
@@ -470,423 +673,444 @@ const FormularioTarea: React.FC<PropsFormularioTarea> = ({
                     guardando={guardando}
                     apagado={invalido}
                     falta={queFalta}
+                    onTocarFalta={irAlQueFalta}
                 />
             )}
         >
-            {referencia}
+            <div ref={raiz} className="flex flex-col gap-6">
+                {referencia}
 
-            {/* Nombre */}
-            <label className="flex flex-col gap-2">
-                <RotuloPaso>Nombre de la tarea</RotuloPaso>
-                <input
-                    ref={campoNombre}
-                    value={nombre}
-                    onChange={e => { setNombre(e.target.value); if (error?.campo === 'nombre') setError(null); }}
-                    maxLength={MAXIMO_NOMBRE}
-                    placeholder="Por ejemplo, Placa del almuerzo"
-                    aria-invalid={!!errNombre}
-                    aria-describedby={errNombre ? `${idBase}-err-nombre` : undefined}
-                    autoComplete="off"
-                    className={CAMPO_CLASE}
-                    style={conBorde(!!errNombre)}
-                />
-                {errNombre && <ErrorDeCampo id={`${idBase}-err-nombre`}>{errNombre}</ErrorDeCampo>}
-            </label>
-
-            <ComboboxDeSub
-                subdepartamentos={datos.subdepartamentos}
-                valor={sub}
-                onCambiar={elegido2 => { setSub(elegido2); if (error?.campo === 'sub') setError(null); }}
-                bloqueado={completada}
-                motivoDelBloqueo="Está completada: para cambiarle el equipo, primero volvela a En proceso."
-                error={errorDe('sub')}
-            />
-
-            {/* Carpeta y día */}
-            <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                <label className="flex flex-col gap-2">
-                    <RotuloPaso>Carpeta</RotuloPaso>
-                    {/* El aria-label no es de más: con el rótulo envolviendo
-                        al select, el nombre accesible sale "Carpeta" más el
-                        texto de TODAS las opciones. Así queda en una palabra. */}
-                    <span className="relative block">
-                        <select
-                            aria-label="Carpeta"
-                            value={carpetaId ?? ''}
-                            onChange={e => alCambiarCarpeta(e.target.value)}
-                            className={`${CAMPO_CLASE} cursor-pointer pr-10`}
-                            style={conBorde(!!errorDe('carpeta'))}
-                        >
-                            <option value="">Sin carpeta</option>
-                            {carpetas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                            {datos.onPedirCarpeta && <option value="__nueva">Nueva carpeta…</option>}
-                        </select>
-                        <ChevronDown
-                            size={14}
-                            strokeWidth={2.4}
-                            aria-hidden="true"
-                            className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-black/[.55]"
-                        />
-                    </span>
-                    {errorDe('carpeta') && <ErrorDeCampo id={`${idBase}-err-carpeta`}>{errorDe('carpeta')}</ErrorDeCampo>}
-                </label>
-
-                <div className="flex flex-col gap-2.5">
-                    <RotuloPaso id={`${idBase}-rot-cuando`}>¿Cuándo?</RotuloPaso>
-
-                    {/* Un día · Con plazo. En edición, una repetición no cambia
-                        de forma: siempre es un día de su serie. */}
-                    {!eraSerie && (
-                        <div role="radiogroup" aria-labelledby={`${idBase}-rot-cuando`} className="flex gap-1.5 rounded-2xl bg-[#f6f6f4] p-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]">
-                            {[
-                                { id: false, etiqueta: 'Un día', icono: Clock },
-                                { id: true, etiqueta: 'Con plazo', icono: CalendarRange },
-                            ].map(o => {
-                                const on = conPlazo === o.id;
-                                const Icono = o.icono;
-                                return (
-                                    <button
-                                        key={String(o.id)}
-                                        type="button"
-                                        role="radio"
-                                        aria-checked={on}
-                                        onClick={() => {
-                                            setConPlazo(o.id);
-                                            setAvisoRepeticion(null);
-                                            if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
-                                            if (o.id && !fechaHasta) setFechaHasta(sumarDias(fecha, PLAZO_SUGERIDO));
-                                        }}
-                                        className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13.5px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${on ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,.1)]' : 'text-black/[.55] hover:text-[#0a0a0a]'}`}
-                                    >
-                                        <Icono size={15} strokeWidth={2.1} aria-hidden="true" />
-                                        {o.etiqueta}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className={conPlazo ? 'grid gap-2.5 sm:grid-cols-2' : ''}>
-                        <label className="flex flex-col gap-1.5">
-                            <span className="text-[13px] font-bold text-black/[.62]">{conPlazo ? 'Desde' : frecuencia ? 'Primer día' : 'Día'}</span>
-                            <input
-                                ref={campoFecha}
-                                type="date"
-                                value={fecha}
-                                onChange={e => {
-                                    setFecha(e.target.value);
-                                    if (error?.campo === 'fecha') setError(null);
-                                    // Un día que se repite: si el "Hasta" era el propuesto, se corre con el día.
-                                    if (!conPlazo && frecuencia && !hastaTocado && e.target.value) {
-                                        setFechaHasta(sumarDias(e.target.value, HASTA_SUGERIDO[frecuencia]));
-                                    }
-                                }}
-                                aria-invalid={!!errFecha}
-                                aria-describedby={errFecha ? `${idBase}-err-fecha` : undefined}
-                                className={CAMPO_CLASE}
-                                style={conBorde(!!errFecha)}
-                            />
-                        </label>
-                        {conPlazo && (
+                <div className={dosColumnas ? 'grid grid-cols-2 items-start gap-6' : 'flex flex-col gap-6'}>
+                    <div className="flex min-w-0 flex-col gap-6">
+                        <Seccion numero={1} titulo="La tarea" bajada="Qué hay que hacer" idBase={idBase} refSeccion={seccion1}>
+                            {/* Nombre */}
                             <label className="flex flex-col gap-1.5">
-                                <span className="text-[13px] font-bold text-black/[.62]">Hasta</span>
+                                <RotuloDeCampo>Nombre de la tarea</RotuloDeCampo>
                                 <input
-                                    ref={campoHasta}
-                                    type="date"
-                                    value={fechaHasta}
-                                    min={sumarDias(fecha, 1)}
-                                    onChange={e => {
-                                        setFechaHasta(e.target.value);
-                                        setAvisoRepeticion(null);
-                                        if (error?.campo === 'plazo') setError(null);
-                                    }}
-                                    aria-invalid={!!errPlazo}
-                                    aria-describedby={errPlazo ? `${idBase}-err-plazo` : undefined}
+                                    ref={campoNombre}
+                                    value={nombre}
+                                    onChange={e => { setNombre(e.target.value); if (error?.campo === 'nombre') setError(null); }}
+                                    maxLength={MAXIMO_NOMBRE}
+                                    placeholder="Por ejemplo, Placa del almuerzo"
+                                    aria-invalid={!!errNombre}
+                                    aria-describedby={errNombre ? `${idBase}-err-nombre` : undefined}
+                                    autoComplete="off"
                                     className={CAMPO_CLASE}
-                                    style={conBorde(!!errPlazo)}
+                                    style={conBorde(!!errNombre)}
                                 />
+                                {errNombre && <ErrorDeCampo id={`${idBase}-err-nombre`}>{errNombre}</ErrorDeCampo>}
                             </label>
-                        )}
-                    </div>
-                    {errFecha && <ErrorDeCampo id={`${idBase}-err-fecha`}>{errFecha}</ErrorDeCampo>}
-                    {conPlazo && errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
-                    {conPlazo && !!fechaHasta && !plazoMal && (
-                        <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
-                            {largoDelPlazo(fecha, fechaHasta)} días
-                        </p>
-                    )}
 
-                    {/* Un día · ¿Se repite? Primero cada cuánto, después hasta cuándo.
-                        Sólo al crear: una tarea que ya existe no se vuelve serie. */}
-                    {!conPlazo && !eraSerie && modo === 'crear' && (
-                        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
-                            <legend className="mb-1 p-0 text-[13px] font-bold text-black/[.62]">¿Se repite?</legend>
-                            <BarraDeRepeticion
-                                valor={frecuencia}
-                                sinRepetir="No se repite"
-                                opciones={FRECUENCIAS.map(f => {
-                                    // Cuántas veces (o por qué no) sólo en la elegida, y sólo
-                                    // cuando ya contestó la base.
-                                    const lista = frecuencia === f.id && !plazoMal && !buscandoOpciones && opcionElegida;
-                                    const nota = !lista ? ''
-                                        : opcionElegida.disponible ? `${opcionElegida.veces} veces`
-                                            : opcionElegida.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces';
-                                    return { id: f.id, texto: nota ? `${f.nombre} · ${nota}` : f.nombre };
-                                })}
-                                mal={repeticionNoEntra}
-                                describe={errRepeticion ? `${idBase}-err-rep` : undefined}
-                                onCambiar={f => {
-                                    setFrecuencia(f);
-                                    if (f && (!hastaTocado || !fechaHasta || fechaHasta <= fecha)) {
-                                        setFechaHasta(sumarDias(fecha, HASTA_SUGERIDO[f]));
-                                    }
-                                    if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
-                                }}
+                            {/* Detalles */}
+                            <label className="flex flex-col gap-1.5">
+                                <RotuloDeCampo>Detalles</RotuloDeCampo>
+                                <textarea
+                                    value={detalles}
+                                    onChange={e => { setDetalles(e.target.value); if (error?.campo === 'detalles') setError(null); }}
+                                    maxLength={MAXIMO_DETALLES}
+                                    rows={5}
+                                    placeholder="Qué hay que hacer, para cuándo y cualquier dato útil"
+                                    aria-describedby={errorDe('detalles') ? `${idBase}-err-det` : undefined}
+                                    className="min-h-[130px] w-full resize-y px-4 py-3.5 text-[15px] font-medium leading-[1.55]"
+                                    style={conBorde(!!errorDe('detalles'))}
+                                />
+                                {MAXIMO_DETALLES - detalles.length <= AVISO_DETALLES && (
+                                    <span className="text-[12px] font-semibold text-black/[.58]">
+                                        Quedan {MAXIMO_DETALLES - detalles.length} letras
+                                    </span>
+                                )}
+                                {errorDe('detalles') && <ErrorDeCampo id={`${idBase}-err-det`}>{errorDe('detalles')}</ErrorDeCampo>}
+                            </label>
+
+                            {/* Prioridad */}
+                            <div className="flex flex-col gap-2">
+                                <RotuloDeCampo id={`${idBase}-rot-prio`}>Prioridad</RotuloDeCampo>
+                                {datos.prioridades.length === 0 ? (
+                                    <p className="m-0 text-[13.5px] font-semibold leading-[1.5] text-black/[.62]">
+                                        Este departamento todavía no tiene prioridades.
+                                        {datos.onIrAConfig && (
+                                            <>
+                                                {' '}
+                                                <button
+                                                    type="button"
+                                                    onClick={datos.onIrAConfig}
+                                                    className="font-bold text-[#0a0a0a] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
+                                                >
+                                                    Cargarlas en Configuración
+                                                </button>
+                                            </>
+                                        )}
+                                    </p>
+                                ) : (
+                                    <div role="radiogroup" aria-labelledby={`${idBase}-rot-prio`} className="flex flex-wrap gap-1.5">
+                                        {datos.prioridades.map(p => {
+                                            const on = prioridadId === p.id;
+                                            return (
+                                                <button
+                                                    key={p.id}
+                                                    type="button"
+                                                    role="radio"
+                                                    aria-checked={on}
+                                                    // Se puede tocar de nuevo para quitarla: la prioridad es opcional.
+                                                    onClick={() => { setPrioridadId(on ? null : p.id); if (error?.campo === 'prioridad') setError(null); }}
+                                                    className={`flex min-h-[44px] items-center gap-2 rounded-full px-3.5 text-[13.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'text-[#0a0a0a]' : 'bg-[#f2f2f0] text-black/[.62]'}`}
+                                                    style={on ? { background: tinte(p.color, '24'), boxShadow: `inset 0 0 0 2px ${p.color}` } : undefined}
+                                                >
+                                                    <Punto color={p.color} tam={9} />
+                                                    {p.nombre}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {errorDe('prioridad') && <ErrorDeCampo id={`${idBase}-err-prio`}>{errorDe('prioridad')}</ErrorDeCampo>}
+                            </div>
+
+                            {/* Carpeta */}
+                        <label className="flex flex-col gap-1.5">
+                            <span className="flex items-baseline justify-between gap-2">
+                                        <RotuloDeCampo>Carpeta</RotuloDeCampo>
+                                        <span className="text-[12px] font-semibold text-black/[.5]">Opcional</span>
+                                    </span>
+                            {/* El aria-label no es de más: con el rótulo envolviendo
+                                al select, el nombre accesible sale "Carpeta" más el
+                                texto de TODAS las opciones. Así queda en una palabra. */}
+                            <span className="relative block">
+                                <select
+                                    aria-label="Carpeta"
+                                    value={carpetaId ?? ''}
+                                    onChange={e => alCambiarCarpeta(e.target.value)}
+                                    className={`${CAMPO_CLASE} cursor-pointer pr-10`}
+                                    style={conBorde(!!errorDe('carpeta'))}
+                                >
+                                    <option value="">Sin carpeta</option>
+                                    {carpetas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    {datos.onPedirCarpeta && <option value="__nueva">Nueva carpeta…</option>}
+                                </select>
+                                <ChevronDown
+                                    size={14}
+                                    strokeWidth={2.4}
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-black/[.55]"
+                                />
+                            </span>
+                            {errorDe('carpeta') && <ErrorDeCampo id={`${idBase}-err-carpeta`}>{errorDe('carpeta')}</ErrorDeCampo>}
+                        </label>
+                        </Seccion>
+
+                        <Seccion numero={2} titulo="Quién la hace" bajada="A qué equipo le llega" idBase={idBase} refSeccion={seccion2}>
+                            <ComboboxDeSub
+                                subdepartamentos={datos.subdepartamentos}
+                                valor={sub}
+                                sinAsignarElegido={subDecidido && !sub}
+                                    onCambiar={elegido2 => { setSub(elegido2); setSubDecidido(true); if (error?.campo === 'sub') setError(null); }}
+                                bloqueado={completada}
+                                motivoDelBloqueo="Está completada: para cambiarle el equipo, primero volvela a En proceso."
+                                error={errorDe('sub')}
                             />
-                            {frecuencia && (
-                                <label className="mt-1.5 flex flex-col gap-1.5">
-                                    <span className="text-[13px] font-bold text-black/[.62]">Se repite hasta</span>
+
+                            {/* La van a ver: aparece recién cuando se decidió a quién le llega. */}
+                            {subDecidido && (
+                                <div className="rounded-[18px] bg-[#f6f6f4] px-4 py-3.5">
+                                    <RotuloDeCampo>La van a ver</RotuloDeCampo>
+                                    {laVanAVer.length > 0 ? (
+                                        <>
+                                            <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-2.5">
+                                                {laVanAVer.map(p => (
+                                                    <span key={p.id} className="flex items-center gap-2 text-[13px] font-bold">
+                                                        <Avatar persona={p} color={elegido?.color ?? '#0a0a0a'} tam={28} />
+                                                        {p.nombre || 'Sin nombre'}
+                                                        {p.dirige && <span className="font-semibold text-black/[.5]">· dirige</span>}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
+                                                Les aparece en su Agenda y les llega una notificación.
+                                                {esSerie && ' Les llega un solo aviso, no uno por cada repetición.'}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="m-0 mt-2 text-[13.5px] font-semibold leading-[1.5] text-black/[.62]">
+                                            Nadie todavía: queda esperando asignación.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </Seccion>
+                    </div>
+
+                    {/* Se queda quieta mientras se baja por la izquierda, si entra entera. */}
+                    <div ref={columnaCuando} className={`min-w-0 ${cuandoFija ? 'sticky top-0' : ''}`}>
+                        <Seccion numero={3} titulo="Cuándo" derecha={resumenCorto} idBase={idBase} refSeccion={seccion3}>
+                            {/* Un día · Con plazo. En edición, una repetición no cambia
+                                de forma: siempre es un día de su serie. */}
+                            {!eraSerie && (
+                                <div role="radiogroup" aria-labelledby={`${idBase}-seccion-3`} className="flex gap-1.5 rounded-2xl bg-[#f6f6f4] p-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]">
+                                    {[
+                                        { id: false, etiqueta: 'Un día', icono: Clock },
+                                        { id: true, etiqueta: 'Con plazo', icono: CalendarRange },
+                                    ].map(o => {
+                                        const on = conPlazo === o.id;
+                                        const Icono = o.icono;
+                                        return (
+                                            <button
+                                                key={String(o.id)}
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={on}
+                                                onClick={() => {
+                                                    setConPlazo(o.id);
+                                                    setAvisoRepeticion(null);
+                                                    if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
+                                                    if (o.id && !fechaHasta) setFechaHasta(sumarDias(fecha, PLAZO_SUGERIDO));
+                                                }}
+                                                className={`flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13.5px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-1 ${on ? 'bg-white text-[#0a0a0a] shadow-[0_1px_3px_rgba(0,0,0,.1)]' : 'text-black/[.55] hover:text-[#0a0a0a]'}`}
+                                            >
+                                                <Icono size={15} strokeWidth={2.1} aria-hidden="true" />
+                                                {o.etiqueta}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            <div className={conPlazo ? 'grid gap-2.5 sm:grid-cols-2' : ''}>
+                                <label className="flex flex-col gap-1.5">
+                                    <RotuloDeCampo>{conPlazo ? 'Desde' : frecuencia ? 'Primer día' : 'Día'}</RotuloDeCampo>
                                     <input
-                                        ref={campoHasta}
+                                        ref={campoFecha}
                                         type="date"
-                                        value={fechaHasta}
-                                        min={sumarDias(fecha, 1)}
+                                        value={fecha}
                                         onChange={e => {
-                                            setFechaHasta(e.target.value);
-                                            setHastaTocado(true);
-                                            if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
+                                            setFecha(e.target.value);
+                                            if (error?.campo === 'fecha') setError(null);
+                                            // Un día que se repite: si el "Hasta" era el propuesto, se corre con el día.
+                                            if (!conPlazo && frecuencia && !hastaTocado && e.target.value) {
+                                                setFechaHasta(sumarDias(e.target.value, HASTA_SUGERIDO[frecuencia]));
+                                            }
                                         }}
-                                        aria-invalid={!!errPlazo || repeticionNoEntra}
-                                        aria-describedby={errPlazo ? `${idBase}-err-plazo` : errRepeticion ? `${idBase}-err-rep` : undefined}
+                                        aria-invalid={!!errFecha}
+                                        aria-describedby={errFecha ? `${idBase}-err-fecha` : undefined}
                                         className={CAMPO_CLASE}
-                                        style={conBorde(!!errPlazo || repeticionNoEntra)}
+                                        style={conBorde(!!errFecha)}
                                     />
                                 </label>
+                                {conPlazo && (
+                                    <label className="flex flex-col gap-1.5">
+                                        <RotuloDeCampo>Hasta</RotuloDeCampo>
+                                        <input
+                                            ref={campoHasta}
+                                            type="date"
+                                            value={fechaHasta}
+                                            min={sumarDias(fecha, 1)}
+                                            onChange={e => {
+                                                setFechaHasta(e.target.value);
+                                                setAvisoRepeticion(null);
+                                                if (error?.campo === 'plazo') setError(null);
+                                            }}
+                                            aria-invalid={!!errPlazo}
+                                            aria-describedby={errPlazo ? `${idBase}-err-plazo` : undefined}
+                                            className={CAMPO_CLASE}
+                                            style={conBorde(!!errPlazo)}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                            {errFecha && <ErrorDeCampo id={`${idBase}-err-fecha`}>{errFecha}</ErrorDeCampo>}
+                            {conPlazo && errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
+                            {conPlazo && !!fechaHasta && !plazoMal && (
+                                <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
+                                    {largoDelPlazo(fecha, fechaHasta)} días
+                                </p>
                             )}
-                            {errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
-                            {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
-                        </fieldset>
-                    )}
 
-                    {/* ¿Se repite? Las opciones y los "no" los decide la base. */}
-                    {conPlazo && !plazoMal && (!eraSerie ? modo === 'crear' : true) && (
-                        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
-                            <legend className="mb-1 p-0 text-[13px] font-bold text-black/[.62]">¿Se repite?</legend>
-                            {buscandoOpciones && opciones.length === 0 ? (
-                                <p className="m-0 text-[13px] font-semibold text-black/[.55]">Buscando qué repeticiones entran…</p>
-                            ) : (
-                                <BarraDeRepeticion
-                                    valor={frecuencia}
-                                    // Una serie no se vuelve una tarea con plazo: al editar una
-                                    // repetición, "No se repite" no está.
-                                    sinRepetir={eraSerie ? null : 'No se repite'}
-                                    opciones={opciones.map(o => ({
-                                        id: o.frecuencia,
-                                        texto: o.disponible
-                                            ? `${o.nombre} · ${o.veces} veces`
-                                            : `${o.nombre} · ${o.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces'}`,
-                                        apagada: !o.disponible,
-                                    }))}
-                                    mal={!!errRepeticion}
-                                    describe={errRepeticion ? `${idBase}-err-rep` : undefined}
-                                    onCambiar={f => {
-                                        setFrecuencia(f);
-                                        setAvisoRepeticion(null);
-                                        if (error?.campo === 'repeticion') setError(null);
-                                    }}
-                                />
+                            <div className="flex flex-col gap-1.5">
+                                <RotuloDeCampo>Horario</RotuloDeCampo>
+                                {/* Horario. Una tarea con plazo sin repetir es siempre de todo
+                                    el día: un horario no significa nada repartido en seis semanas. */}
+                                {!hayHorario ? (
+                                    <p className="m-0 flex items-center gap-2.5 rounded-2xl bg-[#f6f6f4] px-3.5 py-3 text-[13.5px] font-semibold text-black/[.62]">
+                                        <Clock size={17} strokeWidth={1.9} aria-hidden="true" className="flex-none text-black/[.45]" />
+                                        Las tareas con plazo son de todo el día.
+                                    </p>
+                                ) : (
+                                <div className="flex flex-col gap-2.5">
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={todoElDia}
+                                        onClick={() => {
+                                            if (todoElDia) {
+                                                if (!horaDesde) setHoraDesde(HORA_DESDE);
+                                                if (!horaHasta) setHoraHasta(HORA_HASTA);
+                                            }
+                                            setTodoElDia(v => !v);
+                                            if (error?.campo === 'horario') setError(null);
+                                        }}
+                                        className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-[#f6f6f4] px-3.5 text-left shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
+                                    >
+                                        <Clock size={18} strokeWidth={1.9} aria-hidden="true" className="flex-none text-black/[.55]" />
+                                        <span className="flex-1 text-[14.5px] font-bold">Todo el día</span>
+                                        <span
+                                            aria-hidden="true"
+                                            className="relative h-7 w-12 flex-none rounded-full transition-colors"
+                                            style={{ background: todoElDia ? '#0a0a0a' : 'rgba(0,0,0,.16)' }}
+                                        >
+                                            <span
+                                                className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)] transition-[left]"
+                                                style={{ left: todoElDia ? 23 : 3 }}
+                                            />
+                                        </span>
+                                    </button>
+
+                                    {!todoElDia && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-2.5">
+                                                <label className="flex flex-col gap-1.5">
+                                                    <RotuloDeCampo>Desde</RotuloDeCampo>
+                                                    <input
+                                                        ref={campoHoraDesde}
+                                                        type="time"
+                                                        step={300}
+                                                        value={horaDesde}
+                                                        onChange={e => { setHoraDesde(e.target.value); if (error?.campo === 'horario') setError(null); }}
+                                                        aria-invalid={!!errHorario}
+                                                        aria-describedby={errHorario ? `${idBase}-err-horario` : undefined}
+                                                        className={CAMPO_CLASE}
+                                                        style={conBorde(!!errHorario && !horaDesde)}
+                                                    />
+                                                </label>
+                                                <label className="flex flex-col gap-1.5">
+                                                    <RotuloDeCampo>Hasta</RotuloDeCampo>
+                                                    <input
+                                                        ref={campoHoraHasta}
+                                                        type="time"
+                                                        step={300}
+                                                        value={horaHasta}
+                                                        onChange={e => { setHoraHasta(e.target.value); if (error?.campo === 'horario') setError(null); }}
+                                                        aria-invalid={!!errHorario}
+                                                        aria-describedby={errHorario ? `${idBase}-err-horario` : undefined}
+                                                        className={CAMPO_CLASE}
+                                                        style={conBorde(!!errHorario && !!horaDesde)}
+                                                    />
+                                                </label>
+                                            </div>
+                                            {errHorario && <ErrorDeCampo id={`${idBase}-err-horario`}>{errHorario}</ErrorDeCampo>}
+                                        </>
+                                    )}
+                                    {esSerie && (
+                                        <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
+                                            El mismo horario para todas las repeticiones.
+                                        </p>
+                                    )}
+                                </div>
+                                )}
+                            </div>
+
+                            {/* Un día · ¿Se repite? Primero cada cuánto, después hasta cuándo.
+                                Sólo al crear: una tarea que ya existe no se vuelve serie. */}
+                            {!conPlazo && !eraSerie && modo === 'crear' && (
+                                <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+                                    <legend className="mb-1.5 p-0"><RotuloDeCampo>¿Se repite?</RotuloDeCampo></legend>
+                                    <BarraDeRepeticion
+                                        valor={frecuencia}
+                                        sinRepetir="No se repite"
+                                        opciones={FRECUENCIAS.map(f => {
+                                            // Cuántas veces (o por qué no) sólo en la elegida, y sólo
+                                            // cuando ya contestó la base.
+                                            const lista = frecuencia === f.id && !plazoMal && !buscandoOpciones && opcionElegida;
+                                            const nota = !lista ? ''
+                                                : opcionElegida.disponible ? `${opcionElegida.veces} veces`
+                                                    : opcionElegida.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces';
+                                            return { id: f.id, texto: nota ? `${f.nombre} · ${nota}` : f.nombre };
+                                        })}
+                                        mal={repeticionNoEntra}
+                                        describe={errRepeticion ? `${idBase}-err-rep` : undefined}
+                                        onCambiar={f => {
+                                            setFrecuencia(f);
+                                            if (f && (!hastaTocado || !fechaHasta || fechaHasta <= fecha)) {
+                                                setFechaHasta(sumarDias(fecha, HASTA_SUGERIDO[f]));
+                                            }
+                                            if (error?.campo === 'repeticion' || error?.campo === 'plazo') setError(null);
+                                        }}
+                                    />
+                                    {frecuencia && (
+                                        <label className="mt-2.5 flex flex-col gap-1.5">
+                                            <RotuloDeCampo>Se repite hasta</RotuloDeCampo>
+                                            <input
+                                                ref={campoHasta}
+                                                type="date"
+                                                value={fechaHasta}
+                                                min={sumarDias(fecha, 1)}
+                                                onChange={e => {
+                                                    setFechaHasta(e.target.value);
+                                                    setHastaTocado(true);
+                                                    if (error?.campo === 'plazo' || error?.campo === 'repeticion') setError(null);
+                                                }}
+                                                aria-invalid={!!errPlazo || repeticionNoEntra}
+                                                aria-describedby={errPlazo ? `${idBase}-err-plazo` : errRepeticion ? `${idBase}-err-rep` : undefined}
+                                                className={CAMPO_CLASE}
+                                                style={conBorde(!!errPlazo || repeticionNoEntra)}
+                                            />
+                                        </label>
+                                    )}
+                                    {errPlazo && <ErrorDeCampo id={`${idBase}-err-plazo`}>{errPlazo}</ErrorDeCampo>}
+                                    {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
+                                </fieldset>
                             )}
-                            {avisoRepeticion && (
-                                <p role="status" className="m-0 text-[12.5px] font-semibold text-[#8a4b06]">{avisoRepeticion}</p>
+
+                            {/* ¿Se repite? Las opciones y los "no" los decide la base. */}
+                            {conPlazo && !plazoMal && (!eraSerie ? modo === 'crear' : true) && (
+                                <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+                                    <legend className="mb-1.5 p-0"><RotuloDeCampo>¿Se repite?</RotuloDeCampo></legend>
+                                    {buscandoOpciones && opciones.length === 0 ? (
+                                        <p className="m-0 text-[13px] font-semibold text-black/[.55]">Buscando qué repeticiones entran…</p>
+                                    ) : (
+                                        <BarraDeRepeticion
+                                            valor={frecuencia}
+                                            // Una serie no se vuelve una tarea con plazo: al editar una
+                                            // repetición, "No se repite" no está.
+                                            sinRepetir={eraSerie ? null : 'No se repite'}
+                                            opciones={opciones.map(o => ({
+                                                id: o.frecuencia,
+                                                texto: o.disponible
+                                                    ? `${o.nombre} · ${o.veces} veces`
+                                                    : `${o.nombre} · ${o.superaTope ? 'pasa de 200 repeticiones' : 'no entra dos veces'}`,
+                                                apagada: !o.disponible,
+                                            }))}
+                                            mal={!!errRepeticion}
+                                            describe={errRepeticion ? `${idBase}-err-rep` : undefined}
+                                            onCambiar={f => {
+                                                setFrecuencia(f);
+                                                setAvisoRepeticion(null);
+                                                if (error?.campo === 'repeticion') setError(null);
+                                            }}
+                                        />
+                                    )}
+                                    {avisoRepeticion && (
+                                        <p role="status" className="m-0 text-[12.5px] font-semibold text-[#8a4b06]">{avisoRepeticion}</p>
+                                    )}
+                                    {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
+                                </fieldset>
                             )}
-                            {errRepeticion && <ErrorDeCampo id={`${idBase}-err-rep`}>{errRepeticion}</ErrorDeCampo>}
-                        </fieldset>
-                    )}
 
-                    {resumen && (
-                        <p className="m-0 rounded-2xl bg-[#f6f6f4] px-3.5 py-2.5 text-[13px] font-semibold leading-[1.5] text-black/[.72]">
-                            {resumen}
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            {/* Horario. Una tarea con plazo sin repetir es siempre de todo
-                el día: un horario no significa nada repartido en seis semanas. */}
-            {!hayHorario ? (
-                <p className="m-0 flex items-center gap-2.5 rounded-2xl bg-[#f6f6f4] px-3.5 py-3 text-[13.5px] font-semibold text-black/[.62]">
-                    <Clock size={17} strokeWidth={1.9} aria-hidden="true" className="flex-none text-black/[.45]" />
-                    Las tareas con plazo son de todo el día.
-                </p>
-            ) : (
-            <div className="flex flex-col gap-2.5">
-                <button
-                    type="button"
-                    role="switch"
-                    aria-checked={todoElDia}
-                    onClick={() => {
-                        if (todoElDia) {
-                            if (!horaDesde) setHoraDesde(HORA_DESDE);
-                            if (!horaHasta) setHoraHasta(HORA_HASTA);
-                        }
-                        setTodoElDia(v => !v);
-                        if (error?.campo === 'horario') setError(null);
-                    }}
-                    className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-[#f6f6f4] px-3.5 text-left shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2"
-                >
-                    <Clock size={18} strokeWidth={1.9} aria-hidden="true" className="flex-none text-black/[.55]" />
-                    <span className="flex-1 text-[14.5px] font-bold">Todo el día</span>
-                    <span
-                        aria-hidden="true"
-                        className="relative h-7 w-12 flex-none rounded-full transition-colors"
-                        style={{ background: todoElDia ? '#0a0a0a' : 'rgba(0,0,0,.16)' }}
-                    >
-                        <span
-                            className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)] transition-[left]"
-                            style={{ left: todoElDia ? 23 : 3 }}
-                        />
-                    </span>
-                </button>
-
-                {!todoElDia && (
-                    <>
-                        <div className="grid grid-cols-2 gap-2.5">
-                            <label className="flex flex-col gap-1.5">
-                                <span className="text-[13px] font-bold text-black/[.62]">Desde</span>
-                                <input
-                                    type="time"
-                                    step={300}
-                                    value={horaDesde}
-                                    onChange={e => { setHoraDesde(e.target.value); if (error?.campo === 'horario') setError(null); }}
-                                    aria-invalid={!!errHorario}
-                                    aria-describedby={errHorario ? `${idBase}-err-horario` : undefined}
-                                    className={CAMPO_CLASE}
-                                    style={conBorde(!!errHorario && !horaDesde)}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-1.5">
-                                <span className="text-[13px] font-bold text-black/[.62]">Hasta</span>
-                                <input
-                                    type="time"
-                                    step={300}
-                                    value={horaHasta}
-                                    onChange={e => { setHoraHasta(e.target.value); if (error?.campo === 'horario') setError(null); }}
-                                    aria-invalid={!!errHorario}
-                                    aria-describedby={errHorario ? `${idBase}-err-horario` : undefined}
-                                    className={CAMPO_CLASE}
-                                    style={conBorde(!!errHorario && !!horaDesde)}
-                                />
-                            </label>
-                        </div>
-                        {errHorario && <ErrorDeCampo id={`${idBase}-err-horario`}>{errHorario}</ErrorDeCampo>}
-                    </>
-                )}
-                {esSerie && (
-                    <p className="m-0 text-[12.5px] font-semibold text-black/[.55]">
-                        El mismo horario para todas las repeticiones.
-                    </p>
-                )}
-            </div>
-            )}
-
-            {/* Prioridad */}
-            <div className="flex flex-col gap-2.5">
-                <RotuloPaso id={`${idBase}-rot-prio`}>Prioridad</RotuloPaso>
-                {datos.prioridades.length === 0 ? (
-                    <p className="m-0 text-[13.5px] font-semibold leading-[1.5] text-black/[.62]">
-                        Este departamento todavía no tiene prioridades.
-                        {datos.onIrAConfig && (
-                            <>
-                                {' '}
-                                <button
-                                    type="button"
-                                    onClick={datos.onIrAConfig}
-                                    className="font-bold text-[#0a0a0a] underline underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a]"
-                                >
-                                    Cargarlas en Configuración
-                                </button>
-                            </>
-                        )}
-                    </p>
-                ) : (
-                    <div role="radiogroup" aria-labelledby={`${idBase}-rot-prio`} className="flex flex-wrap gap-1.5">
-                        {datos.prioridades.map(p => {
-                            const on = prioridadId === p.id;
-                            return (
-                                <button
-                                    key={p.id}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={on}
-                                    // Se puede tocar de nuevo para quitarla: la prioridad es opcional.
-                                    onClick={() => { setPrioridadId(on ? null : p.id); if (error?.campo === 'prioridad') setError(null); }}
-                                    className={`flex min-h-[44px] items-center gap-2 rounded-full px-3.5 text-[13.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a0a0a] focus-visible:ring-offset-2 ${on ? 'text-[#0a0a0a]' : 'bg-[#f2f2f0] text-black/[.62]'}`}
-                                    style={on ? { background: tinte(p.color, '24'), boxShadow: `inset 0 0 0 2px ${p.color}` } : undefined}
-                                >
-                                    <Punto color={p.color} tam={9} />
-                                    {p.nombre}
-                                </button>
-                            );
-                        })}
+                            {resumen && (
+                                <p className="m-0 rounded-2xl bg-[#f6f6f4] px-3.5 py-2.5 text-[13px] font-semibold leading-[1.5] text-black/[.72]">
+                                    {resumen}
+                                </p>
+                            )}
+                        </Seccion>
                     </div>
-                )}
-                {errorDe('prioridad') && <ErrorDeCampo id={`${idBase}-err-prio`}>{errorDe('prioridad')}</ErrorDeCampo>}
+                </div>
+
+                    <p className="m-0 text-[12.5px] font-semibold text-black/[.5]">
+                    {modo === 'crear'
+                        ? `Se va a registrar: ${sello(ahora)}${datos.miNombre ? ` · por ${datos.miNombre}` : ''}`
+                        : `Creada el ${fechaYHora(tarea?.createdAt ?? null)}${tarea?.creador?.nombre ? ` por ${tarea.creador.nombre}` : ''}`}
+                </p>
+
+                    {errorDe('general') && <p role="alert" className="m-0 text-[13px] font-bold text-[#b42318]">{errorDe('general')}</p>}
             </div>
-
-            {/* Detalles */}
-            <label className="flex flex-col gap-2">
-                <RotuloPaso>Detalles</RotuloPaso>
-                <textarea
-                    value={detalles}
-                    onChange={e => { setDetalles(e.target.value); if (error?.campo === 'detalles') setError(null); }}
-                    maxLength={MAXIMO_DETALLES}
-                    rows={5}
-                    placeholder="Qué hay que hacer, para cuándo y cualquier dato útil"
-                    aria-describedby={errorDe('detalles') ? `${idBase}-err-det` : undefined}
-                    className="min-h-[130px] w-full resize-y px-4 py-3.5 text-[15px] font-medium leading-[1.55]"
-                    style={conBorde(!!errorDe('detalles'))}
-                />
-                {MAXIMO_DETALLES - detalles.length <= AVISO_DETALLES && (
-                    <span className="text-[12px] font-semibold text-black/[.58]">
-                        Quedan {MAXIMO_DETALLES - detalles.length} letras
-                    </span>
-                )}
-                {errorDe('detalles') && <ErrorDeCampo id={`${idBase}-err-det`}>{errorDe('detalles')}</ErrorDeCampo>}
-            </label>
-
-            {/* La van a ver */}
-            <div className="rounded-[18px] bg-[#f6f6f4] px-4 py-3.5">
-                <RotuloPaso>La van a ver</RotuloPaso>
-                {laVanAVer.length > 0 ? (
-                    <>
-                        <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-2.5">
-                            {laVanAVer.map(p => (
-                                <span key={p.id} className="flex items-center gap-2 text-[13px] font-bold">
-                                    <Avatar persona={p} color={elegido?.color ?? '#0a0a0a'} tam={28} />
-                                    {p.nombre || 'Sin nombre'}
-                                    {p.dirige && <span className="font-semibold text-black/[.5]">· dirige</span>}
-                                </span>
-                            ))}
-                        </div>
-                        <p className="m-0 mt-3 text-[12.5px] font-semibold text-black/[.55]">
-                            Les aparece en su Agenda y les llega una notificación.
-                            {esSerie && ' Les llega un solo aviso, no uno por cada repetición.'}
-                        </p>
-                    </>
-                ) : (
-                    <p className="m-0 mt-2 text-[13.5px] font-semibold leading-[1.5] text-black/[.62]">
-                        Nadie todavía: queda esperando asignación.
-                    </p>
-                )}
-            </div>
-
-            <p className="m-0 text-[12.5px] font-semibold text-black/[.5]">
-                {modo === 'crear'
-                    ? `Se va a registrar: ${sello(ahora)}${datos.miNombre ? ` · por ${datos.miNombre}` : ''}`
-                    : `Creada el ${fechaYHora(tarea?.createdAt ?? null)}${tarea?.creador?.nombre ? ` por ${tarea.creador.nombre}` : ''}`}
-            </p>
-
-            {errorDe('general') && <p role="alert" className="m-0 text-[13px] font-bold text-[#b42318]">{errorDe('general')}</p>}
 
             {preguntandoAlcance && (
                 <Hoja

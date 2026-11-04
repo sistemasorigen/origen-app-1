@@ -1,4 +1,4 @@
-import { fechaDesdeIso, sumarDias, type Frecuencia, type Tarea } from '../../services/agenda';
+import { fechaCorta, fechaDesdeIso, sumarDias, type Frecuencia, type Tarea } from '../../services/agenda';
 
 /**
  * Las cuentas de las tareas CON PLAZO y de las que se repiten
@@ -255,6 +255,20 @@ export const resumenDeCuando = (c: Cuando): string => {
     const nombre = (c.frecuenciaTexto || '').toLowerCase();
     const veces = c.veces ? ` · ${c.veces} ${c.veces === 1 ? 'vez' : 'veces'}` : '';
     return `Se repite ${nombre}${cae ? `, ${cae}` : ''}, ${plazo}${veces} · ${horario}`;
+};
+
+/**
+ * Lo mismo en pocas palabras, para un encabezado: "mié 4 nov · Todo el día",
+ * "1/11 – 12/12" o "Cada semana · 6 veces". Las veces son las que dijo la base.
+ */
+export const resumenCortoDeCuando = (c: Cuando): string => {
+    if (c.frecuencia) {
+        return [c.frecuenciaTexto, c.veces ? `${c.veces} ${c.veces === 1 ? 'vez' : 'veces'}` : ''].filter(Boolean).join(' · ');
+    }
+    if (c.hasta) return `${diaYMes(c.desde)} – ${diaYMes(c.hasta)}`;
+    const dia = fechaCorta(c.desde).toLowerCase();
+    if (c.todoElDia) return `${dia} · Todo el día`;
+    return c.horaDesde && c.horaHasta ? `${dia} · ${c.horaDesde} a ${c.horaHasta}` : dia;
 };
 
 /** Los días que cubre algún plazo, para marcarlos en la tira del teléfono. */

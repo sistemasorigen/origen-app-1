@@ -161,8 +161,12 @@ export const Hoja: React.FC<{
      * Queda abajo de la confirmación, que siempre es la última palabra.
      */
     encima?: boolean;
+    /** Fondo #f6f6f4 para apoyar tarjetas blancas; el pie sigue blanco. */
+    gris?: boolean;
+    /** Lo que va fijo entre el título y el cuerpo: no se arrastra ni se desplaza. */
+    bajoElTitulo?: React.ReactNode;
     children: React.ReactNode;
-}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, encima = false, children }) => {
+}> = ({ titulo, subtitulo, adelante, onCerrar, ocupada = false, pie, ancho = 560, encima = false, gris = false, bajoElTitulo, children }) => {
     useBloqueoDeFondo(true);
     const panel = useRef<HTMLDivElement>(null);
     const { confirmacionAbierta } = usePanelOpcional() ?? { confirmacionAbierta: false };
@@ -207,7 +211,7 @@ export const Hoja: React.FC<{
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={idTitulo}
-                className="relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-white shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none md:max-h-[calc(100dvh-64px)] md:max-w-[var(--ancho)] md:rounded-[28px] md:shadow-[0_24px_60px_rgba(0,0,0,.22)]"
+                className={`relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] ${gris ? 'bg-[#f6f6f4]' : 'bg-white'} shadow-[0_-10px_40px_rgba(0,0,0,.18)] outline-none md:max-h-[calc(100dvh-64px)] md:max-w-[var(--ancho)] md:rounded-[28px] md:shadow-[0_24px_60px_rgba(0,0,0,.22)]`}
                 style={{ '--ancho': `${ancho}px` } as React.CSSProperties}
                 initial={esMovil ? { y: '100%' } : { opacity: 0, y: 10, scale: 0.98 }}
                 animate={esMovil ? { y: 0 } : { opacity: 1, y: 0, scale: 1 }}
@@ -239,14 +243,15 @@ export const Hoja: React.FC<{
                         {subtitulo && <p className="m-0 mt-1 text-[13.5px] font-medium leading-[1.45] text-black/[.62]">{subtitulo}</p>}
                     </div>
                 </div>
+                {bajoElTitulo}
                 <div
-                    className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-[22px] pb-4 pt-2.5"
+                    className={`flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pb-4 pt-2.5 ${gris ? 'px-4 md:px-[22px]' : 'px-[22px]'}`}
                     data-cuerpo="true"
                 >
                     {children}
                 </div>
                 {pie && (
-                    <div className="flex flex-none flex-col gap-2 border-t border-black/[.06] px-[22px] pb-[calc(20px+env(safe-area-inset-bottom))] pt-3.5 md:pb-6">
+                    <div className={`flex flex-none flex-col gap-2 border-t border-black/[.06] px-[22px] pb-[calc(20px+env(safe-area-inset-bottom))] pt-3.5 md:pb-6 ${gris ? 'bg-white md:rounded-b-[28px]' : ''}`}>
                         {pie}
                     </div>
                 )}
@@ -277,8 +282,10 @@ export const PieDeHoja: React.FC<{
     apagado?: boolean;
     /** Qué falta, en palabras. Se anuncia y se lee arriba de los botones. */
     falta?: string | null;
+    /** Si está, el aviso de lo que falta se puede tocar (lleva al campo). */
+    onTocarFalta?: () => void;
     peligro?: boolean;
-}> = ({ onCancelar, onAceptar, etiqueta, guardando = false, apagado = false, falta, peligro = false }) => {
+}> = ({ onCancelar, onAceptar, etiqueta, guardando = false, apagado = false, falta, onTocarFalta, peligro = false }) => {
     const idFalta = useRef(`pie-${Math.random().toString(36).slice(2, 8)}`).current;
     const aviso = apagado && !guardando ? (falta || '') : '';
     return (
@@ -286,7 +293,15 @@ export const PieDeHoja: React.FC<{
             {/* Siempre montada, aunque esté vacía: una región viva que nace
                 junto con su texto no siempre se anuncia. Vacía no ocupa. */}
             <p id={idFalta} role="status" className="m-0 text-[12.5px] font-semibold leading-[1.45] text-black/[.62] empty:hidden">
-                {aviso}
+                {aviso && onTocarFalta ? (
+                    <button
+                        type="button"
+                        onClick={onTocarFalta}
+                        className={`-my-1 py-1 text-left font-semibold underline decoration-black/30 underline-offset-[3px] ${foco}`}
+                    >
+                        {aviso}
+                    </button>
+                ) : aviso}
             </p>
             <div className="flex gap-2">
                 <button type="button" onClick={onCancelar} disabled={guardando} className={`${BOTON_GRIS} flex-1`}>Cancelar</button>

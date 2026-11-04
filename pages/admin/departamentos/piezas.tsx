@@ -72,6 +72,11 @@ export const RotuloPaso: React.FC<{ children: React.ReactNode; id?: string }> = 
     <span id={id} className="text-[11px] font-bold uppercase tracking-[0.08em] text-black/[.58]">{children}</span>
 );
 
+/** El rótulo de un campo adentro de una sección: un escalón por debajo de su título. */
+export const RotuloDeCampo: React.FC<{ children: React.ReactNode; id?: string }> = ({ children, id }) => (
+    <span id={id} className="text-[13px] font-semibold text-black/[.62]">{children}</span>
+);
+
 /** Mensaje de error debajo de un campo. */
 export const ErrorDeCampo: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => (
     <span id={id} role="alert" className="text-[12.5px] font-bold text-[#b42318]">{children}</span>

@@ -152,7 +152,7 @@ const PestanaSolicitudes: React.FC = () => {
     /** El recuadro de arriba del formulario: de dónde viene esta tarea. */
     const referenciaDe = (s: Solicitud) => (
         <div
-            className="flex items-center gap-3 rounded-[18px] bg-[#f6f6f4] px-3.5 py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]"
+            className="flex items-center gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[inset_0_0_0_1px_rgba(0,0,0,.06)]"
             data-referencia="true"
         >
             <Avatar

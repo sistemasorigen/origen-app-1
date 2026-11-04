@@ -2751,6 +2751,25 @@ y `EtiquetaDePlazo`. Detalle, vistas y paneles usan esas mismas, así
 - **Fechas de un plazo** en la forma corta `diaYMes` ("1/11"): "Del 1/11 al
   12/12" y "Plazo: 1/11 – 12/12 · faltan 9 días". Las etiquetas para lector de
   pantalla siguen con `fechaCorta`.
+- **Formulario en tres secciones** (`FormularioTarea`, 2026-11-04): tarjetas
+  blancas sobre una hoja gris (`Hoja gris`). ① La tarea: nombre, detalles,
+  prioridad, carpeta. ② Quién la hace: sub-departamento y "La van a ver". ③
+  Cuándo: Un día · Con plazo, fechas, horario, "¿Se repite?" y resumen. Desde
+  1024 px van en dos columnas (940 px) y "Cuándo" queda fija si entra entera;
+  debajo, una columna con tres pastillas fijas (`bajoElTitulo`) que saltan a
+  cada sección. Es sólo presentación: ni las reglas ni lo que se manda saben
+  que existen. Tres cosas que no se ven a simple vista:
+  - **El sub-departamento NO es obligatorio**: sin él la tarea queda
+    "esperando". Por eso el aviso del pie nunca lo pide, aunque el pedido
+    original lo diera de ejemplo. `subDecidido` es sólo de pantalla: distingue
+    "todavía no eligió" de "Sin asignar todavía" (las dos mandan null) para
+    mostrar "La van a ver" y el tilde de ② Quién.
+  - **Las pastillas son un `<nav>` con `contenido-del-overlay`**: sin esa clase,
+    `index.css` esconde todo `nav` mientras hay un modal abierto.
+  - **El aviso del pie** (`queFrena`) lista todo lo que frena con las mismas
+    condiciones de `invalido`; tocarlo marca los errores y baja al primero.
+    Baja en un `requestAnimationFrame`: si arranca antes de que aparezcan los
+    errores, el cambio de alto corta el desplazamiento suave en WebKit.
 - **Formulario**: el selector Un día · Con plazo. Las opciones de "¿Se repite?"
   salen SIEMPRE de `getRepeticionesPosibles`. Esa RPC es `SECURITY DEFINER`
   desde `sql/agenda_repeticiones_posibles_permiso.sql`: como INVOKER daba

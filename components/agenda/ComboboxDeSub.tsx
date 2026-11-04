@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { Subdepartamento } from '../../services/agenda';
-import { ErrorDeCampo, RotuloPaso, plural, sinAcentos } from '../../pages/admin/departamentos/piezas';
+import { ErrorDeCampo, RotuloDeCampo, plural, sinAcentos } from '../../pages/admin/departamentos/piezas';
 import { Punto } from '../../pages/departamentos/equipo/piezas';
 
 /**
@@ -32,13 +32,19 @@ const ComboboxDeSub: React.FC<{
     /** Por qué está bloqueado, en palabras. */
     motivoDelBloqueo?: string;
     error?: string | null;
-}> = ({ subdepartamentos, valor, onCambiar, bloqueado = false, motivoDelBloqueo, error }) => {
+    /**
+     * `valor` null no dice si se eligió "Sin asignar todavía" o si todavía no se
+     * eligió nada: lo sabe quien lo usa.
+     */
+    sinAsignarElegido?: boolean;
+}> = ({ subdepartamentos, valor, onCambiar, bloqueado = false, motivoDelBloqueo, error, sinAsignarElegido = false }) => {
     const [abierta, setAbierta] = useState(false);
     const [consulta, setConsulta] = useState('');
     const [resaltada, setResaltada] = useState(0);
     const idBase = useRef(`sub-${Math.random().toString(36).slice(2, 8)}`).current;
 
     const elegido = subdepartamentos.find(s => s.id === valor) ?? null;
+    const hayPunto = !!elegido || sinAsignarElegido;
 
     const opciones = useMemo<Opcion[]>(() => {
         const k = sinAcentos(consulta);
@@ -79,11 +85,13 @@ const ComboboxDeSub: React.FC<{
 
     return (
         <div className="flex flex-col gap-2">
-            <RotuloPaso id={`${idBase}-rotulo`}>Sub-departamento</RotuloPaso>
+            <RotuloDeCampo id={`${idBase}-rotulo`}>Sub-departamento</RotuloDeCampo>
             <div className="relative">
-                <span className="pointer-events-none absolute left-4 top-1/2 z-[1] -translate-y-1/2" aria-hidden="true">
-                    <Punto color={elegido ? elegido.color : 'rgba(0,0,0,.2)'} tam={10} />
-                </span>
+                {hayPunto && (
+                    <span className="pointer-events-none absolute left-4 top-1/2 z-[1] flex -translate-y-1/2" aria-hidden="true">
+                        <Punto color={elegido ? elegido.color : SIN_ASIGNAR.color} tam={10} />
+                    </span>
+                )}
                 <input
                     role="combobox"
                     aria-labelledby={`${idBase}-rotulo`}
@@ -94,7 +102,7 @@ const ComboboxDeSub: React.FC<{
                     aria-invalid={!!error}
                     aria-describedby={error ? `${idBase}-error` : undefined}
                     disabled={bloqueado}
-                    value={abierta ? consulta : (elegido ? elegido.nombre : '')}
+                    value={abierta ? consulta : (elegido ? elegido.nombre : sinAsignarElegido ? SIN_ASIGNAR.nombre : '')}
                     onChange={e => { setConsulta(e.target.value); setAbierta(true); setResaltada(0); }}
                     onFocus={() => { setAbierta(true); setConsulta(''); setResaltada(0); }}
                     // Un toque en una opción pasa por el blur: se espera un
@@ -103,7 +111,7 @@ const ComboboxDeSub: React.FC<{
                     onKeyDown={alTeclear}
                     placeholder="Buscá o elegí uno"
                     autoComplete="off"
-                    className="h-[50px] w-full pl-10 pr-10 text-[15px] font-semibold disabled:opacity-60"
+                    className={`h-[50px] w-full ${hayPunto ? 'pl-10' : 'pl-4'} pr-10 text-[15px] font-semibold disabled:opacity-60`}
                     style={error ? ({ '--ag-borde': '#b42318' } as React.CSSProperties) : undefined}
                 />
                 <ChevronDown
