@@ -4,20 +4,14 @@ import BannerLinkCarousel, { BannerLinkSlide } from './BannerLinkCarousel';
 /**
  * Un bloque de banner de la portada: título, bajada y carrusel.
  *
- * Los dos que hay —Origen Música y Origen en Youvers— son el mismo bloque con
- * otros slides, así que el título y la bajada viajan acá al lado del
- * componente. Si quedaran escritos en cada pantalla, el día que cambie el
- * texto va a cambiar en una sola.
+ * Hoy es sólo Origen Música. Origen en Youvers pasó a ser Recursos Origen
+ * (SeccionDeRecursos.tsx). El título y la bajada viajan acá al lado del
+ * componente: el día que cambie el texto, cambia en un solo lugar.
  */
 
 export const MUSICA = {
     titulo: 'Origen Música',
     bajada: '¡Acá encontrarás nuestras canciones más recientes de Origen Música! Clickeá la canción para conocer más.',
-};
-
-export const YOUVERS = {
-    titulo: 'Origen en Youvers',
-    bajada: '¡Acá podrás encontrar todos los devocionales de Origen Iglesia!',
 };
 
 const SeccionDeBanner: React.FC<{

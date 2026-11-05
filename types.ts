@@ -958,6 +958,11 @@ export interface YouversBannerSlide {
     targetUrl: string;
 }
 
+/**
+ * Ya no se lee: los slides pasaron a la tabla recursos_origen. Queda en la
+ * config para la vuelta atrás (sql/ROLLBACK_recursos_origen.sql), y como se
+ * guarda la config entera, nadie lo borra sin querer.
+ */
 export interface YouversBannerConfig {
     slides: YouversBannerSlide[];
 }

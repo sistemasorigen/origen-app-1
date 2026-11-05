@@ -2462,6 +2462,36 @@ propia del Día del Niño y no se puede probar sin cámara).
 - **Banner "Origen Música":** `home_musica_banner_slides`, editado desde
   `/panel-admin` (Música). Lectura pública, escritura solo `SUPER_ADMIN`.
   Cada slide abre su `target_url` en pestaña nueva; la URL no se muestra.
+- **Recursos Origen** (`components/inicio/SeccionDeRecursos.tsx`,
+  `services/recursos.ts`, `sql/recursos_origen.sql`): reemplazó a "Origen en
+  Youvers", en el mismo lugar. Tabla `recursos_origen`, lectura pública de los
+  visibles y escritura sólo `SUPER_ADMIN`. Se carga desde `/panel-admin` →
+  Configuración → Banners → Recursos Origen (`pages/admin/RecursosOrigen.tsx`).
+  - **Tipos:** link, archivo (PDF o imagen, bucket público `recursos`, 20 MB),
+    video de YouTube y podcast de Spotify. La categoría (`material` o `podcast`)
+    sale del tipo, con CHECK, y las pestañas "Todo · Material · Podcasts" sólo
+    aparecen si hay de las dos.
+  - **Misma tarjeta y mismo riel que Enlaces Origen:** `TarjetaDeOrigen` y
+    `RielDeTarjetas` están en `SeccionDeEnlaces.tsx`, y no saben qué muestran;
+    `TarjetaDeLink` y `TarjetaDeRecurso` son adaptadores. La diferencia:
+    `soloElBotonAbre`, porque un recurso se abre con "Ir al enlace" y no tocando
+    la tarjeta. El panel comparte con el de Enlaces `piezasDeTarjetas.tsx`.
+  - **Reproductores:** video y podcast se abren en `HojaGrupos` con un iframe
+    (`youtube-nocookie.com`, `open.spotify.com/embed`). Al cerrar, el iframe se
+    desmonta y se corta el sonido. Al abrir, se pausa Origen Música. La CSP de
+    `index.html` tiene `frame-src` para esos dos y `i.ytimg.com` en `img-src`.
+  - **Dos barreras:** las reglas del destino están en los CHECK y en
+    `services/recursos.ts`, escritas igual. Si se toca una, se toca la otra. Los
+    links se limpian antes de validar (`/intl-es/`, `?si=`) y se guardan en la
+    forma canónica.
+  - **El inicio pide `visible = true`** aunque lo diga la RLS: la RLS le deja ver
+    los ocultos al `SUPER_ADMIN`, y Sistemas tiene que ver el inicio como todos.
+  - **Archivos:** se suben al elegirlos, para mostrar el avance (XHR, porque
+    `supabase.storage.upload` no lo informa). Lo subido y no guardado se borra al
+    cancelar; borrar un recurso borra su archivo. El bucket no se lista: sólo
+    `SUPER_ADMIN` tiene SELECT, y el resto lee por la URL pública.
+  - `app_config.config.youversBanner` **no se borró**: ya no se lee, y queda para
+    `sql/ROLLBACK_recursos_origen.sql`.
 - `Estructura.tsx`: `isDashboard` (`/`, `/gcx`, `/ninez`) pone la navbar
   transparente sobre el hero; `isFullWidthPage` saca el `max-w-7xl`.
 

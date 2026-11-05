@@ -16,7 +16,7 @@ import {
  * "Enlaces Origen": la tira de links que carga un SUPER_ADMIN desde el panel
  * (Configuración de la app → Links).
  *
- * Va en el inicio, entre Origen en Youvers y Grupos para vos. Es un riel que
+ * Va en el inicio, entre Recursos Origen y Grupos para vos. Es un riel que
  * se desliza con el dedo o con el trackpad, igual que el de los grupos: en
  * la compu entran tres y en el teléfono una, con la siguiente asomando para
  * que se note que hay más.
@@ -32,6 +32,10 @@ import {
  *
  * Si no hay links, o si no se pudieron traer, la sección no aparece y el
  * resto del inicio sigue igual.
+ *
+ * La tarjeta (TarjetaDeOrigen) y el riel (RielDeTarjetas) son también los de
+ * Recursos Origen (SeccionDeRecursos.tsx). No saben qué están mostrando: lo que
+ * es propio de un enlace está en TarjetaDeLink, que es un adaptador.
  */
 
 // ── La tarjeta ──────────────────────────────────────────────────────────
@@ -67,20 +71,47 @@ const FORMA = 'aspect-[4/3]';
  * (pages/admin/EnlacesOrigen.tsx). Es la misma tarjeta, no una copia: lo que
  * se ve en el panel es literalmente lo que se va a publicar.
  */
-export const TarjetaDeLink: React.FC<{
-    link: LinkDeNovedad;
+export interface ContenidoDeTarjeta {
+    titulo: string;
+    descripcion: string | null;
+    imagenUrl: string | null;
+    focalX: number;
+    focalY: number;
+    zoom: number;
+}
+
+export const ICONO_ABRE_AFUERA = <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />;
+export const ICONO_SIGUE_ACA = <ArrowRight className="w-4 h-4" strokeWidth={2.2} />;
+
+const BOTON_IR = 'flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900';
+
+export const TarjetaDeOrigen: React.FC<{
+    contenido: ContenidoDeTarjeta;
+    /** A dónde lleva, para el lector de pantalla. */
+    etiqueta: string;
+    iconoIr: React.ReactNode;
+    /** El panel de compartir: el link, el rótulo y qué abre el QR. */
+    linkParaCompartir: string;
+    rotuloCompartir: string;
+    queAbreCompartir: string;
     onAbrir: () => void;
+    /** La pastilla de arriba del título: "Cierra hoy". */
+    cierra?: string | null;
+    /**
+     * La tarjeta no abre nada: abre sólo "Ir al enlace", que pasa a ser un botón
+     * de verdad. Por eso tampoco se levanta al pasar el mouse, que es lo que
+     * dice "tocame" en las otras.
+     */
+    soloElBotonAbre?: boolean;
     /** En el panel la tarjeta se mira, no se toca: ni foco ni clicks. */
     vistaPrevia?: boolean;
-}> = ({ link, onAbrir, vistaPrevia = false }) => {
-    const esExterno = link.tipoDestino === 'externo';
-    const cierra = textoDeVencimiento(link.vence);
-    const conImagen = !!link.imagenUrl;
+}> = ({
+    contenido, etiqueta, iconoIr, linkParaCompartir, rotuloCompartir, queAbreCompartir,
+    onAbrir, cierra = null, soloElBotonAbre = false, vistaPrevia = false,
+}) => {
+    const conImagen = !!contenido.imagenUrl;
     const [compartiendo, setCompartiendo] = useState(false);
-    /** El link que se comparte: el de afuera tal cual, o la pantalla de la app con su #. */
-    const linkParaCompartir = esExterno
-        ? link.destino
-        : `${typeof window !== 'undefined' ? window.location.origin : 'https://app.origeniglesia.org'}/#${link.destino}`;
+    const laTarjetaAbre = !vistaPrevia && !soloElBotonAbre;
 
     const abrir = () => {
         if (!vistaPrevia) onAbrir();
@@ -89,12 +120,12 @@ export const TarjetaDeLink: React.FC<{
     return (
         <div
             data-enlace
-            role={vistaPrevia ? undefined : 'link'}
-            tabIndex={vistaPrevia ? undefined : 0}
-            aria-label={vistaPrevia ? undefined : etiquetaDeLink(link)}
+            role={laTarjetaAbre ? 'link' : undefined}
+            tabIndex={laTarjetaAbre ? 0 : undefined}
+            aria-label={laTarjetaAbre ? etiqueta : undefined}
             aria-hidden={vistaPrevia || undefined}
-            onClick={abrir}
-            onKeyDown={vistaPrevia ? undefined : e => {
+            onClick={laTarjetaAbre ? abrir : undefined}
+            onKeyDown={!laTarjetaAbre ? undefined : e => {
                 // Sólo cuando el foco está en la tarjeta: si está en el botón
                 // de compartir, el Enter es de él.
                 if (e.target !== e.currentTarget) return;
@@ -113,7 +144,7 @@ export const TarjetaDeLink: React.FC<{
                 // recorte deja de ser el del panel. La sombra alcanza para
                 // despegarla del fondo.
                 ? 'shadow-[0_4px_16px_rgba(15,23,42,0.08)]'
-                : 'border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${vistaPrevia ? '' : 'cursor-pointer hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
+                : 'border border-slate-200 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)]'} ${!laTarjetaAbre ? '' : 'cursor-pointer hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)] dark:hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-zinc-950'}`}
         >
             {conImagen && (
                 <div className={`relative w-full shrink-0 ${FORMA}`}>
@@ -121,11 +152,11 @@ export const TarjetaDeLink: React.FC<{
                         banners de la home: lo que se eligió en el panel es
                         exactamente lo que se ve acá. */}
                     <img
-                        src={link.imagenUrl as string}
+                        src={contenido.imagenUrl as string}
                         alt=""
                         draggable={false}
                         className="w-full h-full object-cover pointer-events-none select-none"
-                        style={getMediaFrameStyle(link)}
+                        style={getMediaFrameStyle(contenido)}
                     />
                 </div>
             )}
@@ -146,11 +177,11 @@ export const TarjetaDeLink: React.FC<{
 
                 <div className={cierra ? 'mt-3.5' : ''}>
                     <p className="mb-0 text-[17.5px] leading-[1.3] font-bold tracking-[-0.01em] line-clamp-2 [overflow-wrap:anywhere] text-slate-900 dark:text-white">
-                        {link.titulo}
+                        {contenido.titulo}
                     </p>
-                    {link.descripcion && (
+                    {contenido.descripcion && (
                         <p className="mt-1.5 mb-0 text-sm leading-[1.5] [overflow-wrap:anywhere] text-slate-500 dark:text-zinc-400">
-                            {link.descripcion}
+                            {contenido.descripcion}
                         </p>
                     )}
                 </div>
@@ -165,22 +196,30 @@ export const TarjetaDeLink: React.FC<{
                         type="button"
                         onClick={vistaPrevia ? undefined : e => { e.stopPropagation(); setCompartiendo(true); }}
                         tabIndex={vistaPrevia ? -1 : 0}
-                        aria-label={`Compartir ${link.titulo}`}
+                        aria-label={`Compartir ${contenido.titulo}`}
                         className="shrink-0 w-[46px] h-[46px] rounded-xl flex items-center justify-center transition-colors bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white"
                     >
                         <Share className="w-[18px] h-[18px]" strokeWidth={2.1} />
                     </button>
-                    {/* Hace lo mismo que la tarjeta: el click sube solo. Fuera
-                        del orden del teclado, porque la tarjeta ya es el link. */}
-                    <span
-                        aria-hidden="true"
-                        className="flex-1 min-w-0 h-[46px] rounded-xl flex items-center justify-center gap-2 text-[14.5px] font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                    >
-                        Ir al enlace
-                        {esExterno
-                            ? <ExternalLink className="w-[15px] h-[15px]" strokeWidth={2.2} />
-                            : <ArrowRight className="w-4 h-4" strokeWidth={2.2} />}
-                    </span>
+                    {soloElBotonAbre ? (
+                        <button
+                            type="button"
+                            onClick={vistaPrevia ? undefined : abrir}
+                            tabIndex={vistaPrevia ? -1 : 0}
+                            aria-label={etiqueta}
+                            className={`${BOTON_IR} transition-colors hover:bg-slate-700 dark:hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900`}
+                        >
+                            Ir al enlace
+                            {iconoIr}
+                        </button>
+                    ) : (
+                        // Hace lo mismo que la tarjeta: el click sube solo. Fuera
+                        // del orden del teclado, porque la tarjeta ya es el link.
+                        <span aria-hidden="true" className={BOTON_IR}>
+                            Ir al enlace
+                            {iconoIr}
+                        </span>
+                    )}
                 </span>
             </div>
 
@@ -192,14 +231,44 @@ export const TarjetaDeLink: React.FC<{
                 <ModalCompartirQR
                     isOpen={compartiendo}
                     onClose={() => setCompartiendo(false)}
-                    title={link.titulo}
+                    title={contenido.titulo}
                     link={linkParaCompartir}
-                    rotulo="COMPARTIR ENLACE"
-                    queAbre="el enlace"
+                    rotulo={rotuloCompartir}
+                    queAbre={queAbreCompartir}
                 />
                 </span>
             )}
         </div>
+    );
+};
+
+/**
+ * Un enlace en esa tarjeta. También la usa el panel como vista previa
+ * (pages/admin/EnlacesOrigen.tsx).
+ */
+export const TarjetaDeLink: React.FC<{
+    link: LinkDeNovedad;
+    onAbrir: () => void;
+    vistaPrevia?: boolean;
+}> = ({ link, onAbrir, vistaPrevia = false }) => {
+    const esExterno = link.tipoDestino === 'externo';
+    /** El link que se comparte: el de afuera tal cual, o la pantalla de la app con su #. */
+    const linkParaCompartir = esExterno
+        ? link.destino
+        : `${typeof window !== 'undefined' ? window.location.origin : 'https://app.origeniglesia.org'}/#${link.destino}`;
+
+    return (
+        <TarjetaDeOrigen
+            contenido={link}
+            etiqueta={etiquetaDeLink(link)}
+            iconoIr={esExterno ? ICONO_ABRE_AFUERA : ICONO_SIGUE_ACA}
+            linkParaCompartir={linkParaCompartir}
+            rotuloCompartir="COMPARTIR ENLACE"
+            queAbreCompartir="el enlace"
+            onAbrir={onAbrir}
+            cierra={textoDeVencimiento(link.vence)}
+            vistaPrevia={vistaPrevia}
+        />
     );
 };
 
@@ -272,8 +341,42 @@ const COPIAS = 3;
  */
 const ESPACIO = 16;
 
-const SeccionDeEnlaces: React.FC = () => {
-    const navigate = useNavigate();
+/** El título y la bajada de un bloque con riel. */
+export const EncabezadoDeRiel: React.FC<{ titulo: string; bajada: string }> = ({ titulo, bajada }) => (
+    <>
+        <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
+            {titulo}
+        </h2>
+        <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
+            {bajada}
+        </p>
+    </>
+);
+
+/**
+ * Mientras cargan, el lugar ya está tomado: si la sección apareciera de golpe,
+ * el inicio daría un salto justo cuando se está por tocar algo.
+ */
+export const EsqueletoDeRiel: React.FC = () => (
+    <div className="lg:col-span-3" aria-busy="true">
+        <div className="h-5 w-[170px] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+        <div className="mt-3 h-[13px] w-[280px] max-w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
+        <div className={`${FILA} items-start mt-4`}>
+            {[0, 1, 2].map(i => (
+                <div key={i} className={JUSTAS}><Esqueleto /></div>
+            ))}
+        </div>
+    </div>
+);
+
+/** El riel: las tarjetas, el asomo, la vuelta sin punta y las flechas de la compu. */
+export const RielDeTarjetas = <T extends { id: string }>({ lista, dibujar, flechaAnterior, flechaSiguiente }: {
+    lista: T[];
+    dibujar: (item: T) => React.ReactNode;
+    /** Lo que dicen las flechas al lector de pantalla. */
+    flechaAnterior: string;
+    flechaSiguiente: string;
+}) => {
     const rielRef = useRef<HTMLDivElement>(null);
     const sinMovimiento = useReducedMotion();
     /** Sólo tiene sentido dar la vuelta si lo que hay no entra en pantalla. */
@@ -284,21 +387,6 @@ const SeccionDeEnlaces: React.FC = () => {
      */
     const [altoPortada, setAltoPortada] = useState(232);
 
-    // null = todavía no llegaron, o no se pudieron traer. Las dos cosas se
-    // ven igual: la sección no aparece y el resto del inicio sigue.
-    const [links, setLinks] = useState<LinkDeNovedad[] | null>(null);
-    const [cargando, setCargando] = useState(true);
-
-    useEffect(() => {
-        getLinksPublicos()
-            .then(setLinks)
-            // El servicio ya atrapa los errores de la base y devuelve null;
-            // esto es por si falla la red entera.
-            .catch(() => setLinks(null))
-            .finally(() => setCargando(false));
-    }, []);
-
-    const lista = links || [];
     // "Las que entran" son tres, que es lo que muestra la compu.
     const TARJETA = lista.length > 3 ? CON_ASOMO : JUSTAS;
 
@@ -385,82 +473,87 @@ const SeccionDeEnlaces: React.FC = () => {
         frenado.current = window.setTimeout(volverAlMedio, 140);
     };
 
-    // Mientras cargan, el lugar ya está tomado: si la sección apareciera de
-    // golpe, el inicio daría un salto justo cuando se está por tocar algo.
-    if (cargando) {
-        return (
-            <div className="lg:col-span-3" aria-busy="true">
-                <div className="h-5 w-[170px] rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-                <div className="mt-3 h-[13px] w-[280px] max-w-full rounded bg-slate-200 dark:bg-zinc-800 animate-pulse" />
-                <div className={`${FILA} items-start mt-4`}>
-                    {[0, 1, 2].map(i => (
-                        <div key={i} className={JUSTAS}><Esqueleto /></div>
-                    ))}
-                </div>
+    return (
+        <div className="relative group/riel">
+            <div ref={rielRef} onScroll={alDeslizar} className={`${FILA} items-stretch`}>
+                {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
+                    lista.map(l => (
+                        <div
+                            key={`${copia}-${l.id}`}
+                            data-copia={copia}
+                            // Las copias son las mismas tarjetas repetidas: un
+                            // lector de pantalla tiene que leer la lista una
+                            // sola vez.
+                            aria-hidden={copia > 0 || undefined}
+                            className={TARJETA}
+                        >
+                            {dibujar(l)}
+                        </div>
+                    )),
+                )}
             </div>
-        );
-    }
 
+            {/* Sólo cuando hay a dónde ir. Con tres enlaces o menos en la
+                compu entran todos y una flecha no llevaría a ninguna
+                parte. En el teléfono no van: ahí se desliza con el dedo,
+                y dos botones encima taparían la tarjeta. */}
+            {enRonda && (
+                <>
+                    <button
+                        type="button"
+                        onClick={() => correr(-1)}
+                        aria-label={flechaAnterior}
+                        style={{ top: altoPortada / 2 }}
+                        className={`hidden sm:flex -left-3 ${FLECHA}`}
+                    >
+                        <ChevronLeft className="w-4 h-4" strokeWidth={2.2} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => correr(1)}
+                        aria-label={flechaSiguiente}
+                        style={{ top: altoPortada / 2 }}
+                        className={`hidden sm:flex -right-3 ${FLECHA}`}
+                    >
+                        <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
+                    </button>
+                </>
+            )}
+        </div>
+    );
+};
+
+const SeccionDeEnlaces: React.FC = () => {
+    const navigate = useNavigate();
+
+    // null = todavía no llegaron, o no se pudieron traer. Las dos cosas se
+    // ven igual: la sección no aparece y el resto del inicio sigue.
+    const [links, setLinks] = useState<LinkDeNovedad[] | null>(null);
+    const [cargando, setCargando] = useState(true);
+
+    useEffect(() => {
+        getLinksPublicos()
+            .then(setLinks)
+            // El servicio ya atrapa los errores de la base y devuelve null;
+            // esto es por si falla la red entera.
+            .catch(() => setLinks(null))
+            .finally(() => setCargando(false));
+    }, []);
+
+    if (cargando) return <EsqueletoDeRiel />;
+
+    const lista = links || [];
     if (lista.length === 0) return null;
 
     return (
         <div className="lg:col-span-3">
-            <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight leading-[1.05] text-slate-900 dark:text-white">
-                Enlaces Origen
-            </h2>
-            <p className="text-sm font-normal text-slate-500 dark:text-zinc-400 mb-4">
-                Lo que está pasando en Origen, en un solo lugar.
-            </p>
-
-            <div className="relative group/riel">
-                <div ref={rielRef} onScroll={alDeslizar} className={`${FILA} items-stretch`}>
-                    {Array.from({ length: enRonda ? COPIAS : 1 }).map((_, copia) =>
-                        lista.map(l => (
-                            <div
-                                key={`${copia}-${l.id}`}
-                                data-copia={copia}
-                                // Las copias son las mismas tarjetas repetidas: un
-                                // lector de pantalla tiene que leer la lista una
-                                // sola vez.
-                                aria-hidden={copia > 0 || undefined}
-                                className={TARJETA}
-                            >
-                                <TarjetaDeLink
-                                    link={l}
-                                    onAbrir={() => abrirLink(l, navigate)}
-                                />
-                            </div>
-                        )),
-                    )}
-                </div>
-
-                {/* Sólo cuando hay a dónde ir. Con tres enlaces o menos en la
-                    compu entran todos y una flecha no llevaría a ninguna
-                    parte. En el teléfono no van: ahí se desliza con el dedo,
-                    y dos botones encima taparían la tarjeta. */}
-                {enRonda && (
-                    <>
-                        <button
-                            type="button"
-                            onClick={() => correr(-1)}
-                            aria-label="Enlaces anteriores"
-                            style={{ top: altoPortada / 2 }}
-                            className={`hidden sm:flex -left-3 ${FLECHA}`}
-                        >
-                            <ChevronLeft className="w-4 h-4" strokeWidth={2.2} />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => correr(1)}
-                            aria-label="Más enlaces"
-                            style={{ top: altoPortada / 2 }}
-                            className={`hidden sm:flex -right-3 ${FLECHA}`}
-                        >
-                            <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
-                        </button>
-                    </>
-                )}
-            </div>
+            <EncabezadoDeRiel titulo="Enlaces Origen" bajada="Lo que está pasando en Origen, en un solo lugar." />
+            <RielDeTarjetas
+                lista={lista}
+                dibujar={l => <TarjetaDeLink link={l} onAbrir={() => abrirLink(l, navigate)} />}
+                flechaAnterior="Enlaces anteriores"
+                flechaSiguiente="Más enlaces"
+            />
         </div>
     );
 };

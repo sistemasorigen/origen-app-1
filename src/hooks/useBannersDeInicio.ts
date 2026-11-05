@@ -3,11 +3,10 @@ import { AppConfig, FooterLinks, MusicaBannerSlide } from '../../types';
 import { db } from '../../services/dbService';
 import { supabaseService, getMusicaBannerSlides } from '../../services/supabaseService';
 import { liberarMedia, precargarMedia, reservarMedia } from '../utils/mediaDeEntrada';
-import type { BannerLinkSlide } from '../../components/inicio/BannerLinkCarousel';
 
 /**
- * Los banners de la portada: el principal, Origen Música y Origen en Youvers,
- * más los links del pie.
+ * Los banners de la portada: el principal y Origen Música, más los links del
+ * pie.
  *
  * Estaba todo suelto adentro de pages/home/Home.tsx. Se mueve entero —con la
  * caché en localStorage y con la espera de la pantalla de entrada— porque son
@@ -20,7 +19,6 @@ export interface BannersDeInicio {
     /** Arranca en false y pasa a true a los 100 ms: dispara las animaciones. */
     isLoaded: boolean;
     musicaSlides: MusicaBannerSlide[];
-    youversSlides: BannerLinkSlide[];
 }
 
 const SIN_REDES: FooterLinks = { instagram: '', facebook: '', youtube: '', spotify: '' };
@@ -115,19 +113,5 @@ export const useBannersDeInicio = (): BannersDeInicio => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Los slides de Youvers viven en la config (app_config.config, un JSONB de
-    // lectura pública), no en una tabla propia como los de música: son sólo
-    // imagen + link, y así se publican sin depender de ninguna migración.
-    const youversSlides: BannerLinkSlide[] = (config.youversBanner?.slides || []).map(s => ({
-        id: s.id,
-        mediaUrl: s.imageUrl,
-        mediaType: 'image' as const,
-        focalX: s.focalX,
-        focalY: s.focalY,
-        zoom: s.zoom,
-        title: s.title,
-        targetUrl: s.targetUrl
-    }));
-
-    return { config, footerLinks, isLoaded, musicaSlides, youversSlides };
+    return { config, footerLinks, isLoaded, musicaSlides };
 };

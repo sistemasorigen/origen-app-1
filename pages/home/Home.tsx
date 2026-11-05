@@ -11,8 +11,9 @@ import {
     Quote
 } from 'lucide-react';
 import HeroDeInicio from '../../components/inicio/HeroDeInicio';
-import SeccionDeBanner, { MUSICA, YOUVERS } from '../../components/inicio/SeccionDeBanner';
+import SeccionDeBanner, { MUSICA } from '../../components/inicio/SeccionDeBanner';
 import SeccionDeEnlaces from '../../components/inicio/SeccionDeEnlaces';
+import SeccionDeRecursos from '../../components/inicio/SeccionDeRecursos';
 import SeccionGruposParaVos from '../../components/inicio/SeccionGruposParaVos';
 import PieDeInicio from '../../components/inicio/PieDeInicio';
 import TarjetaInstalar from '../../components/inicio/TarjetaInstalar';
@@ -432,7 +433,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
 
     // Los banners, los links del pie y la espera de la pantalla de
     // entrada. Es lo mismo que mostrará /novedades, así que vive aparte.
-    const { config, footerLinks, isLoaded, musicaSlides, youversSlides } = useBannersDeInicio();
+    const { config, footerLinks, isLoaded, musicaSlides } = useBannersDeInicio();
 
     // --- Datos reales para "Próximos eventos" ---
     const [eventos, setEventos] = useState<EventoGeneral[]>([]);
@@ -547,7 +548,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLoginRequest }) =>
                         )}
 
                         <SeccionDeBanner {...MUSICA} slides={musicaSlides} />
-                        <SeccionDeBanner {...YOUVERS} slides={youversSlides} />
+                        <SeccionDeRecursos />
 
                         <SeccionDeEnlaces />
 

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getMediaFrameStyle } from '../ui/CarruselHero';
 
-// Un slide de banner clickeable, en el mínimo común denominador de los dos
-// banners de la home: el de "Origen Música" (tabla propia, imagen o video) y
-// el de "Origen en Youvers" (config, solo imágenes). MusicaBannerSlide entra
-// acá tal cual; los de Youvers se normalizan en el Dashboard.
+// Un slide de banner clickeable. Lo usa el banner de "Origen Música" (tabla
+// propia, imagen o video): MusicaBannerSlide entra acá tal cual.
 export interface BannerLinkSlide {
     id: string;
     mediaUrl?: string;
