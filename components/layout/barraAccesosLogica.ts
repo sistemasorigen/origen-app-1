@@ -143,11 +143,13 @@ export const resolverElegido = (id: string | null, ctx: ContextoDeMenu): MenuIte
  * Lo que hace bajar la barra, sin tocar cada hoja:
  *   · data-modal-active en el body: lo pone useBloqueoDeFondo (42 pantallas);
  *   · aria-modal y role="dialog": las que no bloquean el fondo;
- *   · .fixed.inset-0 activo: las que no tienen ni una cosa ni la otra;
+ *   · .fixed.inset-0 activo: las que no tienen ni una cosa ni la otra. El velo de
+ *     entrada no cuenta: la barra se prepara detrás de él y queda a la vista
+ *     cuando se va, junto con el resto de la app;
  *   · data-fijo-abajo: las botoneras fijas de una pantalla, que quedarían abajo
  *     de la barra.
  */
-export const SELECTOR_TAPA = '[aria-modal="true"],[role="dialog"],.fixed.inset-0:not(.pointer-events-none),[data-fijo-abajo]';
+export const SELECTOR_TAPA = '[aria-modal="true"],[role="dialog"],.fixed.inset-0:not(.pointer-events-none):not([data-velo-entrada]),[data-fijo-abajo]';
 
 export const INPUTS_SIN_TECLADO = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file', 'image', 'hidden']);
 

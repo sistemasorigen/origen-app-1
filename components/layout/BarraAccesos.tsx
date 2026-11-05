@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import type { User } from '../../types';
@@ -321,7 +322,10 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
     const animar = !sinMovimiento;
     const Elegido = elegido?.icon;
 
-    return (
+    // Por un portal: la app entra con una animación que le pone un transform a su
+    // contenedor (.app-entrando), y adentro de un transform un position:fixed se
+    // mide contra él y no contra la pantalla. La barra saltaba a su lugar al final.
+    return createPortal(
         <>
             <style>{ESTILOS}</style>
             <div id="barra-accesos" className="print:hidden" style={{ fontFamily: 'Manrope, system-ui, sans-serif' }}>
@@ -468,7 +472,8 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                     {aviso}
                 </div>
             )}
-        </>
+        </>,
+        document.body,
     );
 };
 

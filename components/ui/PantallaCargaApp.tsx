@@ -49,6 +49,7 @@ const PantallaCargaApp: React.FC<{
 
     return (
         <div
+            data-velo-entrada=""
             className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-slate-50 px-6 dark:bg-zinc-950"
             style={{
                 opacity: saliendo ? 0 : 1,

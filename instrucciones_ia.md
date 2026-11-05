@@ -2039,6 +2039,9 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`; medidas y estados en
   está siempre abierta en /perfil.
 - **Es un `<nav>` con `contenido-del-overlay`:** sin esa clase, `index.css` le pone
   `display:none` al abrir un modal y no llega a bajar animando.
+- **Entra junto con la app:** se monta detrás del velo de entrada, que no la esconde
+  (`data-velo-entrada`). Va por un portal al `body`: adentro de `.app-entrando`, el
+  `transform` de la animación hace que su `position:fixed` no se mida contra la pantalla.
 - **Reproductor:** es el de siempre, de 96 px, y la barra flota 12 px arriba de él. El
   mini que proponía el diseño se descartó (Ignacio, 2026-11-04).
 - **Espacio:** `main` deja `espacioReservado` en lugar de `pb-8` o `pb-32`.
