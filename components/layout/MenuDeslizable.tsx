@@ -120,13 +120,6 @@ export const HamburgerButton: React.FC<{
      */
     onMedia?: boolean;
 }> = ({ onClick, className = "", onMedia = false }) => {
-    /**
-     * El punto de "sin leer", sin número: en la navbar no hay lugar para una
-     * cifra, y lo único que tiene que decir es "entrá al menú". Sin sesión el
-     * contador es 0, así que el punto no se dibuja.
-     */
-    const sinLeer = useSinLeer();
-
     return (
         <button
             id="hamburger-menu-btn"
@@ -136,17 +129,9 @@ export const HamburgerButton: React.FC<{
                 ? 'text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] focus-visible:ring-white/60'
                 : 'text-slate-700 dark:text-zinc-200 drop-shadow-none hover:text-slate-900 dark:hover:text-white focus-visible:ring-slate-900/30 dark:focus-visible:ring-white/30'
                 } ${className}`}
-            aria-label={sinLeer > 0 ? 'Menú, notificaciones sin leer' : 'Menú'}
+            aria-label="Menú"
         >
             <Menu className="w-5 h-5 transition-transform group-hover:scale-110" />
-            {sinLeer > 0 && (
-                /* Sobre el hero el borde va blanco siempre: ahí atrás no hay
-                   navbar, hay una foto, y un borde oscuro desaparecería. */
-                <span
-                    aria-hidden="true"
-                    className={`absolute top-1.5 right-1.5 w-[9px] h-[9px] rounded-full border-2 ${ROJO} ${onMedia ? 'border-white' : 'border-white dark:border-zinc-950'}`}
-                />
-            )}
         </button>
     );
 };
