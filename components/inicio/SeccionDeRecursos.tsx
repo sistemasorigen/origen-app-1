@@ -9,7 +9,7 @@ import {
 import {
     abrirLinkOArchivo, esLinkExterno, etiquetaDeRecurso, getRecursosPublicos, idDeEpisodio, idDeVideo,
     linkParaCompartir, urlEmbebidaDeEpisodio, urlEmbebidaDeVideo,
-    type CategoriaDeRecurso, type Recurso,
+    type Recurso,
 } from '../../services/recursos';
 
 /**
@@ -26,7 +26,8 @@ import {
  *   · archivo: lo abre en otra pestaña (en el teléfono, el visor del sistema);
  *   · video y podcast: la hoja del sistema, con el reproductor adentro.
  *
- * Si no hay recursos, o no se pudieron traer, el bloque no aparece.
+ * Va todo junto, material y podcasts, en un solo riel y en el orden que eligió
+ * Sistemas. Si no hay recursos, o no se pudieron traer, el bloque no aparece.
  */
 
 const ICONO_PLAY = <Play className="w-[15px] h-[15px]" strokeWidth={2.2} />;
@@ -147,19 +148,10 @@ const HojaDelReproductor: React.FC<{ recurso: Recurso | null; onCerrar: () => vo
 
 // ── La sección ──────────────────────────────────────────────────────────
 
-type Filtro = 'todo' | CategoriaDeRecurso;
-
-const PESTANAS: [Filtro, string][] = [
-    ['todo', 'Todo'],
-    ['material', 'Material'],
-    ['podcast', 'Podcasts'],
-];
-
 const SeccionDeRecursos: React.FC = () => {
     const navigate = useNavigate();
     const [recursos, setRecursos] = useState<Recurso[] | null>(null);
     const [cargando, setCargando] = useState(true);
-    const [filtro, setFiltro] = useState<Filtro>('todo');
     const [reproduciendo, setReproduciendo] = useState<Recurso | null>(null);
 
     useEffect(() => {
@@ -171,13 +163,8 @@ const SeccionDeRecursos: React.FC = () => {
 
     if (cargando) return <EsqueletoDeRiel />;
 
-    const todos = recursos || [];
-    if (todos.length === 0) return null;
-
-    // Las pestañas sólo tienen sentido si hay de las dos cosas. Con una sola,
-    // el bloque se ve exactamente como Enlaces.
-    const hayDeLasDos = todos.some(r => r.categoria === 'material') && todos.some(r => r.categoria === 'podcast');
-    const lista = hayDeLasDos && filtro !== 'todo' ? todos.filter(r => r.categoria === filtro) : todos;
+    const lista = recursos || [];
+    if (lista.length === 0) return null;
 
     const abrir = (r: Recurso) => {
         if (r.tipo === 'video' || r.tipo === 'podcast') setReproduciendo(r);
@@ -188,28 +175,7 @@ const SeccionDeRecursos: React.FC = () => {
         <div className="lg:col-span-3">
             <EncabezadoDeRiel titulo="Recursos Origen" bajada="Material de Origen y los podcasts de nuestros pastores." />
 
-            {hayDeLasDos && (
-                <div role="group" aria-label="Filtrar recursos" className="mb-4 flex gap-2">
-                    {PESTANAS.map(([id, nombre]) => (
-                        <button
-                            key={id}
-                            type="button"
-                            aria-pressed={filtro === id}
-                            onClick={() => setFiltro(id)}
-                            className={`h-11 sm:h-9 px-4 rounded-full text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:focus-visible:ring-white focus-visible:ring-offset-2 ${filtro === id
-                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
-                        >
-                            {nombre}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* La key vuelve a armar el riel al filtrar: arranca desde el
-                principio y mide de nuevo si lo que queda entra en pantalla. */}
             <RielDeTarjetas
-                key={filtro}
                 lista={lista}
                 dibujar={r => <TarjetaDeRecurso recurso={r} onAbrir={() => abrir(r)} />}
                 flechaAnterior="Recursos anteriores"

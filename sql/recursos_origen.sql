@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.recursos_origen (
     titulo       text NOT NULL,
     descripcion  text,
     tipo         text NOT NULL,
-    -- Derivada del tipo: la usan las pestañas del inicio.
+    -- Derivada del tipo. El inicio no la usa: muestra todo en un solo carrusel.
     categoria    text NOT NULL,
     destino      text NOT NULL,
     -- La portada de la tarjeta, con su encuadre. NULL = tarjeta blanca.

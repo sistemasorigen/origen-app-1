@@ -2468,9 +2468,9 @@ propia del Día del Niño y no se puede probar sin cámara).
   visibles y escritura sólo `SUPER_ADMIN`. Se carga desde `/panel-admin` →
   Configuración → Banners → Recursos Origen (`pages/admin/RecursosOrigen.tsx`).
   - **Tipos:** link, archivo (PDF o imagen, bucket público `recursos`, 20 MB),
-    video de YouTube y podcast de Spotify. La categoría (`material` o `podcast`)
-    sale del tipo, con CHECK, y las pestañas "Todo · Material · Podcasts" sólo
-    aparecen si hay de las dos.
+    video de YouTube y podcast de Spotify. Va todo junto en un solo carrusel, sin
+    pestañas (Ignacio, 2026-11-05). La columna `categoria` (`material` o
+    `podcast`) sale del tipo, con CHECK, y hoy el inicio no la usa.
   - **Misma tarjeta y mismo riel que Enlaces Origen:** `TarjetaDeOrigen` y
     `RielDeTarjetas` están en `SeccionDeEnlaces.tsx`, y no saben qué muestran;
     `TarjetaDeLink` y `TarjetaDeRecurso` son adaptadores. La diferencia:
