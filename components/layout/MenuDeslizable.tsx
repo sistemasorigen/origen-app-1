@@ -3,11 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
     Menu,
-    Settings,
     Bell,
     ChevronDown,
     ChevronsLeft,
     LogOut,
+    ArrowLeftRight,
+    UserRound,
     RotateCw,
     LogIn
 } from 'lucide-react';
@@ -19,6 +20,8 @@ import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
 import { recargarApp } from '../../hooks/useVersionCheck';
 import { estaInstalada } from '../../src/utils/instalacion';
+import { marcarCambioDeCuenta, RUTA_CAMBIO_DE_CUENTA } from '../../src/utils/cambioDeCuenta';
+import { Panel } from '../miCuenta/piezas';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Los tokens del diseño (design-claude/Menu Deslizable.dc)
@@ -84,7 +87,7 @@ interface DrawerMenuProps {
     isOpen: boolean;
     onClose: () => void;
     currentUser: User | null;
-    onLogout: () => void;
+    onLogout: () => void | Promise<void>;
     isDarkMode?: boolean;
     onToggleTheme?: () => void;
     type?: 'drawer' | 'sidebar';
@@ -235,8 +238,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // El desplegable de cuenta se cierra al tocar afuera o con Escape. Es un
     // menú flotante que se monta sobre la lista: sin esto queda abierto
     // tapando los últimos ítems mientras el usuario ya está mirando otra cosa.
+    // En el celular es una hoja, que trae su propio cierre: acá, tocar una de
+    // sus filas contaría como tocar afuera.
     useEffect(() => {
-        if (!cuentaAbierta) return;
+        if (!cuentaAbierta || type !== 'sidebar') return;
         const alClickAfuera = (e: MouseEvent) => {
             if (cuentaRef.current && !cuentaRef.current.contains(e.target as Node)) {
                 setCuentaAbierta(false);
@@ -251,7 +256,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             document.removeEventListener('mousedown', alClickAfuera);
             document.removeEventListener('keydown', alEscape);
         };
-    }, [cuentaAbierta]);
+    }, [cuentaAbierta, type]);
 
     // Contraer o expandir cambia el ancho del sidebar con una transición de
     // 300ms; el panel es `absolute` contra ese contenedor, así que se quedaría
@@ -430,15 +435,16 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         danger?: boolean;
     }> = ({ icon: Icono, label, onClick, danger }) => (
         <button
-            role="menuitem"
+            type="button"
+            role={isSidebar ? 'menuitem' : undefined}
             onClick={onClick}
-            className={`w-full flex items-center gap-3 px-3 rounded-full text-sm font-semibold transition-colors duration-150 ${ENCIMA} ${danger
+            className={`w-full flex items-center gap-3 px-3 rounded-full ${isSidebar ? 'text-sm' : 'text-[15.5px]'} font-semibold transition-colors duration-150 ${ENCIMA} ${danger
                 ? 'text-[#b42318] dark:text-[#ff8a7a]'
                 : TINTA
                 }`}
-            style={{ height: isSidebar ? 42 : 48 }}
+            style={{ height: isSidebar ? 42 : 52 }}
         >
-            <Icono className="w-[18px] h-[18px] shrink-0" />
+            <Icono className={`${isSidebar ? 'w-[18px] h-[18px]' : 'w-5 h-5'} shrink-0`} strokeWidth={isSidebar ? 2 : 1.75} />
             <span className="truncate">{label}</span>
         </button>
     );
@@ -727,10 +733,27 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     // Como el menú de Facebook: la cuenta arriba de todo —donde el pulgar llega
     // sin estirarse en el teléfono— con su menú abriendo hacia ABAJO, y la
     // marca al pie. Igual en la computadora y en el teléfono.
+    const fotoDeCuenta = currentUser ? (
+        <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
+            {currentUser.avatarUrl ? (
+                <img
+                    src={currentUser.avatarUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
+                    {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
+                </div>
+            )}
+        </div>
+    ) : null;
+
     const chipCuenta = currentUser ? (
         <button
             onClick={() => setCuentaAbierta(v => !v)}
-            aria-haspopup="menu"
+            aria-haspopup={isSidebar ? 'menu' : 'dialog'}
             aria-expanded={cuentaAbierta}
             /* Contraída la tarjeta es sólo la foto, así que
                siempre lleva nombre. */
@@ -740,20 +763,7 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 }`}
         >
             <div className="relative shrink-0">
-                <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
-                    {currentUser.avatarUrl ? (
-                        <img
-                            src={currentUser.avatarUrl}
-                            alt=""
-                            aria-hidden="true"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <div className={`w-full h-full flex items-center justify-center font-semibold ${TINTA} ${isSidebar ? 'text-xs' : 'text-sm'}`}>
-                            {currentUser.name ? currentUser.name.substring(0, 2).toUpperCase() : 'US'}
-                        </div>
-                    )}
-                </div>
+                {fotoDeCuenta}
             </div>
             <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
                 <span className={`max-w-full text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
@@ -767,59 +777,109 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         </button>
     ) : null;
 
-    const menuCuenta = (posicion: string) => (cuentaAbierta && currentUser ? (
-        <div
-            role="menu"
-            /* Contraído el pie mide 80px: si el panel se
-               ajustara al contenedor saldría de 64px de
-               ancho y ninguna etiqueta entraría. Se le fija
-               un ancho propio y desborda sobre el contenido,
-               que es lo que hace cualquier menú de un rail
-               angosto. */
-            className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${posicion}`}
-            style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
-        >
-            {/* Sólo en el navegador: en la app instalada estas
-                dos están en la barra de accesos rápidos (pedido de
-                Ignacio, 5-nov-2026). Acá son la única entrada.
+    /**
+     * Por el mismo cierre que "Cerrar sesión", y recién cuando terminó va al
+     * login: con la sesión viva, /auth rebotaría al inicio. Se limpia el destino
+     * guardado al llegar a esa pantalla (PantallaAutenticacion), porque hasta
+     * entonces SinAcceso lo puede volver a anotar.
+     */
+    const cambiarDeCuenta = async () => {
+        marcarCambioDeCuenta();
+        setCuentaAbierta(false);
+        onClose();
+        await onLogout();
+        navigate(RUTA_CAMBIO_DE_CUENTA, { replace: true });
+    };
 
-                El número de sin leer va sólo en la barra de accesos
-                rápidos (pedido de Ignacio, 5-nov-2026).
-                El modo oscuro sigue viviendo en Mi cuenta.
-                handleNavigation ya cierra el panel de la
-                cuenta y el menú. */}
-            {!estaInstalada() && (
-                <>
+    const rotuloDeCuenta = (texto: string) => (
+        <p
+            aria-hidden="true"
+            className={`m-0 px-3 ${isSidebar ? 'pt-1.5 pb-1' : 'pt-4 pb-1.5'} text-[11px] font-semibold tracking-[.1em] ${M55}`}
+        >
+            {texto}
+        </p>
+    );
+
+    // Dos secciones, las mismas en la compu y en el celular. handleNavigation
+    // ya cierra el panel de la cuenta y el menú.
+    const seccionesDeCuenta = (
+        <>
+            <div role="group" aria-label="App">
+                {rotuloDeCuenta('APP')}
+                {/* Instalada no hay botón de recargar. En el navegador no hay barra
+                    de accesos rápidos: es el camino a Notificaciones. */}
+                {estaInstalada() ? (
+                    <FilaCuenta
+                        icon={RotateCw}
+                        label="Recargar app"
+                        onClick={() => recargarApp('el menú')}
+                    />
+                ) : (
                     <FilaCuenta
                         icon={Bell}
                         label="Notificaciones"
                         onClick={() => handleNavigation('/notificaciones')}
                     />
-                    <FilaCuenta
-                        icon={Settings}
-                        label="Configuración"
-                        onClick={() => handleNavigation('/perfil')}
-                    />
-                </>
-            )}
-            {/* Sólo con la app instalada: ahí no hay barra
-                del navegador ni botón de recargar. */}
-            {estaInstalada() && (
+                )}
+            </div>
+            {isSidebar && <div className={`my-1 mx-2.5 h-px ${GUIA}`} />}
+            <div role="group" aria-label="Gestión de cuenta">
+                {rotuloDeCuenta('GESTIÓN DE CUENTA')}
                 <FilaCuenta
-                    icon={RotateCw}
-                    label="Recargar app"
-                    onClick={() => recargarApp('el menú')}
+                    icon={ArrowLeftRight}
+                    label="Cambiar de cuenta"
+                    onClick={cambiarDeCuenta}
                 />
-            )}
-            <div className={`my-1 mx-2.5 h-px ${GUIA}`} />
-            <FilaCuenta
-                icon={LogOut}
-                label="Cerrar sesión"
-                danger
-                onClick={() => { setCuentaAbierta(false); onLogout(); onClose(); }}
-            />
-        </div>
-    ) : null);
+                <FilaCuenta
+                    icon={UserRound}
+                    label="Perfil"
+                    onClick={() => handleNavigation('/perfil')}
+                />
+                <FilaCuenta
+                    icon={LogOut}
+                    label="Cerrar sesión"
+                    danger
+                    onClick={() => { setCuentaAbierta(false); onLogout(); onClose(); }}
+                />
+            </div>
+        </>
+    );
+
+    // En la compu, el panel que se despliega desde la tarjeta. En el celular, la
+    // hoja de Mi cuenta: va por un portal, así que queda encima del menú, y al
+    // cerrarla el menú sigue donde estaba.
+    const menuCuenta = (posicion: string) => {
+        if (!cuentaAbierta || !currentUser) return null;
+        if (!isSidebar) {
+            return (
+                <Panel abierto onCerrar={() => setCuentaAbierta(false)} etiqueta="Tu cuenta">
+                    <div className={`flex items-center gap-3 px-3 pb-3 border-b ${LINEA}`}>
+                        <div className="shrink-0">{fotoDeCuenta}</div>
+                        <div className="min-w-0 flex flex-col">
+                            <span className={`text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
+                            <span className={`text-[12px] leading-[1.25] font-medium truncate ${M55}`}>{currentUser.email}</span>
+                        </div>
+                    </div>
+                    {seccionesDeCuenta}
+                </Panel>
+            );
+        }
+        return (
+            <div
+                role="menu"
+                /* Contraído el pie mide 80px: si el panel se
+                   ajustara al contenedor saldría de 64px de
+                   ancho y ninguna etiqueta entraría. Se le fija
+                   un ancho propio y desborda sobre el contenido,
+                   que es lo que hace cualquier menú de un rail
+                   angosto. */
+                className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${posicion}`}
+                style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
+            >
+                {seccionesDeCuenta}
+            </div>
+        );
+    };
 
     const botonIngresar = (
         <button

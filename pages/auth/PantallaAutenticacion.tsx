@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { hayCambioDeCuenta, terminarCambioDeCuenta } from '../../src/utils/cambioDeCuenta';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../services/supabaseClient';
@@ -40,7 +41,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     // En desktop este estado existe pero es irrelevante:
     // el splash nunca se renderiza y el formulario
     // siempre se muestra.
-    const [showMobileSplash, setShowMobileSplash] = useState(true);
+    //
+    // Quien viene de "Cambiar de cuenta" (`?ingresar=1`) ya eligió: va directo al
+    // formulario. Ver src/utils/cambioDeCuenta.ts.
+    const vieneDeCambiarCuenta = new URLSearchParams(location.search).get('ingresar') === '1';
+    const [showMobileSplash, setShowMobileSplash] = useState(!vieneDeCambiarCuenta && !hayCambioDeCuenta());
+    useEffect(() => {
+        if (!vieneDeCambiarCuenta) return;
+        terminarCambioDeCuenta();
+        setShowMobileSplash(false);
+        // La cuenta nueva entra al inicio, no adonde estaba la anterior.
+        try { sessionStorage.removeItem('post_login_redirect'); } catch { /* sin storage */ }
+    }, [vieneDeCambiarCuenta]);
     const [loading, setLoading] = useState(false);
     const [registrationComplete, setRegistrationComplete] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
@@ -253,7 +265,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     const handleGoogleLogin = async () => {
         setLoading(true);
         setError(null);
-        const result = await signInWithGoogle();
+        // Si no, Google la vuelve a meter en la misma cuenta.
+        const result = await signInWithGoogle(vieneDeCambiarCuenta ? { elegirCuenta: true } : undefined);
         if (!result.success) {
             setError(result.error || "Error al iniciar sesión con Google.");
         }

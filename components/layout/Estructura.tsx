@@ -19,7 +19,7 @@ interface LayoutProps {
     children: React.ReactNode;
     userRole: UserRole | null;
     currentUser?: User | null;
-    onLogout?: () => void;
+    onLogout?: () => void | Promise<void>;
     appConfig: AppConfig;
     onToggleTheme?: () => void;
     onVolunteerClick?: () => void;
@@ -159,9 +159,8 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     // barra no lo tapa al scrollear (ver contexts/HeroContext.tsx).
     const isNavbarTransparent = isDashboard && (!isScrolled || hasFullBleedHero === 'siempre');
 
-    const handleLogoutAction = () => {
-        onLogout?.();
-    };
+    // Devuelve la promesa: "Cambiar de cuenta" espera a que termine el cierre.
+    const handleLogoutAction = () => onLogout?.();
 
     const renderModuleBackground = () => {
         const modules = db.getModules();

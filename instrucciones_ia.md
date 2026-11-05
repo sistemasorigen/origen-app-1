@@ -433,6 +433,18 @@ La interfaz `MenuItem` soporta `requiresAuth?: boolean`
 para ocultar ítems a usuarios sin sesión aunque
 `roles: []` los haga visibles a todos los autenticados.
 
+**El panel de la cuenta (desde el 5-nov-2026).** En el celular (`type="drawer"`) es la
+hoja `Panel` de `components/miCuenta/piezas.tsx`, encima del menú; al cerrarla, el menú
+sigue abierto. En la compu, el panel que se despliega desde la tarjeta. Las dos tienen
+"APP" (Recargar app instalada; Notificaciones en el navegador, donde no hay barra de
+accesos) y "GESTIÓN DE CUENTA" (Cambiar de cuenta, Perfil, Cerrar sesión).
+
+"Cambiar de cuenta" llama al mismo `onLogout`, lo ESPERA (con la sesión viva, `/auth`
+rebota al inicio) y va a `/auth?ingresar=1`: sin splash, sin `post_login_redirect` y con
+`prompt: 'select_account'` en Google. El login normal no lleva nada de eso. Mientras dura
+el cierre hay una marca en `sessionStorage` (`src/utils/cambioDeCuenta.ts`), porque
+`SinAcceso` manda a `/auth` sin el parámetro y asomaría el splash.
+
 **Grupos de Administración (desde el 29-oct-2026).** "General" va sin rótulo
 (Inicio, GCX, Eventos, Agenda Origen, Prode). "Administración" tiene cinco
 entradas: **GCX** (Panel GCX, Reportes GCX, Panel de anfitriones, Panel de

@@ -32,7 +32,8 @@ interface AuthContextType {
     estadoPerfil: EstadoPerfil;
     needsProfileCompletion: boolean;
     signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-    signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+    /** `elegirCuenta`: Google muestra su selector en vez de entrar con la última cuenta. */
+    signInWithGoogle: (opciones?: { elegirCuenta?: boolean }) => Promise<{ success: boolean; error?: string }>;
     signOut: () => Promise<void>;
     signUp: (firstName: string, lastName: string, phone: string, email: string, pass: string, age: number, gender: string) => Promise<{ success: boolean; error?: string }>;
     resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -489,7 +490,7 @@ const fullUser: User = {
         }
     };
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = async (opciones?: { elegirCuenta?: boolean }) => {
         try {
             // Si hay un destino guardado (ej: volver al
             // modal de un grupo de conexión), Google debe
@@ -513,7 +514,8 @@ const fullUser: User = {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: redirectUrl
+                    redirectTo: redirectUrl,
+                    ...(opciones?.elegirCuenta ? { queryParams: { prompt: 'select_account' } } : {}),
                 }
             });
             if (error) {
