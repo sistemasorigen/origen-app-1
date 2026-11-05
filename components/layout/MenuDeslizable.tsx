@@ -869,7 +869,11 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             className={`absolute z-50 p-1.5 rounded-[22px] ${TARJETA} shadow-[0_14px_40px_rgba(0,0,0,.16)] ${posicion}`}
             style={{ animation: sinMovimiento ? 'none' : 'mdAsoma .16s ease-out' }}
         >
-            {/* Notificaciones primero: es lo que se viene a
+            {/* Sólo en el navegador: en la app instalada estas
+                dos están en la barra de accesos rápidos (pedido de
+                Ignacio, 5-nov-2026). Acá son la única entrada.
+
+                Notificaciones primero: es lo que se viene a
                 hacer acá cuando la foto tiene la marca roja,
                 y la pastilla de la fila es la misma cuenta
                 que esa marca — así se ve CUÁNTAS son antes
@@ -877,20 +881,24 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 El modo oscuro sigue viviendo en Mi cuenta.
                 handleNavigation ya cierra el panel de la
                 cuenta y el menú. */}
-            <FilaCuenta
-                icon={Bell}
-                label="Notificaciones"
-                insignia={sinLeer}
-                etiqueta={sinLeer > 0
-                    ? `Notificaciones, ${sinLeer} sin leer`
-                    : undefined}
-                onClick={() => handleNavigation('/notificaciones')}
-            />
-            <FilaCuenta
-                icon={Settings}
-                label="Configuración"
-                onClick={() => handleNavigation('/perfil')}
-            />
+            {!estaInstalada() && (
+                <>
+                    <FilaCuenta
+                        icon={Bell}
+                        label="Notificaciones"
+                        insignia={sinLeer}
+                        etiqueta={sinLeer > 0
+                            ? `Notificaciones, ${sinLeer} sin leer`
+                            : undefined}
+                        onClick={() => handleNavigation('/notificaciones')}
+                    />
+                    <FilaCuenta
+                        icon={Settings}
+                        label="Configuración"
+                        onClick={() => handleNavigation('/perfil')}
+                    />
+                </>
+            )}
             {/* Sólo con la app instalada: ahí no hay barra
                 del navegador ni botón de recargar. */}
             {estaInstalada() && (

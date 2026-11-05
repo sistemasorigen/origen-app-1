@@ -2022,6 +2022,8 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`; medidas y estados en
 - **Una sola lista de funciones.** `components/layout/menuFunciones.ts` tiene los
   ítems, los grupos, los íconos, las rutas y `puedeVer`. La usan el menú deslizable
   y la hoja de la barra. Una función nueva del menú lleva `id` estable y `corto`.
+- **Menú de la cuenta:** Notificaciones y Configuración salen sólo en el navegador. En la
+  app instalada están en la barra; en el navegador son la única entrada a esas pantallas.
 - **Lo elegido** se guarda en `localStorage`, clave `origen_barra_accesos_<userId>`,
   con el `id` de la función. Si la persona deja de verla, el botón vuelve al "+" y lo
   guardado no se borra: si le devuelven el rol, vuelve solo.
