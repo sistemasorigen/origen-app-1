@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSinLeer } from '../../contexts/NotificationContext';
 import { useInscripcionesDelUsuario } from '../../src/hooks/useInscripcionesDelUsuario';
 import {
     misCompras, misGrupos, misInscripciones,
@@ -135,7 +134,6 @@ const MiCuenta: React.FC = () => {
     const navigate = useNavigate();
     const { seccion: enLaUrl, id } = useParams<{ seccion?: string; id?: string }>();
     const { user, signOut } = useAuth();
-    const sinLeer = useSinLeer();
     const { inscripciones: deGrupos } = useInscripcionesDelUsuario(user);
     const { avisar, Aviso } = useAvisoFlotante();
     const push = usePushNotifications();
@@ -484,7 +482,6 @@ const MiCuenta: React.FC = () => {
             faltan={faltantes.length}
             faltaTexto={faltantes.length === 1 ? `Falta ${faltantes[0].label.toLowerCase()}` : undefined}
             conteos={conteos}
-            sinLeer={sinLeer}
             avisos={{
                 prendido: estadoAvisos === 'prendido',
                 sePuedePrender: (estadoAvisos === 'apagado' || estadoAvisos === 'prendido') && !push.ocupado,

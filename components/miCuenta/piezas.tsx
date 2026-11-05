@@ -216,8 +216,6 @@ export interface FilaProps {
     detalle?: string;
     /** El número a la derecha: cuántos grupos, cuántas compras. */
     valor?: string | number | null;
-    /** La pastilla roja de sin leer. */
-    marca?: number;
     /** Abre algo de afuera de Mi cuenta: la flecha cambia. */
     externa?: boolean;
     activa?: boolean;
@@ -231,7 +229,7 @@ export interface FilaProps {
 }
 
 export const Fila: React.FC<FilaProps> = ({
-    icono, nombre, detalle, valor, marca, externa, activa, onClick,
+    icono, nombre, detalle, valor, externa, activa, onClick,
     interruptor, ayuda, primera,
 }) => {
     const esInterruptor = !!interruptor;
@@ -240,7 +238,6 @@ export const Fila: React.FC<FilaProps> = ({
     const aria = [
         nombre,
         valor ? `, ${valor}` : '',
-        marca ? `, ${marca} sin leer` : '',
     ].join('');
 
     return (
@@ -274,12 +271,6 @@ export const Fila: React.FC<FilaProps> = ({
 
                 {valor ? (
                     <span className="flex-none text-[14.5px] font-medium" style={{ color: 'var(--mc-m50)' }}>{valor}</span>
-                ) : null}
-
-                {marca ? (
-                    <span className="flex-none min-w-[22px] h-[22px] px-[7px] rounded-full bg-[#e5484d] text-white text-[12px] font-bold flex items-center justify-center">
-                        {marca > 9 ? '9+' : marca}
-                    </span>
                 ) : null}
 
                 {esInterruptor ? (

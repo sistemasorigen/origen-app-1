@@ -2008,6 +2008,9 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`; medidas y estados en
   guardado no se borra: si le devuelven el rol, vuelve solo.
 - **Reglas sin pantalla:** `barraAccesosLogica.ts`. Pantalla: `BarraAccesos.tsx` y
   `HojaAccesoRapido.tsx`. Mi cuenta la abre por `useBarraAccesos()`.
+- **El número de sin leer va sólo acá** (Ignacio, 2026-11-05): ni el menú, ni la foto
+  del perfil, ni Mi cuenta llevan marca. Adentro de `/notificaciones` sigue el punto de
+  cada aviso sin leer, y el número del ícono de la app es del sistema.
 - **Contador:** `useSinLeer`, sin otra consulta. El aumento de abrir la app no
   cuenta como "llegó una". Hoy no pasa de 50, porque `fetchNotifications` trae 50 con
   `.limit(50)`: el "99+" recién se va a ver si eso cambia.

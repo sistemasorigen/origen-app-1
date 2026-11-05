@@ -16,7 +16,6 @@ import { hasRole } from '../../services/authUtils';
 import { armarSecciones, coincidencia, type MenuItem, type MenuSection, type SubMenuItem } from './menuFunciones';
 import { supabaseService } from '../../services/supabaseService';
 import { useBloqueoDeFondo } from '../../hooks/useBloqueoDeFondo';
-import { useSinLeer } from '../../contexts/NotificationContext';
 import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
 import { recargarApp } from '../../hooks/useVersionCheck';
 import { estaInstalada } from '../../src/utils/instalacion';
@@ -94,12 +93,6 @@ interface DrawerMenuProps {
 }
 
 /**
- * El rojo de "sin leer": la única excepción a la paleta del menú, porque es
- * lo único que tiene que llamar la atención aunque el ojo esté en otra cosa.
- */
-const ROJO = 'bg-[#e5484d] dark:bg-[#ff6369]';
-
-/**
  * Hamburguesa de la navbar mobile.
  *
  * Sigue exportándose aunque el sidebar de escritorio ya no la use: Estructura.tsx
@@ -161,11 +154,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
     const navRef = useRef<HTMLElement>(null);
     const itemActivoRef = useRef<HTMLButtonElement>(null);
     const sinMovimiento = useReducedMotion();
-    /**
-     * Las que esperan sin leer. El contexto las actualiza en vivo por el
-     * canal de Supabase, así que la marca aparece y se va sola.
-     */
-    const sinLeer = useSinLeer();
     /** De qué departamentos de Agenda Origen es encargado (para "Departamentos"). */
     const accesoAgenda = useAccesoAgenda();
     /** Para los id de aria-controls: sidebar y cajón pueden estar montados a la vez. */
@@ -440,15 +428,10 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         label: string;
         onClick: () => void;
         danger?: boolean;
-        /** Cuántas sin leer: 0 o sin valor, no se dibuja la pastilla. */
-        insignia?: number;
-        /** Para cuando el texto de la fila no alcanza a decir todo. */
-        etiqueta?: string;
-    }> = ({ icon: Icono, label, onClick, danger, insignia = 0, etiqueta }) => (
+    }> = ({ icon: Icono, label, onClick, danger }) => (
         <button
             role="menuitem"
             onClick={onClick}
-            aria-label={etiqueta}
             className={`w-full flex items-center gap-3 px-3 rounded-full text-sm font-semibold transition-colors duration-150 ${ENCIMA} ${danger
                 ? 'text-[#b42318] dark:text-[#ff8a7a]'
                 : TINTA
@@ -457,14 +440,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
         >
             <Icono className="w-[18px] h-[18px] shrink-0" />
             <span className="truncate">{label}</span>
-            {insignia > 0 && (
-                <span
-                    aria-hidden="true"
-                    className={`ml-auto shrink-0 h-[18px] min-w-[18px] px-1.5 flex items-center justify-center rounded-full text-[11px] font-semibold leading-none text-white ${ROJO}`}
-                >
-                    {insignia > 9 ? '9+' : insignia}
-                </span>
-            )}
         </button>
     );
 
@@ -808,8 +783,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 dos están en la barra de accesos rápidos (pedido de
                 Ignacio, 5-nov-2026). Acá son la única entrada.
 
-                Notificaciones primero, con una pastilla que dice
-                cuántas hay y desaparece sola cuando se leen.
+                El número de sin leer va sólo en la barra de accesos
+                rápidos (pedido de Ignacio, 5-nov-2026).
                 El modo oscuro sigue viviendo en Mi cuenta.
                 handleNavigation ya cierra el panel de la
                 cuenta y el menú. */}
@@ -818,10 +793,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                     <FilaCuenta
                         icon={Bell}
                         label="Notificaciones"
-                        insignia={sinLeer}
-                        etiqueta={sinLeer > 0
-                            ? `Notificaciones, ${sinLeer} sin leer`
-                            : undefined}
                         onClick={() => handleNavigation('/notificaciones')}
                     />
                     <FilaCuenta

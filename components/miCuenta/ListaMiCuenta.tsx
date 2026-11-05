@@ -36,7 +36,6 @@ export interface ListaMiCuentaProps {
     /** El nombre del dato que falta, cuando es uno solo. */
     faltaTexto?: string;
     conteos: ConteosDeMiCuenta;
-    sinLeer: number;
     /** Las notificaciones push de este dispositivo: su estado, su detalle y su ayuda. */
     avisos: {
         prendido: boolean;
@@ -109,7 +108,7 @@ const Esqueleto: React.FC = () => (
 );
 
 export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
-    nombre, email, avatarUrl, faltan, faltaTexto, conteos, sinLeer, version,
+    nombre, email, avatarUrl, faltan, faltaTexto, conteos, version,
     avisos, temaOscuro, onAlternarTema, barraAccesos, dirigeGrupos,
     cargando, destacado, onCerrarDestacado, activa, onIr, onIrAfuera,
     onCerrarSesion, onVolver,
@@ -206,7 +205,7 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                     </GrupoDeFilas>
 
                     <GrupoDeFilas titulo="PREFERENCIAS">
-                        <Fila primera icono={ICONOS.campana} nombre="Notificaciones" marca={sinLeer}
+                        <Fila primera icono={ICONOS.campana} nombre="Notificaciones"
                             onClick={() => onIrAfuera('/notificaciones')} />
                         {/* Notificaciones push de este dispositivo: el
                             interruptor las prende (pide el permiso con este
