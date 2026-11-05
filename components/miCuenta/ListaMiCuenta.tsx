@@ -48,6 +48,11 @@ export interface ListaMiCuentaProps {
     };
     temaOscuro: boolean;
     onAlternarTema: () => void;
+    /**
+     * La barra de accesos rápidos. Sin `onAbrir`, estamos en el navegador: la
+     * fila explica que es de la app instalada y lleva a cómo instalarla.
+     */
+    barraAccesos: { detalle: string; onAbrir?: () => void };
     /** "Mis grupos" es de anfitriones: sin grupos a cargo, la fila no va. */
     dirigeGrupos: boolean;
     version: string;
@@ -105,7 +110,7 @@ const Esqueleto: React.FC = () => (
 
 export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
     nombre, email, avatarUrl, faltan, faltaTexto, conteos, sinLeer, version,
-    avisos, temaOscuro, onAlternarTema, dirigeGrupos,
+    avisos, temaOscuro, onAlternarTema, barraAccesos, dirigeGrupos,
     cargando, destacado, onCerrarDestacado, activa, onIr, onIrAfuera,
     onCerrarSesion, onVolver,
 }) => {
@@ -219,7 +224,16 @@ export const ListaMiCuenta: React.FC<ListaMiCuentaProps> = ({
                             ayuda={avisos.ayuda ? { texto: avisos.ayuda, onClick: avisos.onAyuda } : undefined} />
                         <Fila icono={ICONOS.luna} nombre="Modo oscuro"
                             interruptor={{ prendido: temaOscuro, onChange: onAlternarTema }} />
+                        <Fila icono={ICONOS.barra} nombre="Barra de accesos rápidos"
+                            detalle={barraAccesos.detalle}
+                            onClick={barraAccesos.onAbrir ?? (() => onIr('instalar'))}
+                            ayuda={barraAccesos.onAbrir ? undefined : { texto: 'Cómo instalarla', onClick: () => onIr('instalar') }} />
                     </GrupoDeFilas>
+                    {barraAccesos.onAbrir && (
+                        <p className="mt-3 mx-1.5 mb-0 text-[13px] leading-[1.5] font-medium" style={{ color: 'var(--mc-m50)' }}>
+                            La barra aparece solo en la app instalada en tu pantalla de inicio.
+                        </p>
+                    )}
 
                     <GrupoDeFilas titulo="CUENTA Y SEGURIDAD">
                         <Fila primera icono={ICONOS.escudo} nombre="Cuenta y seguridad"

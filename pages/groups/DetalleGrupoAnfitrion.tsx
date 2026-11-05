@@ -506,7 +506,7 @@ const DetalleGrupoAnfitrion: React.FC<{ currentUser: User }> = ({ currentUser })
 
                 {/* La asistencia se saca del flujo: siempre alcanzable con el
                     pulgar, incluso parado en la reunión y con la lista scrolleada. */}
-                <div className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
+                <div data-fijo-abajo="" className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
                     <div className="shadow-[0_6px_22px_rgba(0,0,0,.18)] rounded-full">{BotonAsistencia}</div>
                 </div>
             </div>

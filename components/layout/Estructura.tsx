@@ -8,6 +8,9 @@ import { BarraDeAppContext } from '../../contexts/BarraDeApp';
 
 import GlobalPlayer from './ReproductorGlobal';
 import DrawerMenu, { HamburgerButton } from './MenuDeslizable';
+import BarraAccesos, { BarraAccesosContext, type ApiDeBarra } from './BarraAccesos';
+import { espacioReservado } from './barraAccesosLogica';
+import { plataforma, useInstalacion } from '../../src/utils/instalacion';
 import { useAudio } from '../../contexts/AudioContext';
 import { Sun, Moon } from 'lucide-react';
 import { useAttendanceReminder } from '../../hooks/useAttendanceReminder';
@@ -74,6 +77,11 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     const location = useLocation();
     const navigate = useNavigate();
     const { currentSong } = useAudio();
+    const { instalada } = useInstalacion();
+    // La barra de accesos rápidos: sólo en la app instalada, con sesión y en
+    // pantallas con navegación. En el navegador nada de esto cambia.
+    const conBarra = instalada && !!currentUser && !sinNavegacion;
+    const [apiDeBarra, setApiDeBarra] = useState<ApiDeBarra | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
@@ -191,6 +199,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
     return (
         <HeroLayoutContext.Provider value={heroLayout}>
         <BarraDeAppContext.Provider value={barraDeApp}>
+        <BarraAccesosContext.Provider value={apiDeBarra}>
         <div className="min-h-screen flex font-sans text-slate-900 dark:text-white bg-slate-50 dark:bg-black transition-colors duration-300 relative">
 
             {/* Desktop Sidebar */}
@@ -328,15 +337,19 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                     que no se pierde el acceso al menú al scrollear. */}
                 <main
                     id="main-content"
-                    className={`flex-1 w-full mx-auto animate-fadeIn relative z-10 print:max-w-none print:p-0 print:m-0 ${isDashboard ? '-mt-16 print:mt-0' : ''} ${!isFullWidthPage ? 'max-w-7xl px-4 sm:px-6 lg:px-8 py-8' : ''} ${currentSong ? 'pb-32' : 'pb-8'}`}
+                    className={`flex-1 w-full mx-auto animate-fadeIn relative z-10 print:max-w-none print:p-0 print:m-0 ${isDashboard ? '-mt-16 print:mt-0' : ''} ${!isFullWidthPage ? 'max-w-7xl px-4 sm:px-6 lg:px-8 py-8' : ''} ${conBarra ? '' : currentSong ? 'pb-32' : 'pb-8'}`}
+                    style={conBarra ? { paddingBottom: espacioReservado(plataforma(), !!currentSong) } : undefined}
                     role="main"
                 >
                     {children}
                 </main>
 
-                <GlobalPlayer />
+                {/* Con la barra, la música va en el mini pegado a ella. */}
+                {!conBarra && <GlobalPlayer />}
+                {conBarra && currentUser && <BarraAccesos currentUser={currentUser} alPublicar={setApiDeBarra} />}
             </div>
         </div>
+        </BarraAccesosContext.Provider>
         </BarraDeAppContext.Provider>
         </HeroLayoutContext.Provider>
     );

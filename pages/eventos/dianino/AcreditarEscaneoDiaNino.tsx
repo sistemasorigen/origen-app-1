@@ -194,7 +194,7 @@ const AcreditarEscaneoDiaNino: React.FC = () => {
 
             </div>
 
-            <div className="p-4 sticky bottom-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-8">
+            <div data-fijo-abajo="" className="p-4 sticky bottom-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-8">
                 <button
                     onClick={handleAcreditar}
                     disabled={saving}

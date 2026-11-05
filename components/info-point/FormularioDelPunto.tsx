@@ -101,7 +101,7 @@ export const BarraDeRevisar: React.FC<{
     detalle?: string;
     deshabilitado?: boolean;
 }> = ({ form, resumen, detalle, deshabilitado }) => createPortal(
-    <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)]">
+    <div data-fijo-abajo="" className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)]">
         <div className="w-full max-w-lg mx-auto px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center gap-4">
             <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-bold tracking-tight text-black leading-tight truncate">{resumen}</p>

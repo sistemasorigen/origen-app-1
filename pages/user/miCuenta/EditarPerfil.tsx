@@ -308,6 +308,7 @@ export const EditarPerfil: React.FC<EditarPerfilProps> = ({ onVolver, onCambios,
             {/* El pie, pegado abajo: se edita el perfil con una mano y el
                 teclado ocupa media pantalla. */}
             <div
+                data-fijo-abajo={hayCambios ? '' : undefined}
                 className="sticky bottom-0 -mx-4 lg:mx-0 mt-5 px-4 lg:px-0 pt-3 pb-7 lg:pb-4"
                 style={{
                     background: 'var(--mc-bg)',

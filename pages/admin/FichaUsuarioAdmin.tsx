@@ -649,7 +649,7 @@ const FichaUsuarioAdmin: React.FC<Props> = ({
                             ))}
 
                             {cantidadCambiosRoles > 0 && !creando && (
-                                <div className="sticky bottom-3 flex flex-wrap items-center gap-2 rounded-[20px] bg-[#0a0a0a] px-[18px] py-3.5">
+                                <div data-fijo-abajo="" className="sticky bottom-3 flex flex-wrap items-center gap-2 rounded-[20px] bg-[#0a0a0a] px-[18px] py-3.5">
                                     <span className="min-w-0 flex-1 text-[12.5px] font-medium text-white/70">
                                         {cantidadCambiosRoles === 1 ? '1 cambio sin guardar' : `${cantidadCambiosRoles} cambios sin guardar`}
                                     </span>

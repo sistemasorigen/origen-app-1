@@ -2004,11 +2004,46 @@ estado está en `default`), y `env(safe-area-inset-*)` vale 0 en todos lados.
   `HojaDetalle`, `EnlacesOrigen`, `piezasAdmin`, `AdminGCXLayout`,
   `DetalleDiaNino`, `DetalleNocturna`, `PaginaSolicitudesGrupo`,
   `InfluosPagina`, `PaginaReportarStock` (modal) y `Notificaciones`;
+- la barra de accesos rápidos: `distanciaAbajo` en `barraAccesosLogica.ts`;
 - las que ya suman `env(safe-area-inset-bottom)` (hoy valen 0):
   `DetalleTarea`, `HojaGrupos`, `PanelGuardado`, `FormularioDelPunto`,
   `MenuDeslizable` (pie), `Administrador`, `FormularioDepartamento`,
   `SelectorDeRango`, `equipo/piezas`, `PaginaMovimientosVarios`,
   `PaginaReportarStock`, `CompraVoluntarios`; y `Eventos.tsx` arriba.
+
+### Barra de accesos rápidos (desde el 2026-11-04)
+Diseño: `design-claude/Barra de accesos rapidos.dc.html`; medidas y estados en
+`design-claude/INVENTARIO-BARRA-ACCESOS.md`.
+
+- **Sólo en la app instalada, con sesión y con navegación.** Lo decide
+  `Estructura.tsx` (`conBarra`), que en otro caso no monta nada: en el navegador
+  no hay ni una consulta de más y el reproductor y el espacio de abajo siguen
+  iguales.
+- **Una sola lista de funciones.** `components/layout/menuFunciones.ts` tiene los
+  ítems, los grupos, los íconos, las rutas y `puedeVer`. La usan el menú deslizable
+  y la hoja de la barra. Una función nueva del menú lleva `id` estable y `corto`.
+- **Lo elegido** se guarda en `localStorage`, clave `origen_barra_accesos_<userId>`,
+  con el `id` de la función. Si la persona deja de verla, el botón vuelve al "+" y lo
+  guardado no se borra: si le devuelven el rol, vuelve solo.
+- **Reglas sin pantalla:** `barraAccesosLogica.ts`. Pantalla: `BarraAccesos.tsx` y
+  `HojaAccesoRapido.tsx`. Mi cuenta la abre por `useBarraAccesos()`.
+- **Contador:** `useSinLeer`, sin otra consulta. El aumento de abrir la app no
+  cuenta como "llegó una". Hoy no pasa de 50, porque `fetchNotifications` trae 50 con
+  `.limit(50)`: el "99+" recién se va a ver si eso cambia.
+- **Cuándo baja, sin tocar cada hoja** (`SELECTOR_TAPA` más
+  `body[data-modal-active]`): `useBloqueoDeFondo`, `aria-modal`, `role="dialog"` o un
+  `.fixed.inset-0` activo. Un `MutationObserver` lo mira una vez por cuadro.
+- **`data-fijo-abajo`:** toda botonera fija o pegada abajo de una PANTALLA lo lleva, o
+  la barra le queda encima. Si esa botonera no hace falta siempre, se pone sólo cuando
+  hace falta: en `EditarPerfil` va sólo con cambios, porque en la compu esa pantalla
+  está siempre abierta en /perfil.
+- **Es un `<nav>` con `contenido-del-overlay`:** sin esa clase, `index.css` le pone
+  `display:none` al abrir un modal y no llega a bajar animando.
+- **Reproductor:** con la barra no se monta el de 96 px: va el mini del diseño, pegado
+  arriba de ella, sólo con reproducir y pausar.
+- **Espacio:** `main` deja `espacioReservado` en lugar de `pb-8` o `pb-32`.
+- **Al mirar capturas:** el WebKit de Playwright en Windows muestra Manrope fina aunque
+  el peso calculado sea 700; en Chromium la misma pantalla se ve con su peso.
 
 ---
 

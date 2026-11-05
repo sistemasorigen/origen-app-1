@@ -15,6 +15,7 @@ import {
 } from '../../components/miCuenta/piezas';
 import { ESTILOS_DESTACADA, type Destacado } from '../../components/miCuenta/Destacada';
 import ListaMiCuenta, { type SeccionDeMiCuenta } from '../../components/miCuenta/ListaMiCuenta';
+import { useBarraAccesos } from '../../components/layout/BarraAccesos';
 import {
     ayudaDeAvisos, detalleDeAvisos, esIOS,
     PASOS_ANDROID, PASOS_IPHONE_AJUSTES,
@@ -473,6 +474,7 @@ const MiCuenta: React.FC = () => {
     };
 
     const version = (typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : 'dev').slice(0, 7);
+    const barra = useBarraAccesos();
 
     const lista = (
         <ListaMiCuenta
@@ -501,6 +503,9 @@ const MiCuenta: React.FC = () => {
                     }
                 },
             }}
+            barraAccesos={barra
+                ? { detalle: barra.elegido ? `Tu 5.º botón: ${barra.elegido.label}` : 'Elegí qué va en el 5.º botón', onAbrir: barra.abrirHoja }
+                : { detalle: 'Solo en la app instalada' }}
             temaOscuro={oscuro}
             onAlternarTema={alternar}
             dirigeGrupos={dirigidos.length > 0 || esAnfitrion(user)}

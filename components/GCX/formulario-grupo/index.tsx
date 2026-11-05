@@ -1067,7 +1067,7 @@ const FormularioGrupo: React.FC<PropsFormularioGrupo> = ({
             {/* La píldora de guardar sólo aparece cuando hay algo para guardar,
                 y dice cuánto. En escritorio vive en el encabezado. */}
             {angosto && (puedeGuardar || guardando || esCrear || esReabrir) && (
-                <div className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
+                <div data-fijo-abajo="" className="fixed left-0 right-0 bottom-0 px-4 pt-3.5 pb-5 bg-gradient-to-t from-[#f6f6f4] from-[62%] to-transparent dark:from-[#111110]">
                     <div className="max-w-[430px] mx-auto">{botonGuardar}</div>
                 </div>
             )}

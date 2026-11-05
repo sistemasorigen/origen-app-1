@@ -524,7 +524,7 @@ const CrearEventoGeneral: React.FC = () => {
 
             {/* ── La barra de abajo, en el teléfono ── */}
             {!esCompu && (
-                <div className={`fixed left-0 right-0 bottom-0 z-40 px-4 pt-2.5 pb-[34px] border-t ${T.linea} ${T.fondo}`}>
+                <div data-fijo-abajo="" className={`fixed left-0 right-0 bottom-0 z-40 px-4 pt-2.5 pb-[34px] border-t ${T.linea} ${T.fondo}`}>
                     {!!razon && <p className={`m-0 mb-2 text-center text-[13px] font-semibold ${T.suave}`}>{razon}</p>}
                     <div className="flex gap-2">
                         {botonCancelar}

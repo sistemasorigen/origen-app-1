@@ -750,7 +750,7 @@ const AudienciaServiciosFormulario: React.FC<Props> = () => {
             </div>
 
             {/* ── Pie con la navegación ── */}
-            <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#ecebe8] bg-white px-4 pb-4 pt-3 md:px-7 md:py-3.5">
+            <div data-fijo-abajo="" className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#ecebe8] bg-white px-4 pb-4 pt-3 md:px-7 md:py-3.5">
                 <div className="mx-auto max-w-[1160px]">
                     <div className="mb-2.5 flex items-center justify-between gap-2.5 lg:hidden">
                         <span className="truncate text-[12.5px] font-semibold text-[#0a0a0a]">

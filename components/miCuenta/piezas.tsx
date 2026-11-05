@@ -160,6 +160,7 @@ export const Rotulo: React.FC<{ children: React.ReactNode; className?: string }>
 
 /** Los íconos del .dc, tal cual. */
 export const ICONOS: Record<string, string> = {
+    barra: 'M7 3h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7a4 4 0 014-4zM7 16.5h10',
     grupos: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20a6.5 6.5 0 0113 0M16 4.3a3.5 3.5 0 010 6.4M17.5 14a6.5 6.5 0 014 6',
     calendario: 'M4 6.5h16v13H4zM4 10.5h16M8.5 4v4M15.5 4v4',
     historial: 'M4 12a8 8 0 102.4-5.7M4 4.5V9h4.5M12 8v4.5l3 2',
