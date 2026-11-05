@@ -344,8 +344,7 @@ const Layout: React.FC<LayoutProps> = ({ children, userRole, currentUser, onLogo
                     {children}
                 </main>
 
-                {/* Con la barra, la música va en el mini pegado a ella. */}
-                {!conBarra && <GlobalPlayer />}
+                <GlobalPlayer />
                 {conBarra && currentUser && <BarraAccesos currentUser={currentUser} alPublicar={setApiDeBarra} />}
             </div>
         </div>

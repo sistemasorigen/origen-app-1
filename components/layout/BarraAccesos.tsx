@@ -8,7 +8,7 @@ import { useAccesoAgenda } from '../../hooks/useAccesoAgenda';
 import { supabaseService } from '../../services/supabaseService';
 import { plataforma } from '../../src/utils/instalacion';
 import {
-    ACHIQUE_DE_TECLADO, ALTO_MINI, ANCHO_SIN_TECLADO, BOTONES_FIJOS, ICONO_CAMPANA, LUGAR_PERSONALIZADO, SELECTOR_TAPA, SEPARACION_MINI,
+    ACHIQUE_DE_TECLADO, ANCHO_SIN_TECLADO, BOTONES_FIJOS, ICONO_CAMPANA, LUGAR_PERSONALIZADO, SELECTOR_TAPA,
     abreTeclado, botonActivo, compactaAlMover, distanciaAbajo, etiquetaDeNotificaciones, guardarElegido, leerElegido,
     medidasDeBarra, resolverElegido, textoDelContador, yaEstaEn,
 } from './barraAccesosLogica';
@@ -152,7 +152,7 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
     const sinLeer = useSinLeer();
     const { isLoading: cargandoAvisos } = useNotificationContext();
     const llegadas = useLlegoUnaNueva(sinLeer, cargandoAvisos);
-    const { currentSong, isPlaying, togglePlay } = useAudio();
+    const { currentSong } = useAudio();
 
     // ── Qué puede ver esta persona: lo mismo que decide el menú ──
     const agenda = useAccesoAgenda();
@@ -294,12 +294,12 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
     const m = medidasDeBarra(achicada);
     const activo = botonActivo(location.pathname, elegido);
     const pl = plataforma();
-    const abajo = distanciaAbajo(pl);
+    const abajo = distanciaAbajo(pl, !!currentSong);
     const sinTrans = sinMovimiento;
     const transicionBarra = sinTrans ? 'none' : `width ${CURVA}, height ${CURVA}, padding ${CURVA}, bottom ${CURVA}, transform ${CURVA}, opacity 200ms ease`;
     const transformada = escondida ? 'translate(-50%, 160%)' : 'translate(-50%, 0)';
     const opacidad = escondida ? 0 : 1;
-    const avisoAbajo = (escondida ? 24 : abajo + m.alto + 14 + (currentSong ? ALTO_MINI + SEPARACION_MINI : 0));
+    const avisoAbajo = escondida ? abajo + 12 : abajo + m.alto + 14;
     const colorDe = (i: number) => (activo === i ? 'var(--qb-prim-tinta)' : 'var(--qb-m62)');
     const estiloBoton = (i: number): React.CSSProperties => ({
         position: 'relative', zIndex: 1, width: m.anchos[i], height: m.altoBoton, padding: 0, border: 0, borderRadius: 999,
@@ -325,29 +325,6 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
         <>
             <style>{ESTILOS}</style>
             <div id="barra-accesos" className="print:hidden" style={{ fontFamily: 'Manrope, system-ui, sans-serif' }}>
-                {currentSong && (
-                    <div
-                        data-mini-reproductor=""
-                        aria-hidden={escondida || undefined}
-                        inert={escondida || undefined}
-                        style={{
-                            position: 'fixed', zIndex: 44, left: '50%', bottom: abajo + m.alto + SEPARACION_MINI, width: m.ancho, height: ALTO_MINI,
-                            transform: transformada, opacity: opacidad, transition: transicionBarra,
-                            borderRadius: 22, padding: '0 6px 0 8px', display: 'flex', alignItems: 'center', gap: 10,
-                            background: 'var(--qb-tarjeta)', color: 'var(--qb-ink)', boxShadow: 'var(--qb-sombra)',
-                        }}
-                    >
-                        <img src={currentSong.coverUrl} alt="" style={{ width: 36, height: 36, flex: 'none', borderRadius: 10, objectFit: 'cover', background: 'var(--qb-chip)' }} />
-                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</span>
-                            <span style={{ fontSize: 11.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--qb-m55)' }}>{currentSong.artist}</span>
-                        </span>
-                        <button type="button" onClick={togglePlay} aria-label={isPlaying ? 'Pausar' : 'Reproducir'} style={{ width: 44, height: 44, flex: 'none', border: 0, borderRadius: 999, background: 'var(--qb-prim)', color: 'var(--qb-prim-tinta)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={isPlaying ? 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z' : 'M8 5.5v13l11-6.5z'} /></svg>
-                        </button>
-                    </div>
-                )}
-
                 {/* contenido-del-overlay: index.css le pondría display:none a todo
                     <nav> con un modal abierto, y la barra no alcanzaría a bajar. */}
                 <nav

@@ -52,8 +52,9 @@ export const medidasDeBarra = (compacta: boolean): MedidasDeBarra => {
     };
 };
 
-export const ALTO_MINI = 52;
-export const SEPARACION_MINI = 8;
+/** Lo que mide el reproductor de abajo, y lo que la barra se separa de él. */
+const ALTO_REPRODUCTOR = 96;
+const SEPARACION_REPRODUCTOR = 12;
 
 /**
  * A cuánto del borde de abajo de la PÁGINA va la barra.
@@ -61,13 +62,17 @@ export const SEPARACION_MINI = 8;
  * El diseño mide desde el borde físico (24 en el iPhone, 20 en Android). Acá no
  * hay viewport-fit=cover: en un teléfono la página ya termina arriba de la barra
  * de gestos y no se puede bajar más, así que se deja lo justo para que no
- * se corte la sombra. En la compu no hay gestos: los 24 del diseño.
+ * se corte la sombra. En la compu no hay gestos: los 24 del diseño. Con música,
+ * flota arriba del reproductor, sin taparlo.
  */
-export const distanciaAbajo = (p: Plataforma): number => (p === 'compu' ? 24 : 12);
+export const distanciaAbajo = (p: Plataforma, conReproductor: boolean): number => {
+    if (conReproductor) return ALTO_REPRODUCTOR + SEPARACION_REPRODUCTOR;
+    return p === 'compu' ? 24 : 12;
+};
 
 /** Lo que tiene que dejar libre el final de cada pantalla. */
-export const espacioReservado = (p: Plataforma, conMini: boolean): number =>
-    distanciaAbajo(p) + 72 + 20 + (conMini ? ALTO_MINI + SEPARACION_MINI : 0);
+export const espacioReservado = (p: Plataforma, conReproductor: boolean): number =>
+    distanciaAbajo(p, conReproductor) + 72 + 20;
 
 // ── Contador ───────────────────────────────────────────────────────────────
 

@@ -89,6 +89,8 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`. Los nombres que apare
 | Con reproductor | el de 96 px abajo y la barra 12 px arriba de él |
 | Mini · **Propuesta** | sin el de 96 px: una tarjeta de 52 de alto, 8 px arriba de la barra y de su mismo ancho, con carátula de 36, título, artista y un botón de 44. Se achica y se esconde con la barra |
 
+**Implementado:** "Con reproductor". El mini se descartó (Ignacio, 2026-11-04).
+
 ## Espacio abajo
 
-Lo que se deja al final de la pantalla: abajo de la barra + 72 + 20 (+ 60 con el mini).
+Lo que se deja al final de la pantalla: abajo de la barra + 72 + 20.
