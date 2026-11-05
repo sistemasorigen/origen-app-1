@@ -303,22 +303,19 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
     const avisoAbajo = escondida ? abajo + 12 : abajo + m.alto + 14;
     const colorDe = (i: number) => (activo === i ? 'var(--qb-prim-tinta)' : 'var(--qb-m62)');
     const estiloBoton = (i: number): React.CSSProperties => ({
-        position: 'relative', zIndex: 1, width: m.anchos[i], height: m.altoBoton, padding: 0, border: 0, borderRadius: 999,
+        position: 'relative', zIndex: 1, width: m.anchoBoton, height: m.altoBoton, padding: 0, border: 0, borderRadius: 999,
         background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer', WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'manipulation',
         color: colorDe(i), transition: sinTrans ? 'none' : `width ${CURVA}, height ${CURVA}, color .2s`,
     });
-    const estiloIcono: React.CSSProperties = {
-        display: 'flex', alignItems: 'center', justifyContent: 'center', height: 24,
-        transform: `scale(${achicada ? .8 : 1})`, transition: sinTrans ? 'none' : `transform ${CURVA}`,
-    };
-    const estiloNombre: React.CSSProperties = {
-        display: 'block', overflow: 'visible', whiteSpace: 'nowrap', fontSize: 10, lineHeight: '13px', fontWeight: 700, letterSpacing: '-.015em',
-        marginTop: achicada ? 0 : 4, maxHeight: achicada ? 0 : 13, opacity: achicada ? 0 : 1,
-        transition: sinTrans ? 'none' : `opacity 160ms ease, max-height ${CURVA}, margin ${CURVA}`,
-    };
+    const estiloIcono: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center' };
     const trazo = (i: number) => (activo === i ? 2.25 : 1.75);
-    const izquierdaPastilla = m.anchos.slice(0, activo ?? 0).reduce((a, b) => a + b, 0);
+    const izquierdaPastilla = m.anchoBoton * (activo ?? 0);
+    // En tamaño real y no con scale: un scale encogería también al contador.
+    const crece = sinTrans ? 'none' : `width ${CURVA}, height ${CURVA}`;
+    const tamIcono: React.CSSProperties = { width: m.icono, height: m.icono, transition: crece };
+    /** Sólo en la compu: en un teléfono, mantener apretado es para cambiar el botón. */
+    const tooltip = (nombre: string) => (pl === 'compu' ? nombre : undefined);
     const animar = !sinMovimiento;
     const Elegido = elegido?.icon;
 
@@ -347,7 +344,7 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                         <span
                             aria-hidden="true"
                             style={{
-                                position: 'absolute', zIndex: 0, top: 0, left: izquierdaPastilla, width: m.anchos[activo ?? 0], height: m.altoBoton,
+                                position: 'absolute', zIndex: 0, top: 0, left: izquierdaPastilla, width: m.anchoBoton, height: m.altoBoton,
                                 borderRadius: 999, background: 'var(--qb-prim)', pointerEvents: 'none', opacity: activo === null ? 0 : 1,
                                 transition: sinTrans ? 'none' : `left 260ms cubic-bezier(.3,.8,.2,1), width ${CURVA}, height ${CURVA}, opacity .2s`,
                             }}
@@ -360,6 +357,7 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                                     type="button"
                                     onClick={() => irA(boton.ruta)}
                                     aria-label={esCampana ? etiquetaDeNotificaciones(sinLeer) : boton.nombre}
+                                    title={tooltip(boton.nombre)}
                                     aria-current={activo === i ? 'page' : undefined}
                                     style={estiloBoton(i)}
                                 >
@@ -369,8 +367,8 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                                                 <svg
                                                     key={`campana-${llegadas}`}
                                                     data-campana=""
-                                                    width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={trazo(i)} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-                                                    style={{ transformOrigin: '50% 8%', animation: llegadas && animar ? 'qbRing .75s ease-out' : 'none' }}
+                                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={trazo(i)} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                                                    style={{ ...tamIcono, transformOrigin: '50% 8%', animation: llegadas && animar ? 'qbRing .75s ease-out' : 'none' }}
                                                 >
                                                     <path d={ICONO_CAMPANA} />
                                                 </svg>
@@ -380,9 +378,13 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                                                         data-contador=""
                                                         aria-hidden="true"
                                                         style={{
-                                                            position: 'absolute', top: -6, left: 13, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
+                                                            // Arriba a la derecha de la campana, con su propio
+                                                            // tamaño: achicada tiene que seguir leyéndose.
+                                                            position: 'absolute', top: -7, left: achicada ? 14 : 17,
+                                                            minWidth: achicada ? 16 : 18, height: achicada ? 16 : 18, padding: achicada ? '0 4px' : '0 5px', borderRadius: 999,
+                                                            transition: sinTrans ? 'none' : `top ${CURVA}, left ${CURVA}`,
                                                             background: '#e5484d', color: '#fff', boxShadow: `0 0 0 2px var(${activo === i ? '--qb-prim' : '--qb-tarjeta'})`,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, lineHeight: 1,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: achicada ? 10 : 11, fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap',
                                                             animation: llegadas && animar ? 'qbPop .35s cubic-bezier(.3,.7,.3,1.4)' : 'none',
                                                         }}
                                                     >
@@ -391,12 +393,11 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                                                 )}
                                             </span>
                                         ) : (
-                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={trazo(i)} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={trazo(i)} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={tamIcono}>
                                                 <path d={boton.icono} />
                                             </svg>
                                         )}
                                     </span>
-                                    <span style={estiloNombre}>{boton.nombre}</span>
                                 </button>
                             );
                         })}
@@ -411,33 +412,32 @@ const BarraAccesos: React.FC<{ currentUser: User; alPublicar: (api: ApiDeBarra |
                                 onPointerCancel={soltar}
                                 onContextMenu={e => e.preventDefault()}
                                 aria-label={`${elegido.label}. Mantené apretado para cambiarlo`}
+                                title={tooltip(elegido.label)}
                                 aria-current={activo === LUGAR_PERSONALIZADO ? 'page' : undefined}
                                 style={estiloBoton(LUGAR_PERSONALIZADO)}
                             >
                                 <span style={estiloIcono}>
                                     <Elegido
                                         key={animarElegido}
-                                        size={22}
                                         strokeWidth={trazo(LUGAR_PERSONALIZADO)}
                                         aria-hidden="true"
-                                        style={{ animation: animarElegido && animar ? 'qbIn .35s ease both' : 'none' }}
+                                        style={{ ...tamIcono, animation: animarElegido && animar ? 'qbIn .35s ease both' : 'none' }}
                                     />
                                 </span>
-                                <span style={estiloNombre}>{elegido.corto ?? elegido.label}</span>
                             </button>
                         ) : (
                             <button
                                 type="button"
                                 onClick={() => setHoja({ editar: false })}
                                 aria-label="Agregar un acceso rápido"
+                                title={tooltip('Agregar')}
                                 style={estiloBoton(LUGAR_PERSONALIZADO)}
                             >
                                 <span style={estiloIcono}>
-                                    <span style={{ width: 28, height: 28, borderRadius: 999, boxShadow: 'inset 0 0 0 1.75px currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: animar ? 'qbIn .3s ease both' : 'none' }}>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                                    <span style={{ width: m.circuloMas, height: m.circuloMas, transition: crece, borderRadius: 999, boxShadow: 'inset 0 0 0 1.75px currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: animar ? 'qbIn .3s ease both' : 'none' }}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" aria-hidden="true" style={{ width: m.mas, height: m.mas, transition: crece }}><path d="M12 5v14M5 12h14" /></svg>
                                     </span>
                                 </span>
-                                <span style={estiloNombre}>Agregar</span>
                             </button>
                         )}
                     </div>

@@ -34,21 +34,31 @@ export const LUGAR_PERSONALIZADO = 4;
 // ── Medidas ────────────────────────────────────────────────────────────────
 
 export interface MedidasDeBarra {
-    anchos: number[];
+    anchoBoton: number;
     altoBoton: number;
     relleno: number;
     alto: number;
     ancho: number;
+    icono: number;
+    /** El círculo y la cruz del "+". */
+    circuloMas: number;
+    mas: number;
 }
 
+const CANTIDAD_DE_BOTONES = 5;
+
+/** Botones parejos, sólo con el ícono. Achicada, el 70% de lo normal. */
 export const medidasDeBarra = (compacta: boolean): MedidasDeBarra => {
-    const anchos = compacta ? [46, 46, 46, 46, 46] : [62, 62, 86, 62, 62];
-    const altoBoton = compacta ? 42 : 60;
+    const anchoBoton = compacta ? 42 : 60;
+    const altoBoton = compacta ? 40 : 56;
     const relleno = compacta ? 4 : 6;
     return {
-        anchos, altoBoton, relleno,
+        anchoBoton, altoBoton, relleno,
         alto: altoBoton + relleno * 2,
-        ancho: anchos.reduce((a, b) => a + b, 0) + relleno * 2,
+        ancho: anchoBoton * CANTIDAD_DE_BOTONES + relleno * 2,
+        icono: compacta ? 19 : 27,
+        circuloMas: compacta ? 24 : 34,
+        mas: compacta ? 14 : 20,
     };
 };
 
@@ -72,7 +82,7 @@ export const distanciaAbajo = (p: Plataforma, conReproductor: boolean): number =
 
 /** Lo que tiene que dejar libre el final de cada pantalla. */
 export const espacioReservado = (p: Plataforma, conReproductor: boolean): number =>
-    distanciaAbajo(p, conReproductor) + 72 + 20;
+    distanciaAbajo(p, conReproductor) + medidasDeBarra(false).alto + 20;
 
 // ── Contador ───────────────────────────────────────────────────────────────
 

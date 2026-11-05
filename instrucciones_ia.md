@@ -2041,6 +2041,10 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`; medidas y estados en
 - **Reproductor:** es el de siempre, de 96 px, y la barra flota 12 px arriba de él. El
   mini que proponía el diseño se descartó (Ignacio, 2026-11-04).
 - **Espacio:** `main` deja `espacioReservado` en lugar de `pb-8` o `pb-32`.
+- **Sin nombres (Ignacio, 2026-11-05):** sólo íconos, en botones parejos: 60 × 56 con
+  ícono de 27 y, achicada, 42 × 40 con ícono de 19 (`medidasDeBarra`). El nombre queda en
+  el `aria-label` y, en la compu, como `title`. El tamaño achicado es real y no un `scale`,
+  que encogería también al contador. `corto` en `menuFunciones.ts` ya no se muestra.
 - **Al mirar capturas:** el WebKit de Playwright en Windows muestra Manrope fina aunque
   el peso calculado sea 700; en Chromium la misma pantalla se ve con su peso.
 

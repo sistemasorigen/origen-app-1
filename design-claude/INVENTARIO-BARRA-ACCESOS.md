@@ -21,6 +21,10 @@ Diseño: `design-claude/Barra de accesos rapidos.dc.html`. Los nombres que apare
 
 ## La barra
 
+**Cambió después del diseño (Ignacio, 2026-11-05):** sin nombres y con botones parejos.
+Normal: botones de 60 × 56, ícono de 27, barra de 312 × 68. Achicada: 42 × 40, ícono de 19,
+barra de 218 × 48. La tabla de abajo es lo que dice el diseño.
+
 | Qué | Normal | Achicada al bajar |
 |---|---|---|
 | Ancho de los botones | 62, 62, 86, 62, 62 | 46 cada uno |
