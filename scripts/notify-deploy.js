@@ -60,48 +60,9 @@ if (error) {
 
 console.log(`[notify-deploy] app_version actualizada a ${newVersion} — los clientes conectados van a ver el aviso de actualización.`);
 
-// ── El push a quien tiene la app instalada ──────────────────────────────
-// app_version sólo alcanza a quien tiene la app ABIERTA en ese momento: el
-// aviso llega por Realtime. Quien la tiene cerrada no se entera hasta la
-// próxima vez que entra. Esto manda, además, una notificación al teléfono.
-//
-// La RPC crea un aviso en app_notifications por cada persona con la app
-// instalada y las notificaciones activadas, y el trigger
-// trg_app_notifications_push lo empuja al teléfono.
-//
-// Desde el 2026-10-29 el TEXTO sale del catálogo de alertas (la alerta
-// 'app_version_nueva' de notif_alertas, sql/notif_catalogo.sql): se puede
-// editar, pausar o ponerle un horario de no molestar desde Sistemas →
-// Gestión de notificaciones, sin tocar este script. Por eso acá no va
-// ningún título ni mensaje.
-//
-// Dos perillas, las dos opcionales:
-//   SIN_AVISO=1    → este deploy no manda ningún push (un arreglo chico,
-//                    una prueba, un deploy a las 3 de la mañana).
-//   AVISO_HORAS=n  → no repetirle a la misma persona dentro de n horas.
-//                    Por defecto 0: sale SIEMPRE, en todos los deploys
-//                    (pedido de Ignacio, 28-oct-2026: "siempre que aplique
-//                    npm run deploy, que salga el push"). Para que tres
-//                    deploys seguidos no sean tres pushes, AVISO_HORAS=6.
-//
-// Si esto falla, el deploy NO falla: a esta altura ya está todo publicado y
-// verificado. Se avisa y se sigue.
-if (process.env.SIN_AVISO === '1') {
-    console.log('[notify-deploy] SIN_AVISO=1 — este deploy no manda push a los teléfonos.');
-} else {
-    const horas = Number.parseInt(process.env.AVISO_HORAS ?? '0', 10);
-    const { data: avisados, error: errorAviso } = await supabase.rpc('avisar_actualizacion', {
-        p_horas: Number.isFinite(horas) ? horas : 0,
-    });
-
-    if (errorAviso) {
-        console.warn('[notify-deploy] No se pudo mandar el push de actualización (el deploy está bien igual):', errorAviso.message);
-    } else if (avisados > 0) {
-        console.log(`[notify-deploy] Push de "hay una versión nueva" mandado a ${avisados} persona(s) con la app instalada.`);
-    } else {
-        console.log('[notify-deploy] Sin push: o nadie tiene la app instalada con notificaciones, o ya se les avisó hace poco.');
-    }
-}
+// Sin notificación (pedido de Ignacio, 5-nov-2026): una versión nueva no se
+// anuncia en Notificaciones. El cartel de "Hay una actualización" alcanza:
+// useVersionCheck lo muestra al abrir la app, al volver del fondo y por Realtime.
 
 // Archivo de trabajo intermedio: no debe quedar colgado entre deploys (el
 // próximo build lo regenera desde cero de todos modos, pero dejarlo viejo

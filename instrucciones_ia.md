@@ -1834,7 +1834,7 @@ npm run deploy =
   → git add -f dist && git add -A && git commit -m "chore: deploy"
   → git push upstream main
   → node scripts/publish-dist.js   (sube dist/ por FTPS y confirma)
-  → node scripts/notify-deploy.js  (app_version + push a los teléfonos)
+  → node scripts/notify-deploy.js  (app_version)
 ```
 - **`dist/` se commitea** (con `-f`, porque está en el `.gitignore`).
   Todo cambio de frontend necesita build antes de publicarse.
@@ -1859,37 +1859,16 @@ npm run deploy =
   cache-busting **antes** de que monte React.
 - `public/.htaccess` define `Cache-Control` reales (vía `mod_headers`).
 
-### El push de "hay una versión nueva"
+### Una versión nueva no manda notificación
 
-`app_version` sólo alcanza a quien tiene la app **abierta**: el aviso llega por
-Realtime. Quien la tiene cerrada no se entera hasta que entra. Por eso, desde
-el 2026-10-28, `notify-deploy.js` manda además una notificación al teléfono en
-**cada deploy**.
+Desde el 2026-11-05 (pedido de Ignacio) el deploy no crea nada en Notificaciones ni
+manda push: sólo sale el cartel de `ModalActualizacion`, con su botón. Quien tenía la
+app cerrada lo ve al abrirla: `useVersionCheck` revisa al arrancar, al volver del
+fondo y cada tanto, además de Realtime.
 
-- Llama a la RPC `avisar_actualizacion(titulo, mensaje, horas)`
-  (hoy en `sql/notif_catalogo.sql`), que crea un aviso en `app_notifications`
-  por cada persona con la app instalada y las notificaciones activadas. De ahí
-  en adelante es el camino de siempre: `trg_app_notifications_push` →
-  `send-push` → el teléfono.
-- **El texto sale del catálogo**, de la alerta `app_version_nueva` (sección
-  40): se edita desde Sistemas, no en el script. `notify-deploy.js` la llama
-  sólo con `p_horas`.
-- **Sólo `service_role` puede ejecutarla.** Ni `anon` ni `authenticated`: si
-  cualquiera con sesión pudiera, tendría cómo mandarle una notificación al
-  teléfono de todos los demás.
-- **Sale en TODOS los deploys** (pedido de Ignacio, 28-oct-2026: "siempre que
-  aplique npm run deploy, que salga el push"). Hasta ese día tenía un freno de
-  6 horas por persona, y un deploy hecho poco después de otro no mandaba nada.
-- Dos perillas, en el entorno:
-  - `SIN_AVISO=1 npm run deploy` → ese deploy no manda ningún push.
-  - `AVISO_HORAS=6 npm run deploy` → no le repite el aviso a quien ya lo
-    recibió en las últimas 6 horas (útil para varios deploys seguidos).
-- **Si falla, el deploy no falla.** A esa altura ya está todo publicado y
-  verificado: se avisa por consola y se sigue.
-- **Llega a quien tiene la app en la pantalla de inicio.** En iPhone no hay
-  otra forma (sección 12 y el skill de PWA). Al 2026-10-28 son 2 personas: el
-  push existe desde esta semana. Para que sirva como anuncio de verdad, la
-  gente tiene que instalar la app y aceptar las notificaciones.
+`notify-deploy.js` dejó de llamar a la RPC `avisar_actualizacion`. La RPC y la alerta
+`app_version_nueva` siguen en la base (`sql/notif_catalogo.sql`) sin nadie que las use:
+esa alerta figura en Gestión de notificaciones, pero ya no sale.
 
 **Ya no hay recarga automática por inactividad:** `useAutoRefresh` se eliminó
 porque el aviso por Realtime lo hace innecesario. La config de la Home se

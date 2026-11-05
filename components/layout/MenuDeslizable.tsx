@@ -100,46 +100,6 @@ interface DrawerMenuProps {
 const ROJO = 'bg-[#e5484d] dark:bg-[#ff6369]';
 
 /**
- * El pop de la marca cuando llega una notificación nueva.
- *
- * Devuelve un número que sólo cambia cuando el contador SUBE: se usa como
- * `key` para que la marca vuelva a entrar. Al bajar —marcar como leída— no
- * salta: lo que importa es lo que llega, no lo que se va.
- */
-const usePop = (n: number): number => {
-    const anterior = useRef(n);
-    const [pop, setPop] = useState(0);
-    useEffect(() => {
-        if (n > anterior.current) setPop(p => p + 1);
-        anterior.current = n;
-    }, [n]);
-    return pop;
-};
-
-/**
- * La marca roja sobre la foto de perfil.
- *
- * Va FUERA del círculo de la foto —que recorta lo que sobresale— y con un
- * borde del color de la tarjeta, que es lo que la despega de la imagen.
- * Apoyada en la esquina y apenas por fuera: así no tapa la cara.
- *
- * Se define acá afuera y no adentro del menú a propósito: un componente
- * declarado en el cuerpo de otro cambia de identidad en cada render, React
- * lo vuelve a montar y la animación de entrada se repetiría sola.
- */
-const MarcaSinLeer: React.FC<{ n: number; quieto: boolean }> = ({ n, quieto }) => (
-    <motion.span
-        aria-hidden="true"
-        initial={quieto ? false : { scale: 0.6, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={quieto ? { duration: 0 } : { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-        className={`absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white dark:border-[#1b1b1a] text-[11px] font-semibold leading-none text-white ${ROJO}`}
-    >
-        {n > 9 ? '9+' : n}
-    </motion.span>
-);
-
-/**
  * Hamburguesa de la navbar mobile.
  *
  * Sigue exportándose aunque el sidebar de escritorio ya no la use: Estructura.tsx
@@ -221,7 +181,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
      * canal de Supabase, así que la marca aparece y se va sola.
      */
     const sinLeer = useSinLeer();
-    const pop = usePop(sinLeer);
     /** De qué departamentos de Agenda Origen es encargado (para "Departamentos"). */
     const accesoAgenda = useAccesoAgenda();
     /** Para los id de aria-controls: sidebar y cajón pueden estar montados a la vez. */
@@ -814,18 +773,12 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
             aria-haspopup="menu"
             aria-expanded={cuentaAbierta}
             /* Contraída la tarjeta es sólo la foto, así que
-               siempre lleva nombre. Con algo sin leer lo lleva
-               también expandida, para que el lector de pantalla
-               diga el número que se ve en rojo. */
-            aria-label={sinLeer > 0
-                ? `Cuenta de ${currentUser.name}, ${sinLeer} ${sinLeer === 1 ? 'notificación sin leer' : 'notificaciones sin leer'}`
-                : isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
+               siempre lleva nombre. */
+            aria-label={isCollapsed ? `Cuenta de ${currentUser.name}` : undefined}
             title={isCollapsed ? currentUser.name : undefined}
             className={`w-full flex items-center rounded-[22px] ${TARJETA} ${TINTA} shadow-[0_1px_3px_rgba(0,0,0,.05)] dark:shadow-none transition-colors duration-150 hover:bg-[#fbfbfa] dark:hover:bg-[#222220] ${FOCO} ${isCollapsed ? 'justify-center p-1.5' : isSidebar ? 'p-2' : 'py-1 pl-1 pr-2.5'
                 }`}
         >
-            {/* La marca va afuera del círculo: adentro la
-                recortaría el overflow-hidden de la foto. */}
             <div className="relative shrink-0">
                 <div className={`${isSidebar ? 'w-8 h-8' : 'w-[34px] h-[34px]'} rounded-full overflow-hidden ${PASTILLA}`}>
                     {currentUser.avatarUrl ? (
@@ -841,9 +794,6 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                         </div>
                     )}
                 </div>
-                {sinLeer > 0 && (
-                    <MarcaSinLeer key={pop} n={sinLeer} quieto={!!sinMovimiento} />
-                )}
             </div>
             <div className={`${textoQueSeVa} flex flex-col items-start`} style={estiloTexto}>
                 <span className={`max-w-full text-sm leading-[1.2] font-semibold truncate ${TINTA}`}>{currentUser.name}</span>
@@ -873,11 +823,8 @@ const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 dos están en la barra de accesos rápidos (pedido de
                 Ignacio, 5-nov-2026). Acá son la única entrada.
 
-                Notificaciones primero: es lo que se viene a
-                hacer acá cuando la foto tiene la marca roja,
-                y la pastilla de la fila es la misma cuenta
-                que esa marca — así se ve CUÁNTAS son antes
-                de entrar, y desaparece sola cuando se leen.
+                Notificaciones primero, con una pastilla que dice
+                cuántas hay y desaparece sola cuando se leen.
                 El modo oscuro sigue viviendo en Mi cuenta.
                 handleNavigation ya cierra el panel de la
                 cuenta y el menú. */}
